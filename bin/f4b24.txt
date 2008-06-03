@@ -1,0 +1,49 @@
+□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
+
+              Fittle Ver.2.2.2 Preview 3 for BASS 2.4
+
+□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
+
+Copyright (c) 2004-2008 Mallow <mallow at livedoor.com>
+All rights reserved.
+
+このソフトはオープンソース化されたfittleを基にした非公式で実験的なバージョンです
+
+改変の方針
+	改変点も含めソースを公開する
+	基本的には本体に機能を追加しない
+	本体から分離可能な機能をプラグイン化した上で削除する
+
+主な変更点
+	bass 2.4専用
+	zip書庫機能を削除
+	ミニパネルを削除
+
+追加したプラグイン(公式でも利用可能)
+	minipane.dll ミニパネル 設定画面がまだない(minipane.iniを編集しないと設定できない)
+	taskvol.dll  タスクバー上ホイールで音量を変えるプラグイン 強制終了時にエクスプローラごと落ちる問題に対処
+	xdelfile.dll ファイル削除機能無効化プラグイン
+
+追加した専用プラグイン
+	arj.fap      arj書庫プラグイン 要統合アーカイバプロジェクト版unarj32j.dll
+	cab.fap      cab書庫プラグイン 要IE5以降(cabinet.dll又はfdi.dll)
+	gca.fap      gca書庫プラグイン
+	lha.fap      lzh書庫プラグイン 要統合アーカイバプロジェクト版unlha32.dll
+	rar.fap      rar書庫プラグイン 要RARLABオフィシャル版unrar.dll
+	tar.fap      tar書庫プラグイン 要統合アーカイバプロジェクト版tar32.dll
+	zip.fap      zip書庫プラグイン 要統合アーカイバプロジェクト版unzip32.dll
+
+実験履歴
+	test10
+		ミニパネルを削除してみた
+
+	test9
+		mkimg.dll対策
+
+	test8
+		次曲ボタン連打対策
+
+	test7
+		書庫関連付け対策
+		巨大プレイリスト保存問題対策
+
