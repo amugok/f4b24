@@ -1278,8 +1278,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					while(i!=-1){
 						pszTarget = GetPtrFromIndex(GetCurListTab(m_hTab)->pRoot, i)->szFilePath;
 						if(i==GetCurListTab(m_hTab)->nPlaying) bPlaying = TRUE;	// 削除ファイルが演奏中
-						j++;
 						if(!IsURLPath(pszTarget) && !IsArchivePath(pszTarget) && !IsCueSheetPath(pszTarget)){	// 削除できないファイルでなければ
+							j++;
 							p = (char *)HeapReAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, p,
 								HeapSize(GetProcessHeap(), 0, p) + (lstrlen(pszTarget) + 2) * sizeof(char));
 							lstrcpy(p+q, pszTarget);
