@@ -669,8 +669,12 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			return FALSE;
 
 		case WM_MOVE:
-			nMiniPanel_x = (int)(short) LOWORD(lp);
-			nMiniPanel_y = (int)(short) HIWORD(lp);
+			{
+				RECT rc;
+				GetWindowRect(hDlg, &rc);
+				nMiniPanel_x = rc.left;
+				nMiniPanel_y = rc.top;
+			}
 			return TRUE;
 
 		case WM_COMMAND:
