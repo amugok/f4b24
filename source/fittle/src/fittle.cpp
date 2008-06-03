@@ -49,6 +49,8 @@
 #define ODS(X) \
 	OutputDebugString(X); OutputDebugString("\n");
 
+#define IDM_SYNC_NEXT 32769
+
 // --列挙型の宣言--
 enum {PM_LIST=0, PM_RANDOM, PM_SINGLE};	// プレイモード
 enum {GS_NOEND=0, GS_OK, GS_FAILED, GS_NEWFREQ};	// EventSyncの戻り値みたいな
