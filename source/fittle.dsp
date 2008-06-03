@@ -144,6 +144,10 @@ SOURCE=.\fittle\src\tree.cpp
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
+SOURCE=.\fittle\src\aplugin.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\fittle\src\archive.h
 # End Source File
 # Begin Source File

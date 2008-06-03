@@ -131,7 +131,7 @@ static char m_szTag[MAX_FITTLE_PATH];	// タグ
 static char m_szTreePath[MAX_FITTLE_PATH];	// ツリーのパス
 static BOOL m_bFLoat = FALSE;
 static TAGINFO m_taginfo = {0};
-static BOOL m_bCueEnd = FALSE;
+static volatile BOOL m_bCueEnd = FALSE;
 // メンバ変数（ハンドル編）
 static HWND m_hCombo = NULL;		// コンボボックスハンドル
 static HWND m_hTree = NULL;			// ツリービューハンドル

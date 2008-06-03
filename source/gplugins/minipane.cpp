@@ -138,31 +138,6 @@ static void SaveState(){
 	WritePrivateProfileInt("MiniPanel", "End", nMiniPanelEnd, m_szINIPath);
 }
 
-// 設定を保存
-static void SaveConfig(){
-	int i;
-	char szSec[10];
-
-	char m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
-
-	// INIファイルの位置を取得
-	GetModuleParentDir(m_szINIPath);
-	lstrcat(m_szINIPath, "minipane.ini");
-
-	// タスクトレイを保存
-	for(i=0;i<6;i++){
-		wsprintf(szSec, "Click%d", i);
-		WritePrivateProfileInt("MiniPanel", szSec, nTrayClick[i], m_szINIPath); //ホットキー
-	}
-
-	WritePrivateProfileInt("MiniPanel", "TagReverse", nTagReverse, m_szINIPath);
-
-	WritePrivateProfileInt("MiniPanel", "TopMost", nMiniTop, m_szINIPath);
-	WritePrivateProfileInt("MiniPanel", "Scroll", nMiniScroll, m_szINIPath);
-	WritePrivateProfileInt("MiniPanel", "TimeShow", nMiniTimeShow, m_szINIPath);
-	WritePrivateProfileInt("MiniPanel", "ToolShow", nMiniToolShow, m_szINIPath);
-}
-
 static FITTLE_PLUGIN_INFO fpi = {
 	PDK_VER,
 	OnInit,
@@ -285,6 +260,12 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			}
 			break;
 		}
+	case WM_FITTLE:
+		if (wp == GET_MINIPANEL)
+		{
+			return (m_hMiniPanel && IsWindow(m_hMiniPanel)) ? (LRESULT)m_hMiniPanel : (LRESULT)0;
+		}
+		break;
 	case WM_INITMENUPOPUP:
 		EnableMenuItem((HMENU)wp, IDM_MINIPANEL, MF_BYCOMMAND | MF_ENABLED);
 		break;
@@ -302,14 +283,12 @@ static BOOL OnInit(){
 	m_hOldProc = (WNDPROC)SetWindowLong(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
 
 	LoadState();
-	LoadConfig();
 
 	return TRUE;
 }
 
 /* 終了時に一度だけ呼ばれます */
 static void OnQuit(){
-	//SaveConfig();
 	SaveState();
 	if (hMiniMenu){
 		DestroyMenu(hMiniMenu);
@@ -557,9 +536,12 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			LOGFONT lf;
 			HDC hDC;
 
+			LoadConfig();
+
 			m_hMiniTool = CreateToolBar(hDlg);
 			if(nMiniToolShow){
 				s_nToolWidth = GetToolbarTrueWidth(m_hMiniTool) + GetSystemMetrics(SM_CXDLGFRAME)*2;
+				ShowWindow(m_hMiniTool, SW_SHOWNA);
 			}else{
 				s_nToolWidth = GetSystemMetrics(SM_CXDLGFRAME)*2;
 				ShowWindow(m_hMiniTool, SW_HIDE);
@@ -789,9 +771,24 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 		case WM_USER_MINIPANEL:
 			if (wp == 1){
 				UpdateMenuPlayMode();
-			}
-			if (wp == 2){
+			}else if (wp == 2){
 				UpdateMenuRepeatMode();
+			}else if (wp == 3){
+				LoadConfig();
+
+				SetWindowPos(hDlg, (nMiniTop?HWND_TOPMOST:HWND_NOTOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+				if(nMiniToolShow){
+					s_nToolWidth = GetToolbarTrueWidth(m_hMiniTool) + GetSystemMetrics(SM_CXDLGFRAME)*2;
+					ShowWindow(m_hMiniTool, SW_SHOWNA);
+				}else{
+					s_nToolWidth = GetSystemMetrics(SM_CXDLGFRAME)*2;
+					ShowWindow(m_hMiniTool, SW_HIDE);
+				}
+
+				UpdatePanelTitle();
+				UpdatePanelTime();
+
+				InvalidateRect(hDlg, &rc, FALSE);
 			}
 			return TRUE;
 
