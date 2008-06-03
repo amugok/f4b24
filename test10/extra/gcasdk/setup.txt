@@ -1,4 +1,0 @@
-PUT
-	GcaSDK.h
-	GcaSDK.lib
-HERE

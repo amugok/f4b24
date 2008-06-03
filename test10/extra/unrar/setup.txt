@@ -1,4 +1,0 @@
-PUT
-	unrar.h
-	unrar.lib
-HERE
