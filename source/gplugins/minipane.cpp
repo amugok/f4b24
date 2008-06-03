@@ -797,7 +797,7 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 				UpdatePanelTitle();
 				UpdatePanelTime();
 
-				InvalidateRect(hDlg, &rc, FALSE);
+				InvalidateRect(hDlg, NULL, TRUE);
 			}
 			return TRUE;
 
