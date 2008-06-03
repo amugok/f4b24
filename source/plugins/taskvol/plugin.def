@@ -1,4 +1,0 @@
-LIBRARY	plugin
-
-SECTIONS
-    .sharedata READ WRITE SHARED
