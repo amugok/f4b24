@@ -71,6 +71,21 @@ void GetModuleParentDir(char *szParPath){
 	return;
 }
 
+// 終了状態を読込
+static void LoadState(){
+	char m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
+
+	// INIファイルの位置を取得
+	GetModuleParentDir(m_szINIPath);
+	lstrcat(m_szINIPath, "minipane.ini");
+
+	nMiniPanel_x = (int)GetPrivateProfileInt("MiniPanel", "x", 0, m_szINIPath);
+	nMiniPanel_y = (int)GetPrivateProfileInt("MiniPanel", "y", 0, m_szINIPath);
+	nMiniPanelEnd = (int)GetPrivateProfileInt("MiniPanel", "End", 0, m_szINIPath);
+	nMiniWidth = (int)GetPrivateProfileInt("MiniPanel", "Width", 402, m_szINIPath);
+
+}
+
 // 設定を読込
 static void LoadConfig(){
 	char m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
@@ -80,21 +95,17 @@ static void LoadConfig(){
 	lstrcat(m_szINIPath, "minipane.ini");
 
 	// クリック時の動作
-	nTrayClick[0] = GetPrivateProfileInt("TaskTray", "Click0", 6, m_szINIPath);
-	nTrayClick[1] = GetPrivateProfileInt("TaskTray", "Click1", 0, m_szINIPath);
-	nTrayClick[2] = GetPrivateProfileInt("TaskTray", "Click2", 8, m_szINIPath);
-	nTrayClick[3] = GetPrivateProfileInt("TaskTray", "Click3", 0, m_szINIPath);
-	nTrayClick[4] = GetPrivateProfileInt("TaskTray", "Click4", 5, m_szINIPath);
-	nTrayClick[5] = GetPrivateProfileInt("TaskTray", "Click5", 0, m_szINIPath);
+	nTrayClick[0] = GetPrivateProfileInt("MiniPanel", "Click0", 6, m_szINIPath);
+	nTrayClick[1] = GetPrivateProfileInt("MiniPanel", "Click1", 0, m_szINIPath);
+	nTrayClick[2] = GetPrivateProfileInt("MiniPanel", "Click2", 8, m_szINIPath);
+	nTrayClick[3] = GetPrivateProfileInt("MiniPanel", "Click3", 0, m_szINIPath);
+	nTrayClick[4] = GetPrivateProfileInt("MiniPanel", "Click4", 5, m_szINIPath);
+	nTrayClick[5] = GetPrivateProfileInt("MiniPanel", "Click5", 0, m_szINIPath);
 
 	// タグを反転
-	nTagReverse = GetPrivateProfileInt("Main", "TagReverse", 0, m_szINIPath);
+	nTagReverse = GetPrivateProfileInt("MiniPanel", "TagReverse", 0, m_szINIPath);
 
-	nMiniPanel_x = (int)GetPrivateProfileInt("MiniPanel", "x", 0, m_szINIPath);
-	nMiniPanel_y = (int)GetPrivateProfileInt("MiniPanel", "y", 0, m_szINIPath);
-	nMiniPanelEnd = (int)GetPrivateProfileInt("MiniPanel", "End", 0, m_szINIPath);
 	nMiniTop = (int)GetPrivateProfileInt("MiniPanel", "TopMost", 1, m_szINIPath);
-	nMiniWidth = (int)GetPrivateProfileInt("MiniPanel", "Width", 402, m_szINIPath);
 	nMiniScroll = (int)GetPrivateProfileInt("MiniPanel", "Scroll", 1, m_szINIPath);
 	nMiniTimeShow = (int)GetPrivateProfileInt("MiniPanel", "TimeShow", 1, m_szINIPath);
 	nMiniToolShow = (int)GetPrivateProfileInt("MiniPanel", "ToolShow", 1, m_szINIPath);
@@ -106,6 +117,25 @@ static int WritePrivateProfileInt(char *szAppName, char *szKeyName, int nData, c
 
 	wsprintf(szTemp, "%d", nData);
 	return WritePrivateProfileString(szAppName, szKeyName, szTemp, szINIPath);
+}
+
+// 終了状態を保存
+static void SaveState(){
+	char m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
+
+	// INIファイルの位置を取得
+	GetModuleParentDir(m_szINIPath);
+	lstrcat(m_szINIPath, "minipane.ini");
+
+
+	WritePrivateProfileInt("MiniPanel", "x", nMiniPanel_x, m_szINIPath);
+	WritePrivateProfileInt("MiniPanel", "y", nMiniPanel_y, m_szINIPath);
+	WritePrivateProfileInt("MiniPanel", "End", nMiniPanelEnd, m_szINIPath);
+	WritePrivateProfileInt("MiniPanel", "Width", nMiniWidth, m_szINIPath);
+
+	GetModuleParentDir(m_szINIPath);
+	lstrcat(m_szINIPath, "Fittle.ini");
+	WritePrivateProfileInt("MiniPanel", "End", nMiniPanelEnd, m_szINIPath);
 }
 
 // 設定を保存
@@ -122,23 +152,15 @@ static void SaveConfig(){
 	// タスクトレイを保存
 	for(i=0;i<6;i++){
 		wsprintf(szSec, "Click%d", i);
-		WritePrivateProfileInt("TaskTray", szSec, nTrayClick[i], m_szINIPath); //ホットキー
+		WritePrivateProfileInt("MiniPanel", szSec, nTrayClick[i], m_szINIPath); //ホットキー
 	}
 
-	WritePrivateProfileInt("Main", "TagReverse", nTagReverse, m_szINIPath);
+	WritePrivateProfileInt("MiniPanel", "TagReverse", nTagReverse, m_szINIPath);
 
-	WritePrivateProfileInt("MiniPanel", "x", nMiniPanel_x, m_szINIPath);
-	WritePrivateProfileInt("MiniPanel", "y", nMiniPanel_y, m_szINIPath);
-	WritePrivateProfileInt("MiniPanel", "End", nMiniPanelEnd, m_szINIPath);
 	WritePrivateProfileInt("MiniPanel", "TopMost", nMiniTop, m_szINIPath);
-	WritePrivateProfileInt("MiniPanel", "Width", nMiniWidth, m_szINIPath);
 	WritePrivateProfileInt("MiniPanel", "Scroll", nMiniScroll, m_szINIPath);
 	WritePrivateProfileInt("MiniPanel", "TimeShow", nMiniTimeShow, m_szINIPath);
 	WritePrivateProfileInt("MiniPanel", "ToolShow", nMiniToolShow, m_szINIPath);
-
-	GetModuleParentDir(m_szINIPath);
-	lstrcat(m_szINIPath, "Fittle.ini");
-	WritePrivateProfileInt("MiniPanel", "End", nMiniPanelEnd, m_szINIPath);
 }
 
 static FITTLE_PLUGIN_INFO fpi = {
@@ -187,18 +209,23 @@ static int GetRepeatFlag()
 
 static void UpdatePanelTitle()
 {
+	static char szNull[1] = { 0 };
 	char *ptitle = (char *)SendMessage(fpi.hParent, WM_FITTLE, GET_TITLE, 0);
 	char *partist = (char *)SendMessage(fpi.hParent, WM_FITTLE, GET_ARTIST, 0);
-	if (!ptitle || !partist || (!ptitle[0] && !partist[0])){
-		char *ppath = (char *)SendMessage(fpi.hParent, WM_FITTLE, GET_PLAYING_PATH, 0);
-		if (!ppath || !ppath[0])
-			m_szTag[0] = 0;
+	if (!ptitle || !ptitle[0]) ptitle = (char *)SendMessage(fpi.hParent, WM_FITTLE, GET_PLAYING_PATH, 0);
+	if (!ptitle) ptitle = szNull;
+	if (!partist) partist = szNull;
+
+	if(!nTagReverse){
+		if (!partist[0])
+			lstrcpy(m_szTag, ptitle);
 		else
-		lstrcpy(m_szTag, ppath);
-	}else if(!nTagReverse){
-		wsprintf(m_szTag, "%s / %s", ptitle, partist);
+			wsprintf(m_szTag, "%s / %s", ptitle, partist);
 	}else{
-		wsprintf(m_szTag, "%s / %s", partist, ptitle);
+		if (!partist[0])
+			lstrcpy(m_szTag, partist);
+		else
+			wsprintf(m_szTag, "%s / %s", partist, ptitle);
 	}
 }
 
@@ -209,7 +236,8 @@ static void UpdatePanelTime()
 	if (nPos >= 0 && nLen >= 0)
 		wsprintf(m_szTime, "\t%02d:%02d / %02d:%02d", nPos/60, nPos%60, nLen/60, nLen%60);
 	else
-		wsprintf(m_szTime, "\t--:-- / --:--");
+		m_szTag[0] = 0;
+		//wsprintf(m_szTime, "\t--:-- / --:--");
 }
 
 static void SendCommand(int nCommand)
@@ -273,6 +301,7 @@ static BOOL OnInit(){
 
 	m_hOldProc = (WNDPROC)SetWindowLong(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
 
+	LoadState();
 	LoadConfig();
 
 	return TRUE;
@@ -280,7 +309,8 @@ static BOOL OnInit(){
 
 /* 終了時に一度だけ呼ばれます */
 static void OnQuit(){
-	SaveConfig();
+	//SaveConfig();
+	SaveState();
 	if (hMiniMenu){
 		DestroyMenu(hMiniMenu);
 		hMiniMenu = 0;
@@ -517,6 +547,7 @@ static void UpdateMenuRepeatMode(){
 #define MINIPANEL_SEPARATOR 4
 
 static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
+	HGDIOBJ hOldFont;
 	static HFONT s_hFont;
 	static int s_nToolWidth = 0;
 
@@ -583,7 +614,7 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			RECT rc;
 
 			hDC = BeginPaint(hDlg, &ps);
-			SelectObject(hDC, (HGDIOBJ)s_hFont);
+			hOldFont = SelectObject(hDC, (HGDIOBJ)s_hFont);
 			SetBkColor(hDC, GetSysColor(COLOR_BTNFACE));
 
 			// タイトル表示
@@ -602,7 +633,8 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 				FillRect(hDC, &rc, (HBRUSH)(COLOR_BTNFACE+1));
 				TextOut(hDC, rc.left + MINIPANEL_SEPARATOR, 6, m_szTime+1, lstrlen(m_szTime+1));
 			}
-			
+
+			SelectObject(hDC, hOldFont);
 			EndPaint(hDlg, &ps);
 			return TRUE;
 
@@ -614,8 +646,9 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 
 					// 文字列幅取得
 					hDC = GetDC(hDlg);
-					SelectObject(hDC, (HGDIOBJ)s_hFont);
+					hOldFont = SelectObject(hDC, (HGDIOBJ)s_hFont);
 					GetTextExtentPoint32(hDC, m_szTag, lstrlen(m_szTag), &size);
+					SelectObject(hDC, hOldFont);
 					ReleaseDC(hDlg, hDC);
 
 					// 文字列位置決定
@@ -664,7 +697,8 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 					m_hMiniPanel = NULL;
 					m_hMiniTool = NULL;
 					ShowWindow(fpi.hParent, SW_SHOW);
-					EndDialog(hDlg, 0);
+					//EndDialog(hDlg, IDCANCEL);
+					DestroyWindow(hDlg);
 					return TRUE;
 
 				case IDM_PLAY:
