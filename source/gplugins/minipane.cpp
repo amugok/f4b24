@@ -95,8 +95,8 @@ static void LoadConfig(){
 	lstrcat(m_szINIPath, "minipane.ini");
 
 	// ÉNÉäÉbÉNéûÇÃìÆçÏ
-	nTrayClick[0] = GetPrivateProfileInt("MiniPanel", "Click0", 6, m_szINIPath);
-	nTrayClick[1] = GetPrivateProfileInt("MiniPanel", "Click1", 0, m_szINIPath);
+	nTrayClick[0] = GetPrivateProfileInt("MiniPanel", "Click0", 0, m_szINIPath);
+	nTrayClick[1] = GetPrivateProfileInt("MiniPanel", "Click1", 6, m_szINIPath);
 	nTrayClick[2] = GetPrivateProfileInt("MiniPanel", "Click2", 8, m_szINIPath);
 	nTrayClick[3] = GetPrivateProfileInt("MiniPanel", "Click3", 0, m_szINIPath);
 	nTrayClick[4] = GetPrivateProfileInt("MiniPanel", "Click4", 5, m_szINIPath);
@@ -732,7 +732,7 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			return FALSE;
 
 		case WM_LBUTTONDBLCLK:
-			PanelClose();
+			DoTrayClickAction(fpi.hParent, 1);
 			return TRUE;
 
 		case WM_MOUSEWHEEL:
