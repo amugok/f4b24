@@ -132,10 +132,12 @@ static void SaveState(){
 	WritePrivateProfileInt("MiniPanel", "y", nMiniPanel_y, m_szINIPath);
 	WritePrivateProfileInt("MiniPanel", "End", nMiniPanelEnd, m_szINIPath);
 	WritePrivateProfileInt("MiniPanel", "Width", nMiniWidth, m_szINIPath);
+	WritePrivateProfileString(NULL, NULL, NULL, m_szINIPath);
 
 	GetModuleParentDir(m_szINIPath);
 	lstrcat(m_szINIPath, "Fittle.ini");
 	WritePrivateProfileInt("MiniPanel", "End", nMiniPanelEnd, m_szINIPath);
+	WritePrivateProfileString(NULL, NULL, NULL, m_szINIPath);
 }
 
 static FITTLE_PLUGIN_INFO fpi = {
@@ -560,7 +562,8 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			UpdatePanelTitle();
 			UpdatePanelTime();
 
-			SetWindowPos(hDlg, (nMiniTop?HWND_TOPMOST:0), nMiniPanel_x, nMiniPanel_y, nMiniWidth, MINIPANEL_HEIGHT, SWP_SHOWWINDOW);
+			MoveWindow(hDlg, nMiniPanel_x, nMiniPanel_y, nMiniWidth, MINIPANEL_HEIGHT, FALSE);
+			SetWindowPos(hDlg, (nMiniTop?HWND_TOPMOST:HWND_NOTOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
 
 			SET_SUBCLASS(m_hMiniTool, NewMiniToolProc);	// 仕方ないからサブクラス化
 
@@ -665,21 +668,23 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			}
 			return FALSE;
 
+		case WM_MOVE:
+			nMiniPanel_x = (int)(short) LOWORD(lp);
+			nMiniPanel_y = (int)(short) HIWORD(lp);
+			return TRUE;
+
 		case WM_COMMAND:
 			switch(LOWORD(wp))
 			{
 				case IDCANCEL:
-					RECT rcMini;
-					nMiniPanelEnd = 0;
-					GetWindowRect(hDlg, &rcMini);
-					nMiniPanel_x = rcMini.left;
-					nMiniPanel_y = rcMini.top;
 					DeleteObject(s_hFont);
 					KillTimer(hDlg, ID_SEEKTIMER);
+
+					nMiniPanelEnd = 0;
 					m_hMiniPanel = NULL;
 					m_hMiniTool = NULL;
+
 					ShowWindow(fpi.hParent, SW_SHOW);
-					//EndDialog(hDlg, IDCANCEL);
 					DestroyWindow(hDlg);
 					return TRUE;
 

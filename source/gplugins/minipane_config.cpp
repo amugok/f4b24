@@ -95,6 +95,7 @@ static void SaveConfig(){
 	WritePrivateProfileInt("MiniPanel", "Scroll", nMiniScroll, m_szINIPath);
 	WritePrivateProfileInt("MiniPanel", "TimeShow", nMiniTimeShow, m_szINIPath);
 	WritePrivateProfileInt("MiniPanel", "ToolShow", nMiniToolShow, m_szINIPath);
+	WritePrivateProfileString(NULL, NULL, NULL, m_szINIPath);
 }
 
 static void ViewConfig(HWND hDlg)
