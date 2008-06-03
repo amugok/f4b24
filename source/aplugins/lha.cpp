@@ -71,7 +71,7 @@ static BOOL CALLBACK EnumArchive(char *pszFilePath, LPFNARCHIVEENUMPROC lpfnProc
 		do{
 			FILETIME ft;
 			DosDateTimeToFileTime(iinfo.wDate, iinfo.wTime, &ft);
-			lpfnProc(iinfo.szFileName, iinfo.dwCompressedSize, ft, pData);
+			lpfnProc(iinfo.szFileName, iinfo.dwOriginalSize, ft, pData);
 		}while(lpUnLhaFindNext(hArc, &iinfo)!=-1);
 	}
 
