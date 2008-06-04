@@ -34,6 +34,9 @@ All rights reserved.
 	zip.fap      zip書庫プラグイン 要統合アーカイバプロジェクト版unzip32.dll
 
 実験履歴
+	test11
+		次曲へ移る処理の安定性向上
+
 	test10
 		ミニパネルを削除してみた
 
