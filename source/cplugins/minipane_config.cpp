@@ -9,14 +9,17 @@
 //#pragma comment(lib,"shell32.lib")
 #pragma comment(lib,"comctl32.lib")
 #pragma comment(lib,"shlwapi.lib")
+#pragma comment(linker, "/EXPORT:GetAPluginInfo=_GetCPluginInfo@0")
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
-#pragma comment(linker,"/ENTRY:WinMain")
 #pragma comment(linker,"/MERGE:.rdata=.text")
+#pragma comment(linker,"/ENTRY:DllMain")
 #pragma comment(linker,"/OPT:NOWIN98")
 #endif
 
 #define WM_USER_MINIPANEL (WM_USER + 88)
+
+static HMODULE hDLL = 0;
 
 /*設定関係*/
 static int nTrayClick[6];			// クリック時の動作
@@ -25,6 +28,18 @@ static int nMiniTop;
 static int nMiniScroll;
 static int nMiniTimeShow;
 static int nMiniToolShow;
+
+
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
+{
+	(void)lpvReserved;
+	if (fdwReason == DLL_PROCESS_ATTACH)
+	{
+		hDLL = hinstDLL;
+		DisableThreadLibraryCalls(hinstDLL);
+	}
+	return TRUE;
+}
 
 // 実行ファイルのパスを取得
 void GetModuleParentDir(char *szParPath)
@@ -188,32 +203,25 @@ static BOOL CALLBACK MiniPanePageProc(HWND hWnd , UINT msg , WPARAM wp , LPARAM 
 	return FALSE;
 }
 
-
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+static HPROPSHEETPAGE SetupPage(int nIndex)
 {
-	PROPSHEETPAGE psp[1];
-	PROPSHEETHEADER psh;
+	if (nIndex == 0)
+	{
+		PROPSHEETPAGE psp[1];
 
-	InitCommonControls();
-
-	psp[0].dwSize = sizeof (PROPSHEETPAGE);
-	psp[0].dwFlags = PSP_DEFAULT;
-	psp[0].hInstance = GetModuleHandle(NULL);
-	psp[0].pszTemplate = TEXT("MINIPANE_SHEET");
-	psp[0].pfnDlgProc = (DLGPROC)MiniPanePageProc;
-
-	psh.dwSize = sizeof (PROPSHEETHEADER);
-	psh.dwFlags = PSH_USEICONID  | PSH_PROPSHEETPAGE;
-	psh.hwndParent = 0;
-	psh.hInstance = GetModuleHandle(NULL);
-	psh.pszIcon = TEXT("MYICON");
-	psh.pszCaption = TEXT("設定");
-	psh.nPages = 1;
-	psh.nStartPage = 0;
-	psh.ppsp = psp;
-
-	PropertySheet(&psh);
-
-	ExitProcess(0);
+		psp[0].dwSize = sizeof (PROPSHEETPAGE);
+		psp[0].dwFlags = PSP_DEFAULT;
+		psp[0].hInstance = hDLL;
+		psp[0].pszTemplate = TEXT("MINIPANE_SHEET");
+		psp[0].pfnDlgProc = (DLGPROC)MiniPanePageProc;
+		return CreatePropertySheetPage(psp);
+	}
 	return 0;
 }
+
+extern "C" void * CALLBACK GetCPluginInfo(void)
+{
+	return 0;
+}
+
+

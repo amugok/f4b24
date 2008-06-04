@@ -61,15 +61,6 @@ END
 #endif    // APSTUDIO_INVOKED
 
 
-/////////////////////////////////////////////////////////////////////////////
-//
-// Icon
-//
-
-// Icon with lowest ID value placed first to ensure application icon
-// remains consistent on all systems.
-MYICON                  ICON    DISCARDABLE     "Fittle.ico"
-
 #ifndef _MAC
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -86,7 +77,7 @@ VS_VERSION_INFO VERSIONINFO
  FILEFLAGS 0x0L
 #endif
  FILEOS 0x40004L
- FILETYPE 0x1L
+ FILETYPE 0x2L
  FILESUBTYPE 0x0L
 BEGIN
     BLOCK "StringFileInfo"
@@ -100,7 +91,7 @@ BEGIN
             VALUE "InternalName", "minipane_config\0"
             VALUE "LegalCopyright", "\0"
             VALUE "LegalTrademarks", "\0"
-            VALUE "OriginalFilename", "minipane_config.exe\0"
+            VALUE "OriginalFilename", "minipane.fcp\0"
             VALUE "PrivateBuild", "\0"
             VALUE "ProductName", "Fittle\0"
             VALUE "ProductVersion", "0, 0, 0, 0\0"

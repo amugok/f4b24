@@ -2501,6 +2501,8 @@ static void OnChangeTrack(){
 	char szTitleCap[524] = {0};
 	BASS_CHANNELINFO info;
 
+	m_bCueEnd = FALSE;
+
 	// 99ÅìÇ‹Ç≈Ç¢Ç©Ç»Ç©Ç¡ÇΩèÍçá
 	if(m_nGaplessState==GS_NOEND){
 		m_pNext = SelectNextFile(TRUE);
