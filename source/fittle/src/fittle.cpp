@@ -49,8 +49,10 @@
 #define ODS(X) \
 	OutputDebugString(X); OutputDebugString("\n");
 
-#define IDM_SYNC_NEXT 32769
-
+enum {
+	IDM_SETUP_NEXT = 32769,
+	IDM_PLAY_NEXT
+};
 // --列挙型の宣言--
 enum {PM_LIST=0, PM_RANDOM, PM_SINGLE};	// プレイモード
 enum {GS_NOEND=0, GS_OK, GS_FAILED, GS_NEWFREQ};	// EventSyncの戻り値みたいな
@@ -115,6 +117,7 @@ static void OnChangeTrack();
 static int FilePause();
 static int StopOutputStream(HWND);
 static struct FILEINFO *SelectNextFile(BOOL);
+static void FreeChannelInfo(BOOL bFlag);
 
 // メンバ変数（状態編）
 static HINSTANCE m_hInst = NULL;	// インスタンス
@@ -142,8 +145,6 @@ static HWND m_hSeek = NULL;			// シークバーハンドル
 static HWND m_hVolume = NULL;		// ボリュームバーハンドル
 static HWND m_hTitleTip = NULL;		// タイトル用ツールチップハンドル
 static HWND m_hSliderTip = NULL;	// スライダ用ツールチップハンドル
-//static HWND m_hMiniTool = NULL;		// ミニパネルツールバー
-//static HWND m_hMiniPanel = NULL;	// ミニパネルハンドル
 static HMENU m_hTrayMenu = NULL;	// トレイメニューハンドル
 static HIMAGELIST m_hDrgImg = NULL;	// ドラッグイメージ
 static HHOOK m_hHook = NULL;		// ローカルフックハンドル
@@ -343,7 +344,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 	{
 		case WM_USER:
 			return (LRESULT)(HWND)SendMessage(hWnd, WM_FITTLE, GET_MINIPANEL, 0);
-			//return (LRESULT)m_hMiniPanel;
 
 		case WM_USER+1:
 			OnChangeTrack();
@@ -1009,7 +1009,20 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					}
 					break;
 
-				case IDM_SYNC_NEXT:
+				case IDM_PLAY_NEXT:
+					EnterCriticalSection(&m_cs);
+
+					// ファイル切り替え
+					g_bNow = !g_bNow;
+					// 開放
+					FreeChannelInfo(!g_bNow);
+
+					LeaveCriticalSection(&m_cs);
+
+					PostMessage(GetParent(m_hStatus), WM_USER+1, 0, 0); 
+					break;
+
+				case IDM_SETUP_NEXT:
 					m_pNext = SelectNextFile(TRUE);
 					m_nGaplessState = GS_OK;
 
@@ -1024,6 +1037,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 							BASS_ChannelGetInfo(g_cInfo[!g_bNow].hChan, &info2);
 							if(info1.freq!=info2.freq || info1.chans!=info2.chans || info1.flags!=info2.flags){
 								m_nGaplessState = GS_NEWFREQ;
+							}else{
+								m_nGaplessState = GS_OK;
 							}
 						}
 					}
@@ -1960,8 +1975,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 				case GET_MINIPANEL:
 					return 0;
-					//return (HRESULT)m_hMiniPanel;
-
 
 				default:
 					break;
@@ -2280,11 +2293,6 @@ static void SaveConfig(HWND hWnd){
 
 // ウィンドウの表示/非表示をトグル
 static void ToggleWindowView(HWND hWnd){
-//	HWND m_hMiniPanel = (HWND)SendMessage(hWnd, WM_FITTLE, GET_MINIPANEL, 0);
-//	if(m_hMiniPanel){
-//		SendMessage(m_hMiniPanel, WM_COMMAND, MAKEWPARAM(IDCANCEL, 0), 0);
-//		return;
-//	}
 	if(IsIconic(hWnd) || !IsWindowVisible(hWnd)){
 		if(m_bTrayFlag && g_cfg.nTrayOpt==1){
 			Shell_NotifyIcon(NIM_DELETE, &m_ni);
@@ -2423,17 +2431,9 @@ static DWORD CALLBACK MainStreamProc(HSTREAM /*handle*/, void *buf, DWORD len, v
 	if(BASS_ChannelIsActive(g_cInfo[g_bNow].hChan)){
 		r = BASS_ChannelGetData(g_cInfo[g_bNow].hChan, buf, len);
 		if(m_bCueEnd || !BASS_ChannelIsActive(g_cInfo[g_bNow].hChan)){
+			m_bCueEnd = FALSE;
 
-			EnterCriticalSection(&m_cs);
-
-			// ファイル切り替え
-			g_bNow = !g_bNow;
-			// 開放
-			FreeChannelInfo(!g_bNow);
-			PostMessage(GetParent(m_hStatus), WM_USER+1, 0, 0); 
-
-			LeaveCriticalSection(&m_cs);
-
+			PostMessage(GetParent(m_hStatus), WM_COMMAND, MAKEWPARAM(IDM_PLAY_NEXT, 0), 0);
 		}
 	}else{
 		r = BASS_STREAMPROC_END;
@@ -2468,8 +2468,6 @@ static BOOL PlayByUser(HWND hWnd, struct FILEINFO *pPlayFile){
 		m_hChanOut = CreateMainStream(&info);
 
 		OnStatusChangePlugins();
-//		HWND m_hMiniPanel = (HWND)SendMessage(hWnd, WM_FITTLE, GET_MINIPANEL, 0);
-//		SendMessage(m_hMiniPanel, WM_USER+3, 0, 1);
 
 		// シークバー用タイマー作成
 		SetTimer(hWnd, ID_SEEKTIMER, 500, NULL);
@@ -2489,7 +2487,7 @@ static BOOL PlayByUser(HWND hWnd, struct FILEINFO *pPlayFile){
 // 次のファイルをオープンする関数(99％地点で発動)
 static void CALLBACK EventSync(HSYNC /*handle*/, DWORD /*channel*/, DWORD /*data*/, void *user){
 	if(user==0){
-		PostMessage(GetParent(m_hStatus), WM_COMMAND, MAKEWPARAM(IDM_SYNC_NEXT, 0), 0);
+		PostMessage(GetParent(m_hStatus), WM_COMMAND, MAKEWPARAM(IDM_SETUP_NEXT, 0), 0);
 	}else{
 		m_bCueEnd = TRUE;
 	}
@@ -2502,8 +2500,6 @@ static void OnChangeTrack(){
 	char szShortTag[64] = {0};
 	char szTitleCap[524] = {0};
 	BASS_CHANNELINFO info;
-
-	m_bCueEnd = FALSE;
 
 	// 99％までいかなかった場合
 	if(m_nGaplessState==GS_NOEND){
@@ -2616,8 +2612,6 @@ static void OnChangeTrack(){
 		ShowToolTip(GetParent(m_hStatus), m_hTitleTip, m_ni.szTip);
 
 	OnTrackChagePlugins();
-//	HWND m_hMiniPanel = (HWND)SendMessage(GetParent(m_hStatus), WM_FITTLE, GET_MINIPANEL, 0);
-//	PostMessage(m_hMiniPanel, WM_USER+3, 0, 3);
 
 	m_pNext = NULL;	// 消去
 	return;
@@ -2773,7 +2767,6 @@ static BOOL _BASS_ChannelSetPosition(DWORD handle, int nPos){
 	}
 
 	SendMessage(m_hToolBar,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(FALSE, 0));
-	//if(m_hMiniTool) SendMessage(m_hMiniTool,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(FALSE, 0));
 	return bRet;
 }
 
@@ -2825,8 +2818,6 @@ static int FilePause(){
 
 	// プラグインを呼ぶ
 	OnStatusChangePlugins();
-//	HWND m_hMiniPanel = (HWND)SendMessage(GetParent(m_hStatus), WM_FITTLE, GET_MINIPANEL, 0);
-//	SendMessage(m_hMiniPanel, WM_USER+3, (dMode==BASS_ACTIVE_PLAYING?TRUE:FALSE), 2);
 
 	return 0;
 }
@@ -2856,7 +2847,6 @@ static int StopOutputStream(HWND hWnd){
 	SendMessage(m_hSeek, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)0);
 	//ツールバー
 	SendMessage(m_hToolBar,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(FALSE, 0));
-	//if(m_hMiniTool) SendMessage(m_hMiniTool,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(FALSE, 0));
 	
 	//文字列表示関係
 	SetWindowText(hWnd, FITTLE_VERSION);
@@ -2880,8 +2870,6 @@ static int StopOutputStream(HWND hWnd){
 
 	// プラグインを呼ぶ
 	OnStatusChangePlugins();
-//	HWND m_hMiniPanel = (HWND)SendMessage(hWnd, WM_FITTLE, GET_MINIPANEL, 0);
-//	SendMessage(m_hMiniPanel, WM_USER+3, 0, 0);
 
 	return 0;
 }
@@ -2899,7 +2887,6 @@ static int ControlPlayMode(HMENU hMenu, int nMode){
 	if(i++==nMode){
 		mii.fState = MFS_CHECKED;
 		SendMessage(m_hToolBar,  TB_CHANGEBITMAP, (WPARAM)IDM_PM_TOGGLE, (LPARAM)MAKELONG(5, 0));
-		//if(m_hMiniTool) SendMessage(m_hMiniTool,  TB_CHANGEBITMAP, (WPARAM)IDM_PM_TOGGLE, (LPARAM)MAKELONG(5, 0));
 	}
 	SetMenuItemInfo(hMenu, IDM_PM_LIST, FALSE, &mii);
 	SetMenuItemInfo(m_hTrayMenu, IDM_PM_LIST, FALSE, &mii);
@@ -2907,7 +2894,6 @@ static int ControlPlayMode(HMENU hMenu, int nMode){
 	if(i++==nMode){
 		mii.fState = MFS_CHECKED;
 		SendMessage(m_hToolBar,  TB_CHANGEBITMAP, (WPARAM)IDM_PM_TOGGLE, (LPARAM)MAKELONG(7, 0));
-		//if(m_hMiniTool) SendMessage(m_hMiniTool,  TB_CHANGEBITMAP, (WPARAM)IDM_PM_TOGGLE, (LPARAM)MAKELONG(7, 0));
 	}
 	SetMenuItemInfo(hMenu, IDM_PM_RANDOM, FALSE, &mii);
 	SetMenuItemInfo(m_hTrayMenu, IDM_PM_RANDOM, FALSE, &mii);
@@ -2915,12 +2901,10 @@ static int ControlPlayMode(HMENU hMenu, int nMode){
 	if(i++==nMode){
 		mii.fState = MFS_CHECKED;
 		SendMessage(m_hToolBar,  TB_CHANGEBITMAP, (WPARAM)IDM_PM_TOGGLE, (LPARAM)MAKELONG(8, 0));
-		//if(m_hMiniTool) SendMessage(m_hMiniTool,  TB_CHANGEBITMAP, (WPARAM)IDM_PM_TOGGLE, (LPARAM)MAKELONG(8, 0));
 	}
 	SetMenuItemInfo(hMenu, IDM_PM_SINGLE, FALSE, &mii);
 	SetMenuItemInfo(m_hTrayMenu, IDM_PM_SINGLE, FALSE, &mii);
 	InvalidateRect(m_hToolBar, NULL, TRUE);
-	//if(m_hMiniTool)	InvalidateRect(m_hMiniTool, NULL, TRUE);
 	return 0;
 }
 
@@ -2934,12 +2918,10 @@ static BOOL ToggleRepeatMode(HMENU hMenu){
 		m_nRepeatFlag = FALSE;
 		mii.fState = MFS_UNCHECKED;
 		SendMessage(m_hToolBar, TB_CHECKBUTTON, (WPARAM)IDM_PM_REPEAT, (LPARAM)MAKELONG(FALSE, 0));
-		//if(m_hMiniTool) SendMessage(m_hMiniTool,  TB_CHECKBUTTON, (WPARAM)IDM_PM_REPEAT, (LPARAM)MAKELONG(FALSE, 0));
 	}else{
 		m_nRepeatFlag = TRUE;
 		mii.fState = MFS_CHECKED;
 		SendMessage(m_hToolBar, TB_CHECKBUTTON, (WPARAM)IDM_PM_REPEAT, (LPARAM)MAKELONG(TRUE, 0));
-		//if(m_hMiniTool) SendMessage(m_hMiniTool,  TB_CHECKBUTTON, (WPARAM)IDM_PM_REPEAT, (LPARAM)MAKELONG(TRUE, 0));
 	}
 	SetMenuItemInfo(hMenu, IDM_PM_REPEAT, FALSE, &mii);
 	SetMenuItemInfo(m_hTrayMenu, IDM_PM_REPEAT, FALSE, &mii);
