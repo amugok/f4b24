@@ -45,6 +45,7 @@ static HMODULE m_hinstDLL = 0;
 static HWND m_hMiniTool = NULL;		// ミニパネルツールバー
 static HWND m_hMiniPanel = NULL;	// ミニパネルハンドル
 static WNDPROC m_hOldProc = 0;
+static HIMAGELIST m_hImageList = NULL;
 
 static int m_nTitleDisplayPos = 1;
 static char m_szTime[100];			// 再生時間
@@ -161,35 +162,35 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 	return TRUE;
 }
 
+LRESULT FittlePluginInterface(int nCommand){
+	return SendMessage(fpi.hParent, WM_FITTLE, nCommand, 0);
+}
 
+static int IsCheckedMainMenu(int nCommand){
+	HMENU hMainMenu = (HMENU)FittlePluginInterface(GET_MENU);
+	return (GetMenuState(hMainMenu, nCommand, MF_BYCOMMAND) & MF_CHECKED) != 0;
+}
 
-static int GetPlayMode()
-{
-	HMENU hMainMenu = (HMENU)SendMessage(fpi.hParent, WM_FITTLE, GET_MENU, 0);
-	if (GetMenuState(hMainMenu, IDM_PM_LIST, MF_BYCOMMAND) & MF_CHECKED)
+static int GetPlayMode(){
+	if (IsCheckedMainMenu(IDM_PM_LIST))
 		return PM_LIST;
-	if (GetMenuState(hMainMenu, IDM_PM_RANDOM, MF_BYCOMMAND) & MF_CHECKED)
+	if (IsCheckedMainMenu(IDM_PM_RANDOM))
 		return PM_RANDOM;
-	if (GetMenuState(hMainMenu, IDM_PM_SINGLE, MF_BYCOMMAND) & MF_CHECKED)
+	if (IsCheckedMainMenu(IDM_PM_SINGLE))
 		return PM_SINGLE;
 	/* 不明の再生モード */
 	return PM_LIST;
 }
 
-static int GetRepeatFlag()
-{
-	HMENU hMainMenu = (HMENU)SendMessage(fpi.hParent, WM_FITTLE, GET_MENU, 0);
-	if (GetMenuState(hMainMenu, IDM_PM_REPEAT, MF_BYCOMMAND) & MF_CHECKED)
-		return TRUE;
-	return FALSE;
+static int GetRepeatFlag(){
+	return IsCheckedMainMenu(IDM_PM_REPEAT) ? TRUE : FALSE;
 }
 
-static void UpdatePanelTitle()
-{
+static void UpdatePanelTitle(){
 	static char szNull[1] = { 0 };
-	char *ptitle = (char *)SendMessage(fpi.hParent, WM_FITTLE, GET_TITLE, 0);
-	char *partist = (char *)SendMessage(fpi.hParent, WM_FITTLE, GET_ARTIST, 0);
-	if (!ptitle || !ptitle[0]) ptitle = (char *)SendMessage(fpi.hParent, WM_FITTLE, GET_PLAYING_PATH, 0);
+	char *ptitle = (char *)FittlePluginInterface(GET_TITLE);
+	char *partist = (char *)FittlePluginInterface(GET_ARTIST);
+	if (!ptitle || !ptitle[0]) ptitle = (char *)FittlePluginInterface(GET_PLAYING_PATH);
 	if (!ptitle) ptitle = szNull;
 	if (!partist) partist = szNull;
 
@@ -206,24 +207,47 @@ static void UpdatePanelTitle()
 	}
 }
 
-static void UpdatePanelTime()
-{
-	int nPos = SendMessage(fpi.hParent, WM_FITTLE, GET_POSITION, 0);
-	int nLen = SendMessage(fpi.hParent, WM_FITTLE, GET_DURATION, 0);
+static void UpdatePanelTime(){
+	int nPos = FittlePluginInterface(GET_POSITION);
+	int nLen = FittlePluginInterface(GET_DURATION);
 	if (nPos >= 0 && nLen >= 0)
 		wsprintf(m_szTime, "\t%02d:%02d / %02d:%02d", nPos/60, nPos%60, nLen/60, nLen%60);
 	else
 		m_szTag[0] = 0;
-		//wsprintf(m_szTime, "\t--:-- / --:--");
 }
 
-static void SendCommand(int nCommand)
-{
-	SendMessage(fpi.hParent, WM_COMMAND, MAKEWPARAM(nCommand, 0), 0);
+static void SendCommandMessage(HWND hwnd, int nCommand){
+	if (hwnd && IsWindow(hwnd))
+		SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(nCommand, 0), 0);
 }
-static void PanelClose()
-{
-	if (m_hMiniPanel) SendMessage(m_hMiniPanel, WM_COMMAND, MAKEWPARAM(IDCANCEL,0), 0);
+
+static void SendCommand(int nCommand){
+	SendCommandMessage(fpi.hParent, nCommand);
+}
+static void PanelClose(){
+	SendCommandMessage(m_hMiniPanel, IDCANCEL);
+}
+
+static void FreeImageList(){
+	if (m_hImageList){
+		if (m_hMiniTool && IsWindow(m_hMiniTool)){
+			SendMessage(m_hMiniTool, TB_SETIMAGELIST, 0, (LPARAM)0);
+		}
+		ImageList_Destroy(m_hImageList);
+		m_hImageList = NULL;
+	}
+}
+
+static void FreeMiniMenu(){
+	if (hMiniMenu){
+		DestroyMenu(hMiniMenu);
+		hMiniMenu = 0;
+	}
+}
+
+static void SetMiniToolCheck(int nCommand, int nSwitch){
+	if (m_hMiniTool && IsWindow(m_hMiniTool))
+		SendMessage(m_hMiniTool,  TB_CHECKBUTTON, (WPARAM)nCommand, (LPARAM)MAKELONG(nSwitch, 0));
 }
 
 // サブクラス化したウィンドウプロシージャ
@@ -263,8 +287,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			break;
 		}
 	case WM_FITTLE:
-		if (wp == GET_MINIPANEL)
-		{
+		if (wp == GET_MINIPANEL)		{
 			return (m_hMiniPanel && IsWindow(m_hMiniPanel)) ? (LRESULT)m_hMiniPanel : (LRESULT)0;
 		}
 		break;
@@ -277,11 +300,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 /* 起動時に一度だけ呼ばれます */
 static BOOL OnInit(){
-	HMENU hMainMenu = (HMENU)SendMessage(fpi.hParent, WM_FITTLE, GET_MENU, 0);
+	HMENU hMainMenu = (HMENU)FittlePluginInterface(GET_MENU);
 	EnableMenuItem(hMainMenu, IDM_MINIPANEL, MF_BYCOMMAND | MF_ENABLED);
 
 	hMiniMenu = LoadMenu(m_hinstDLL, "TRAYMENU");
-
 	m_hOldProc = (WNDPROC)SetWindowLong(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
 
 	LoadState();
@@ -292,10 +314,8 @@ static BOOL OnInit(){
 /* 終了時に一度だけ呼ばれます */
 static void OnQuit(){
 	SaveState();
-	if (hMiniMenu){
-		DestroyMenu(hMiniMenu);
-		hMiniMenu = 0;
-	}
+	FreeImageList();
+	FreeMiniMenu();
 	return;
 }
 
@@ -311,21 +331,21 @@ static void OnTrackChange(){
 static void OnStatusChange(){
 	if (m_hMiniPanel)
 	{
-		switch (SendMessage(fpi.hParent, WM_FITTLE, GET_STATUS, 0)){
+		switch (FittlePluginInterface(GET_STATUS)){
 		case 0/*BASS_ACTIVE_STOPPED*/:
-			if (m_hMiniTool) SendMessage(m_hMiniTool,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(FALSE, 0));
+			SetMiniToolCheck(IDM_PAUSE, FALSE);
 			KillTimer(m_hMiniPanel, ID_SEEKTIMER);
 			InvalidateRect(m_hMiniPanel, NULL, TRUE);
 			m_szTag[0] = 0;
 			break;
 		case 1/*BASS_ACTIVE_PLAYING*/:
 		case 2/*BASS_ACTIVE_STALLED*/:
-			if (m_hMiniTool) SendMessage(m_hMiniTool,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(FALSE, 0));
+			SetMiniToolCheck(IDM_PAUSE, FALSE);
 			SetTimer(m_hMiniPanel, ID_SEEKTIMER, 500, 0);
 			InvalidateRect(m_hMiniPanel, NULL, FALSE);
 			break;
 		case 3/*BASS_ACTIVE_PAUSED*/:
-			if (m_hMiniTool) SendMessage(m_hMiniTool,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(TRUE, 0));
+			SetMiniToolCheck(IDM_PAUSE, TRUE);
 			KillTimer(m_hMiniPanel, ID_SEEKTIMER);
 			break;
 		}
@@ -354,7 +374,6 @@ __declspec(dllexport) FITTLE_PLUGIN_INFO *GetPluginInfo(){
 #define TB_BMP_NUM 9
 // ツールバーの作成
 static HWND CreateToolBar(HWND hRebar){
-	HIMAGELIST hToolImage;
 	HBITMAP hBmp;
 	TBBUTTON tbb[] = {
 		{0, IDM_PLAY, TBSTATE_ENABLED, TBSTYLE_BUTTON, 0L, 0},
@@ -382,12 +401,13 @@ static HWND CreateToolBar(HWND hRebar){
 	if(hBmp==NULL)	hBmp = LoadBitmap(m_hinstDLL, (char *)IDR_TOOLBAR1);
 	
 	//SendMessage(hToolBar, TB_AUTOSIZE, 0, 0) ;
-	
-	hToolImage = ImageList_Create(16, 16, ILC_COLOR16 | ILC_MASK, TB_BMP_NUM, 0);
-	ImageList_AddMasked(hToolImage, hBmp, RGB(0,255,0)); //緑を背景色に
+
+	FreeImageList();
+	m_hImageList = ImageList_Create(16, 16, ILC_COLOR16 | ILC_MASK, TB_BMP_NUM, 0);
+	ImageList_AddMasked(m_hImageList, hBmp, RGB(0,255,0)); //緑を背景色に
 
 	DeleteObject(hBmp);
-	SendMessage(hToolBar, TB_SETIMAGELIST, 0, (LPARAM)hToolImage);
+	SendMessage(hToolBar, TB_SETIMAGELIST, 0, (LPARAM)m_hImageList);
 	
 	SendMessage(hToolBar, TB_SETEXTENDEDSTYLE, 0, (LPARAM)TBSTYLE_EX_DRAWDDARROWS);
 	SendMessage(hToolBar, TB_ADDBUTTONS, (WPARAM)TB_BTN_NUM, (LPARAM)&tbb);
@@ -529,7 +549,7 @@ static void UpdateMenuRepeatMode(){
 
 static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 	HGDIOBJ hOldFont;
-	static HFONT s_hFont;
+	static HFONT s_hFont = 0;
 	static int s_nToolWidth = 0;
 
 	switch (msg)
@@ -568,17 +588,17 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			SET_SUBCLASS(m_hMiniTool, NewMiniToolProc);	// 仕方ないからサブクラス化
 
 			m_nTitleDisplayPos = 1;
-			switch (SendMessage(fpi.hParent, WM_FITTLE, GET_STATUS, 0)){
+			switch (FittlePluginInterface(GET_STATUS)){
 			case 0/*BASS_ACTIVE_STOPPED*/:
-				SendMessage(m_hMiniTool,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(FALSE, 0));
+				SetMiniToolCheck(IDM_PAUSE, FALSE);
 				break;
 			case 1/*BASS_ACTIVE_PLAYING*/:
 			case 2/*BASS_ACTIVE_STALLED*/:
-				SendMessage(m_hMiniTool,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(FALSE, 0));
+				SetMiniToolCheck(IDM_PAUSE, FALSE);
 				SetTimer(hDlg, ID_SEEKTIMER, 500, 0);
 				break;
 			case 3/*BASS_ACTIVE_PAUSED*/:
-				SendMessage(m_hMiniTool,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(TRUE, 0));
+				SetMiniToolCheck(IDM_PAUSE, TRUE);
 				break;
 			}
 			return TRUE;
@@ -678,10 +698,12 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			return TRUE;
 
 		case WM_COMMAND:
-			switch(LOWORD(wp))
-			{
+			switch(LOWORD(wp)){
 				case IDCANCEL:
-					DeleteObject(s_hFont);
+					if (s_hFont){
+						DeleteObject(s_hFont);
+						s_hFont = 0;
+					}
 					KillTimer(hDlg, ID_SEEKTIMER);
 
 					nMiniPanelEnd = 0;
