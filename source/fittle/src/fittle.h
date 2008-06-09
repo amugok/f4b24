@@ -126,14 +126,9 @@ struct CONFIG{
 	int nTabBottom;
 	int nOut32bit;
 	int nFadeOut;
-	int nMiniPanel_x;
-	int nMiniPanel_y;
+
 	int nMiniPanelEnd;
-	int nMiniTop;
-	int nMiniWidth;
-	int nMiniScroll;
-	int nMiniTimeShow;
-	int nMiniToolShow;
+
 	char szStartPath[MAX_FITTLE_PATH];	// スタートアップパス
 	char szTypeList[MAX_EXT_COUNT][5];		// 検索拡張子
 	char szBMPath[MAX_BM_SIZE][MAX_FITTLE_PATH];	// しおり

@@ -2091,14 +2091,9 @@ static void LoadConfig(){
 	g_cfg.nTextColor = (int)GetPrivateProfileInt("Color", "TextColor", (int)GetSysColor(COLOR_WINDOWTEXT), m_szINIPath);
 	g_cfg.nPlayTxtCol = (int)GetPrivateProfileInt("Color", "PlayTxtCol", (int)RGB(0xFF, 0, 0), m_szINIPath);
 	g_cfg.nPlayBkCol = (int)GetPrivateProfileInt("Color", "PlayBkCol", (int)RGB(230, 234, 238), m_szINIPath);
-	g_cfg.nMiniPanel_x = (int)GetPrivateProfileInt("MiniPanel", "x", 0, m_szINIPath);
-	g_cfg.nMiniPanel_y = (int)GetPrivateProfileInt("MiniPanel", "y", 0, m_szINIPath);
+
 	g_cfg.nMiniPanelEnd = (int)GetPrivateProfileInt("MiniPanel", "End", 0, m_szINIPath);
-	g_cfg.nMiniTop = (int)GetPrivateProfileInt("MiniPanel", "TopMost", 1, m_szINIPath);
-	g_cfg.nMiniWidth = (int)GetPrivateProfileInt("MiniPanel", "Width", 402, m_szINIPath);
-	g_cfg.nMiniScroll = (int)GetPrivateProfileInt("MiniPanel", "Scroll", 1, m_szINIPath);
-	g_cfg.nMiniTimeShow = (int)GetPrivateProfileInt("MiniPanel", "TimeShow", 1, m_szINIPath);
-	g_cfg.nMiniToolShow = (int)GetPrivateProfileInt("MiniPanel", "ToolShow", 1, m_szINIPath);
+
 	// グリッドライン
 	g_cfg.nGridLine = GetPrivateProfileInt("Main", "GridLine", 1, m_szINIPath);
 	g_cfg.nSingleExpand = GetPrivateProfileInt("Main", "SingleExp", 0, m_szINIPath);
@@ -2236,14 +2231,7 @@ static void SaveConfig(HWND hWnd){
 	WritePrivateProfileInt("Main", "TabMulti", g_cfg.nTabMulti, m_szINIPath);
 	WritePrivateProfileInt("Main", "Out32bit", g_cfg.nOut32bit, m_szINIPath);
 	WritePrivateProfileInt("Main", "FadeOut", g_cfg.nFadeOut, m_szINIPath);
-	WritePrivateProfileInt("MiniPanel", "x", g_cfg.nMiniPanel_x, m_szINIPath);
-	WritePrivateProfileInt("MiniPanel", "y", g_cfg.nMiniPanel_y, m_szINIPath);
 	WritePrivateProfileInt("MiniPanel", "End", g_cfg.nMiniPanelEnd, m_szINIPath);
-	WritePrivateProfileInt("MiniPanel", "TopMost", g_cfg.nMiniTop, m_szINIPath);
-	WritePrivateProfileInt("MiniPanel", "Width", g_cfg.nMiniWidth, m_szINIPath);
-	WritePrivateProfileInt("MiniPanel", "Scroll", g_cfg.nMiniScroll, m_szINIPath);
-	WritePrivateProfileInt("MiniPanel", "TimeShow", g_cfg.nMiniTimeShow, m_szINIPath);
-	WritePrivateProfileInt("MiniPanel", "ToolShow", g_cfg.nMiniToolShow, m_szINIPath);
 	WritePrivateProfileInt("Font", "Height", g_cfg.nFontHeight, m_szINIPath);
 	WritePrivateProfileInt("Font", "Style", g_cfg.nFontStyle, m_szINIPath);
 	WritePrivateProfileInt("Color", "PlayView", g_cfg.nPlayView, m_szINIPath);
@@ -4252,14 +4240,10 @@ static BOOL CALLBACK GeneralSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 			SendDlgItemMessage(hDlg, IDC_CHECK4, BM_SETCHECK, (WPARAM)g_cfg.nHighTask, 0);
 			SendDlgItemMessage(hDlg, IDC_CHECK5, BM_SETCHECK, (WPARAM)g_cfg.nCloseMin, 0);
 			SendDlgItemMessage(hDlg, IDC_CHECK6, BM_SETCHECK, (WPARAM)g_cfg.nZipSearch, 0);
-			SendDlgItemMessage(hDlg, IDC_CHECK7, BM_SETCHECK, (WPARAM)g_cfg.nMiniTop, 0);
-			SendDlgItemMessage(hDlg, IDC_CHECK8, BM_SETCHECK, (WPARAM)g_cfg.nMiniTimeShow, 0);
-			SendDlgItemMessage(hDlg, IDC_CHECK9, BM_SETCHECK, (WPARAM)g_cfg.nMiniScroll, 0);
 			for(i=1;i<=60;i++){
 				wsprintf(szBuff, "%d", i);
 				SendDlgItemMessage(hDlg, IDC_COMBO1, CB_ADDSTRING, (WPARAM)0, (LPARAM)szBuff);
 			}
-			SendDlgItemMessage(hDlg, IDC_CHECK11, BM_SETCHECK, (WPARAM)g_cfg.nMiniToolShow, 0);
 			SendDlgItemMessage(hDlg, IDC_COMBO1, CB_SETCURSEL, (WPARAM)g_cfg.nSeekAmount-1, (LPARAM)0);
 
 			DWORD floatable; // floating-point channel support? 0 = no, else yes
@@ -4288,10 +4272,7 @@ static BOOL CALLBACK GeneralSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 				}
 				g_cfg.nCloseMin = (int)SendDlgItemMessage(hDlg, IDC_CHECK5, BM_GETCHECK, 0, 0);
 				g_cfg.nZipSearch = (int)SendDlgItemMessage(hDlg, IDC_CHECK6, BM_GETCHECK, 0, 0);
-				g_cfg.nMiniTop = (int)SendDlgItemMessage(hDlg, IDC_CHECK7, BM_GETCHECK, 0, 0);
-				g_cfg.nMiniTimeShow = (int)SendDlgItemMessage(hDlg, IDC_CHECK8, BM_GETCHECK, 0, 0);
-				g_cfg.nMiniScroll = (int)SendDlgItemMessage(hDlg, IDC_CHECK9, BM_GETCHECK, 0, 0);
-				g_cfg.nMiniToolShow = (int)SendDlgItemMessage(hDlg, IDC_CHECK11, BM_GETCHECK, 0, 0);
+
 				g_cfg.nSeekAmount = GetDlgItemInt(hDlg, IDC_COMBO1, NULL, FALSE);
 				g_cfg.nOut32bit = (int)SendDlgItemMessage(hDlg, IDC_CHECK13, BM_GETCHECK, 0, 0);
 				g_cfg.nFadeOut = (int)SendDlgItemMessage(hDlg, IDC_CHECK14, BM_GETCHECK, 0, 0);

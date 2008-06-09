@@ -477,18 +477,6 @@ BEGIN
     LTEXT           "秒",IDC_STATIC,40,162,10,12
     LTEXT           "一度にシークする量を指定してください\n単位は秒で1～60の間で指定できます",
                     IDC_STATIC,56,157,133,18
-    GROUPBOX        "ミニパネル",IDC_STATIC,7,184,193,63,NOT WS_VISIBLE
-    CONTROL         "常に手前に表示する",IDC_CHECK7,"Button",BS_AUTOCHECKBOX | 
-                    NOT WS_VISIBLE | WS_GROUP | WS_TABSTOP,12,195,180,11
-    CONTROL         "経過時間/再生時間を表示する",IDC_CHECK8,"Button",
-                    BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_GROUP | WS_TABSTOP,
-                    12,207,180,11
-    CONTROL         "長いタイトルをスクロールする",IDC_CHECK9,"Button",
-                    BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_GROUP | WS_TABSTOP,
-                    12,219,180,11
-    CONTROL         "ツールバーアイコンを表示する",IDC_CHECK11,"Button",
-                    BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_GROUP | WS_TABSTOP,
-                    12,231,180,11
 END
 
 HOTKEY_SHEET DIALOGEX 0, 0, 201, 175
