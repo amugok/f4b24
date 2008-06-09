@@ -20,6 +20,6 @@ goto exitcmd
 
 :buildall
 
-call %0 minipane /MD
+call %0 fittle /MD
 
 :exitcmd
