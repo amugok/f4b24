@@ -77,8 +77,8 @@ static BOOL CALLBACK AddURLDlgProc(HWND, UINT, WPARAM, LPARAM);
 static DWORD CALLBACK MainStreamProc(HSTREAM, void *, DWORD, void *);
 static void CALLBACK EventSync(HSYNC, DWORD, DWORD, void *);
 // コントロール関係
-static void LoadConfig();
-static void SaveConfig(HWND);
+static void LoadState();
+static void SaveState(HWND);
 static void DoTrayClickAction(HWND, int);
 static void PopupTrayMenu(HWND);
 static void PopupPlayModeMenu(HWND, NMTOOLBAR *);
@@ -261,7 +261,7 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 	wc.lpszClassName = (LPCSTR)szClassName;
 	if(!RegisterClassEx(&wc)) return 0;
 
-	LoadConfig();
+	LoadState();
 
 	// ウィンドウ作成
 	hWnd = CreateWindow(szClassName,
@@ -734,7 +734,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			// クリティカルセクションを削除
 			DeleteCriticalSection(&m_cs);
 
-			SaveConfig(hWnd);
+			SaveState(hWnd);
 			SavePlaylists(m_hTab);
 
 			if(m_bTrayFlag){
@@ -2080,7 +2080,7 @@ static void PopupPlayModeMenu(HWND hWnd, NMTOOLBAR *lpnmtb){
 }
 
 // グローバルな設定を読み込む
-static void LoadConfig(){
+static void LoadState(){
 	int i;
 	char szSec[10];
 
@@ -2180,7 +2180,7 @@ static void LoadConfig(){
 }
 
 // 設定を保存
-static void SaveConfig(HWND hWnd){
+static void SaveState(HWND hWnd){
 	int i;
 	char szLastPath[MAX_FITTLE_PATH];
 	char szSec[10];
@@ -2202,14 +2202,17 @@ static void SaveConfig(HWND hWnd){
 	WritePrivateProfileInt("Main", "Repeat", m_nRepeatFlag, m_szINIPath); //リピートモード
 	WritePrivateProfileInt("Main", "Volumes", (int)SendMessage(m_hVolume, TBM_GETPOS, 0, 0), m_szINIPath); //ボリューム
 	WritePrivateProfileInt("Main", "Tray", g_cfg.nTrayOpt, m_szINIPath); //タスクトレイモード
+	WritePrivateProfileInt("Main", "ShowStatus", g_cfg.nShowStatus, m_szINIPath);
+	WritePrivateProfileInt("Main", "TreeWidth", g_cfg.nTreeWidth, m_szINIPath); //ツリーの幅
+	WritePrivateProfileInt("Main", "TreeState", (g_cfg.nTreeState==TREE_SHOW), m_szINIPath);
+	WritePrivateProfileInt("Main", "MainMenu", (GetMenu(hWnd)?1:0), m_szINIPath);
+	WritePrivateProfileInt("Main", "TabIndex", (m_nPlayTab==-1?TabCtrl_GetCurSel(m_hTab):m_nPlayTab), m_szINIPath);	//TabのIndex
+
+	
+	
 	WritePrivateProfileInt("Main", "Info", g_cfg.nInfoTip, m_szINIPath); //曲名お知らせ
 	WritePrivateProfileInt("Main", "PathTip", g_cfg.nPathTip, m_szINIPath); // ツールチップでフルパスを表示
 	WritePrivateProfileInt("Main", "Priority", g_cfg.nHighTask, m_szINIPath); //システム優先度
-	WritePrivateProfileInt("Main", "TreeWidth", g_cfg.nTreeWidth, m_szINIPath); //ツリーの幅
-	WritePrivateProfileInt("Main", "TreeState", (g_cfg.nTreeState==TREE_SHOW), m_szINIPath);
-	WritePrivateProfileInt("Main", "ShowStatus", g_cfg.nShowStatus, m_szINIPath);
-	WritePrivateProfileInt("Main", "TabIndex", (m_nPlayTab==-1?TabCtrl_GetCurSel(m_hTab):m_nPlayTab), m_szINIPath);	//TabのIndex
-	WritePrivateProfileInt("Main", "MainMenu", (GetMenu(hWnd)?1:0), m_szINIPath);
 	WritePrivateProfileInt("Main", "TreeIcon", g_cfg.nTreeIcon, m_szINIPath);
 	WritePrivateProfileInt("Main", "HideShow", g_cfg.nHideShow, m_szINIPath);
 	WritePrivateProfileInt("Main", "AllSub", g_cfg.nAllSub, m_szINIPath);
