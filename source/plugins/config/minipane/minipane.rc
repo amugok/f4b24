@@ -1,6 +1,6 @@
 //Microsoft Developer Studio generated resource script.
 //
-#include "minipane_config.rh"
+#include "minipane.rh"
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
@@ -36,7 +36,7 @@ LANGUAGE LANG_JAPANESE, SUBLANG_DEFAULT
 
 1 TEXTINCLUDE MOVEABLE PURE 
 BEGIN
-    "minipane_config.rh\0"
+    "minipane.rh\0"
 END
 
 2 TEXTINCLUDE MOVEABLE PURE 

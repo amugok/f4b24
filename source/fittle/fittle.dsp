@@ -38,8 +38,8 @@ RSC=rc.exe
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 0
-# PROP Output_Dir "..\Release"
-# PROP Intermediate_Dir "..\Release"
+# PROP Output_Dir "Release"
+# PROP Intermediate_Dir "Release"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /YX /FD /c
@@ -53,7 +53,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /machine:I386
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /machine:I386 /out:"../bin/fittle.exe"
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /machine:I386 /out:"../../bin/fittle.exe"
 
 !ELSEIF  "$(CFG)" == "fittle - Win32 Debug"
 
@@ -64,8 +64,8 @@ LINK32=link.exe
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 1
-# PROP Output_Dir "..\Debug"
-# PROP Intermediate_Dir "..\Debug"
+# PROP Output_Dir "Debug"
+# PROP Intermediate_Dir "Debug"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /YX /FD /GZ /c
@@ -79,7 +79,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /debug /machine:I386 /out:"..\bin/fittle.exe" /pdbtype:sept
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /debug /machine:I386 /out:"../../bin/fittle.exe" /pdbtype:sept
 
 !ENDIF 
 
@@ -92,51 +92,51 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=.\fittle\src\archive.cpp
+SOURCE=.\src\archive.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\bass_tag.cpp
+SOURCE=.\src\bass_tag.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\cuesheet.cpp
+SOURCE=.\src\cuesheet.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\dsp.cpp
+SOURCE=.\src\dsp.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\finddlg.cpp
+SOURCE=.\src\finddlg.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\fittle.cpp
+SOURCE=.\src\fittle.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\func.cpp
+SOURCE=.\src\func.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\list.cpp
+SOURCE=.\src\list.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\listtab.cpp
+SOURCE=.\src\listtab.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\mt19937ar.cpp
+SOURCE=.\src\mt19937ar.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\plugins.cpp
+SOURCE=.\src\plugins.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\tree.cpp
+SOURCE=.\src\tree.cpp
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -144,59 +144,59 @@ SOURCE=.\fittle\src\tree.cpp
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE=.\fittle\src\aplugin.h
+SOURCE=.\src\aplugin.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\archive.h
+SOURCE=.\src\archive.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\bass_tag.h
+SOURCE=.\src\bass_tag.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\cuesheet.h
+SOURCE=.\src\cuesheet.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\dsp.h
+SOURCE=.\src\dsp.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\finddlg.h
+SOURCE=.\src\finddlg.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\fittle.h
+SOURCE=.\src\fittle.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\func.h
+SOURCE=.\src\func.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\list.h
+SOURCE=.\src\list.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\listtab.h
+SOURCE=.\src\listtab.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\mt19937ar.h
+SOURCE=.\src\mt19937ar.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\plugin.h
+SOURCE=.\src\plugin.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\plugins.h
+SOURCE=.\src\plugins.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\src\tree.h
+SOURCE=.\src\tree.h
 # End Source File
 # End Group
 # Begin Group "Resource Files"
@@ -204,15 +204,15 @@ SOURCE=.\fittle\src\tree.h
 # PROP Default_Filter "ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
 # Begin Source File
 
-SOURCE=.\fittle\resource\Fittle.ico
+SOURCE=.\resource\Fittle.ico
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\resource\Fittle.rc
+SOURCE=.\resource\Fittle.rc
 # End Source File
 # Begin Source File
 
-SOURCE=.\fittle\resource\toolbar1.bmp
+SOURCE=.\resource\toolbar1.bmp
 # End Source File
 # End Group
 # End Target

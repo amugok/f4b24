@@ -29,7 +29,7 @@
 // ライブラリをリンク
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "shlwapi.lib")
-#pragma comment(lib, "../extra/bass24/bass.lib")
+#pragma comment(lib, "../../extra/bass24/bass.lib")
 
 //--マクロ--
 // 全ての選択状態を解除後、指定インデックスのアイテムを選択、表示

@@ -5,12 +5,12 @@
 
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")
-//#pragma comment(lib,"user32.lib")
+#pragma comment(lib,"user32.lib")
 //#pragma comment(lib,"gdi32.lib")
 //#pragma comment(lib,"shell32.lib")
 #pragma comment(lib,"comctl32.lib")
 #pragma comment(lib,"shlwapi.lib")
-#pragma comment(linker, "/EXPORT:GetAPluginInfo=_GetCPluginInfo@0")
+#pragma comment(linker, "/EXPORT:GetCPluginInfo=_GetCPluginInfo@0")
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/MERGE:.rdata=.text")
@@ -29,6 +29,16 @@ static int nMiniTop;
 static int nMiniScroll;
 static int nMiniTimeShow;
 static int nMiniToolShow;
+
+static DWORD CALLBACK GetConfigPageCount(void);
+static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel);
+
+static CONFIG_PLUGIN_INFO cpinfo = {
+	0,
+	CPDK_VER,
+	GetConfigPageCount,
+	GetConfigPage
+};
 
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
@@ -204,9 +214,11 @@ static BOOL CALLBACK MiniPanePageProc(HWND hWnd , UINT msg , WPARAM wp , LPARAM 
 	return FALSE;
 }
 
-static HPROPSHEETPAGE SetupPage(int nIndex)
-{
-	if (nIndex == 0)
+static DWORD CALLBACK GetConfigPageCount(void){
+	return 1;
+}
+static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel){
+	if (nIndex == 0 && nLevel == 1)
 	{
 		PROPSHEETPAGE psp[1];
 
@@ -220,9 +232,11 @@ static HPROPSHEETPAGE SetupPage(int nIndex)
 	return 0;
 }
 
-extern "C" void * CALLBACK GetCPluginInfo(void)
-{
-	return 0;
+#ifdef __cplusplus
+extern "C"
+#endif
+CONFIG_PLUGIN_INFO * CALLBACK GetCPluginInfo(void){
+	return &cpinfo;
 }
 
 
