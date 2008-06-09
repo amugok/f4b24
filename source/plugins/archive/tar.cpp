@@ -1,7 +1,7 @@
-#include "../fittle/src/aplugin.h"
+#include "../../fittle/src/aplugin.h"
 #include <shlwapi.h>
 #include <time.h>
-#include "../../extra/unlha32/UNLHA32.H"
+#include "../../../extra/unlha32/UNLHA32.H"
 
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")

@@ -1,9 +1,9 @@
-#include "../fittle/src/aplugin.h"
+#include "../../fittle/src/aplugin.h"
 #include <shlwapi.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include "../../extra/cabsdk/FDI.h"
+#include "../../../extra/cabsdk/FDI.h"
 
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")

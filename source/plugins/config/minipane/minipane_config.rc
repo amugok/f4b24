@@ -15,7 +15,7 @@
 #ifndef IDC_STATIC
 # define IDC_STATIC -1
 #endif
-#include "../fittle/resource/resource.h"
+#include "../../../fittle/resource/resource.h"
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
 
@@ -49,7 +49,7 @@ BEGIN
     "#ifndef IDC_STATIC\r\n"
     "# define IDC_STATIC -1\r\n"
     "#endif\r\n"
-    "#include ""../fittle/resource/resource.h""\0"
+    "#include ""../../../fittle/resource/resource.h""\0"
 END
 
 3 TEXTINCLUDE MOVEABLE PURE 
@@ -59,52 +59,6 @@ BEGIN
 END
 
 #endif    // APSTUDIO_INVOKED
-
-
-#ifndef _MAC
-/////////////////////////////////////////////////////////////////////////////
-//
-// Version
-//
-
-VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,0,0,0
- PRODUCTVERSION 0,0,0,0
- FILEFLAGSMASK 0x3fL
-#ifdef _DEBUG
- FILEFLAGS 0x1L
-#else
- FILEFLAGS 0x0L
-#endif
- FILEOS 0x40004L
- FILETYPE 0x2L
- FILESUBTYPE 0x0L
-BEGIN
-    BLOCK "StringFileInfo"
-    BEGIN
-        BLOCK "041104b0"
-        BEGIN
-            VALUE "Comments", "minipane_config\0"
-            VALUE "CompanyName", "\0"
-            VALUE "FileDescription", "minipane_config\0"
-            VALUE "FileVersion", "0, 0, 0, 0\0"
-            VALUE "InternalName", "minipane_config\0"
-            VALUE "LegalCopyright", "\0"
-            VALUE "LegalTrademarks", "\0"
-            VALUE "OriginalFilename", "minipane.fcp\0"
-            VALUE "PrivateBuild", "\0"
-            VALUE "ProductName", "Fittle\0"
-            VALUE "ProductVersion", "0, 0, 0, 0\0"
-            VALUE "SpecialBuild", "\0"
-        END
-    END
-    BLOCK "VarFileInfo"
-    BEGIN
-        VALUE "Translation", 0x411, 1200
-    END
-END
-
-#endif    // !_MAC
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -121,14 +75,6 @@ BEGIN
         RIGHTMARGIN, 200
         TOPMARGIN, 7
         BOTTOMMARGIN, 198
-    END
-
-    "CONFIG_DIALOG", DIALOG
-    BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 200
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 204
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -175,16 +121,6 @@ BEGIN
     COMBOBOX        IDC_COMBO6,78,175,85,103,CBS_DROPDOWNLIST | WS_VSCROLL | 
                     WS_TABSTOP
     LTEXT           "中ダブルクリック",IDC_STATIC,10,177,62,12
-END
-
-CONFIG_DIALOG DIALOGEX 0, 0, 207, 211
-STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION
-CAPTION "設定"
-FONT 9, "ＭＳ Ｐゴシック", 0, 0, 0x1
-BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,90,190,50,14
-    PUSHBUTTON      "キャンセル",IDCANCEL,150,190,50,14
-    CONTROL         "",IDC_TAB1,"SysTabControl32",0x0,7,7,193,178
 END
 
 #endif    // 日本語 resources

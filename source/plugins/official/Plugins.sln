@@ -7,8 +7,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gesture", "gesture\gesture.
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "timecap", "timecap\timecap.vcproj", "{678F03C1-945E-45AA-9F54-723EFD47082B}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "taskvol", "taskvol\taskvol.vcproj", "{98C6F2C6-97FA-4348-9F73-874B5A1C7D46}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bkimg", "bkimg\bkimg.vcproj", "{9435F631-BD23-4624-A277-9C7A7347E7FD}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "opentext", "opentext\opentext.vcproj", "{B4251B00-C94F-4354-B36B-68B7945E89D3}"
@@ -45,10 +43,6 @@ Global
 		{678F03C1-945E-45AA-9F54-723EFD47082B}.Debug|Win32.Build.0 = Debug|Win32
 		{678F03C1-945E-45AA-9F54-723EFD47082B}.Release|Win32.ActiveCfg = Release|Win32
 		{678F03C1-945E-45AA-9F54-723EFD47082B}.Release|Win32.Build.0 = Release|Win32
-		{98C6F2C6-97FA-4348-9F73-874B5A1C7D46}.Debug|Win32.ActiveCfg = Debug|Win32
-		{98C6F2C6-97FA-4348-9F73-874B5A1C7D46}.Debug|Win32.Build.0 = Debug|Win32
-		{98C6F2C6-97FA-4348-9F73-874B5A1C7D46}.Release|Win32.ActiveCfg = Release|Win32
-		{98C6F2C6-97FA-4348-9F73-874B5A1C7D46}.Release|Win32.Build.0 = Release|Win32
 		{9435F631-BD23-4624-A277-9C7A7347E7FD}.Debug|Win32.ActiveCfg = Debug|Win32
 		{9435F631-BD23-4624-A277-9C7A7347E7FD}.Debug|Win32.Build.0 = Debug|Win32
 		{9435F631-BD23-4624-A277-9C7A7347E7FD}.Release|Win32.ActiveCfg = Release|Win32

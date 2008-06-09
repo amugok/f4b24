@@ -1,6 +1,6 @@
-#include "../fittle/src/aplugin.h"
+#include "../../fittle/src/aplugin.h"
 #include <shlwapi.h>
-#include "../../extra/gcasdk/GcaSDK.h"
+#include "../../../extra/gcasdk/GcaSDK.h"
 
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")
@@ -9,7 +9,7 @@
 #pragma comment(lib,"ole32.lib")
 #pragma comment(lib,"comdlg32.lib")
 #pragma comment(lib,"user32.lib")
-#pragma comment(lib,"../../extra/gcasdk/GcaSDK.lib")
+#pragma comment(lib,"../../../extra/gcasdk/GcaSDK.lib")
 #pragma comment(linker, "/EXPORT:GetAPluginInfo=_GetAPluginInfo@0")
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)

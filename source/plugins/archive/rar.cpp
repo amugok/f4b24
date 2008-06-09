@@ -1,12 +1,12 @@
-#include "../fittle/src/aplugin.h"
+#include "../../fittle/src/aplugin.h"
 #include <shlwapi.h>
-#include "../../extra/unrar/unrar.h"
+#include "../../../extra/unrar/unrar.h"
 
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")
 #pragma comment(lib,"user32.lib")
 #pragma comment(lib,"shlwapi.lib")
-#pragma comment(lib,"../../extra/unrar/unrar.lib")
+#pragma comment(lib,"../../../extra/unrar/unrar.lib")
 #pragma comment(linker, "/EXPORT:GetAPluginInfo=_GetAPluginInfo@0")
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)

@@ -1,6 +1,7 @@
-#include "../fittle/resource/resource.h"
-#include "../fittle/src/fittle.h"
-#include "../fittle/src/plugin.h"
+#include "../../../fittle/resource/resource.h"
+#include "../../../fittle/src/fittle.h"
+#include "../../../fittle/src/plugin.h"
+#include "../cplugin.h"
 
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")
