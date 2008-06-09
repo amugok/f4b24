@@ -66,19 +66,27 @@ static CueCharset DetectCharset(HANDLE hFile){
 
 /* xx:xx:xxという表記とハンドルから時間をQWORDで取得 */
 QWORD GetByteFromSecStr(HCHANNEL hChan, char *pszSecStr){
-	int min, sec;
+	int min, sec, frame;
 
 	if(*pszSecStr=='\0'){
 		return BASS_ChannelGetLength(hChan, BASS_POS_BYTE);
 	}
 
 	min = atoi(pszSecStr);
+	sec = 0;
+	frame = 0;
 
-	for(;*pszSecStr!=':';pszSecStr++);
+	while (*pszSecStr && *pszSecStr!=':') pszSecStr++;
 
-	sec = atoi(++pszSecStr);
+	if (*pszSecStr){
+		sec = atoi(++pszSecStr);
+		while (*pszSecStr && *pszSecStr!=':') pszSecStr++;
+		if (*pszSecStr){
+			frame = atoi(++pszSecStr);
+		}
+	}
 
-	return BASS_ChannelSeconds2Bytes(hChan, (float)(min*60+sec));
+	return BASS_ChannelSeconds2Bytes(hChan, (float)((min * 60 + sec) * 75 + frame) / 75.0);
 }
 
 
