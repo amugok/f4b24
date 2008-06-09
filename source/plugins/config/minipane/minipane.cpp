@@ -31,7 +31,7 @@ static int nMiniTimeShow;
 static int nMiniToolShow;
 
 static DWORD CALLBACK GetConfigPageCount(void);
-static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel);
+static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel, char *pszConfigPath, int nConfigPathSize);
 
 static CONFIG_PLUGIN_INFO cpinfo = {
 	0,
@@ -217,7 +217,7 @@ static BOOL CALLBACK MiniPanePageProc(HWND hWnd , UINT msg , WPARAM wp , LPARAM 
 static DWORD CALLBACK GetConfigPageCount(void){
 	return 1;
 }
-static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel){
+static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel, char *pszConfigPath, int nConfigPathSize){
 	if (nIndex == 0 && nLevel == 1)
 	{
 		PROPSHEETPAGE psp[1];
@@ -227,6 +227,7 @@ static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel){
 		psp[0].hInstance = hDLL;
 		psp[0].pszTemplate = TEXT("MINIPANE_SHEET");
 		psp[0].pfnDlgProc = (DLGPROC)MiniPanePageProc;
+		lstrcpyn(pszConfigPath, "plugin/minipane", nConfigPathSize);
 		return CreatePropertySheetPage(psp);
 	}
 	return 0;

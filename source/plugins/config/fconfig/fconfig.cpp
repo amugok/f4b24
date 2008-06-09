@@ -121,7 +121,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				int nIndex = 0;
 				HPROPSHEETPAGE hpspAdd;
 				do{
-					hpspAdd = pCur->GetConfigPage(nIndex++, nLevel);
+					char szPath[64];
+					hpspAdd = pCur->GetConfigPage(nIndex++, nLevel, szPath, 64);
 					if (hpspAdd && nNumPage < nMaxPage){
 						phpage[nNumPage++] = hpspAdd;
 					}

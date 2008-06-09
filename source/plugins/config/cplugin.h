@@ -14,7 +14,7 @@ typedef struct CONFIG_PLUGIN_INFO_TAG {
 	int nCPDKVer;
 
 	DWORD (CALLBACK * GetConfigPageCount)(void);
-	HPROPSHEETPAGE (CALLBACK * GetConfigPage)(int nIndex, int nLevel);
+	HPROPSHEETPAGE (CALLBACK * GetConfigPage)(int nIndex, int nLevel, char *pszConfigPath, int nConfigPathSize);
 
 } CONFIG_PLUGIN_INFO;
 
