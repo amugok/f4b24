@@ -20,6 +20,14 @@
 #include <shlwapi.h>
 #include <tchar.h>
 
+// ソフト名（バージョンアップ時に忘れずに更新）
+#ifndef _DEBUG
+#define FITTLE_VERSION "Fittle Ver.2.2.2 Preview 3 for bass 2.4"
+#else
+#define FITTLE_VERSION "Fittle Ver.2.2.2 <Debug>"
+#endif
+
+
 #ifndef GetWindowLongPtr
 #define GetWindowLongPtr GetWindowLong
 #define SetWindowLongPtr SetWindowLong

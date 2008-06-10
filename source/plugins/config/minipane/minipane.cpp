@@ -1,6 +1,7 @@
 #include "../../../fittle/resource/resource.h"
 #include "../../../fittle/src/fittle.h"
 #include "../../../fittle/src/plugin.h"
+#include "../../../fittle/src/f4b24.h"
 #include "../cplugin.h"
 
 #if defined(_MSC_VER)
@@ -17,8 +18,6 @@
 #pragma comment(linker,"/ENTRY:DllMain")
 #pragma comment(linker,"/OPT:NOWIN98")
 #endif
-
-#define WM_USER_MINIPANEL (WM_USER + 88)
 
 static HMODULE hDLL = 0;
 
@@ -41,11 +40,9 @@ static CONFIG_PLUGIN_INFO cpinfo = {
 };
 
 
-BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
-{
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 	(void)lpvReserved;
-	if (fdwReason == DLL_PROCESS_ATTACH)
-	{
+	if (fdwReason == DLL_PROCESS_ATTACH){
 		hDLL = hinstDLL;
 		DisableThreadLibraryCalls(hinstDLL);
 	}
@@ -53,8 +50,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 }
 
 // 実行ファイルのパスを取得
-void GetModuleParentDir(char *szParPath)
-{
+void GetModuleParentDir(char *szParPath){
 	char szPath[MAX_FITTLE_PATH];
 
 	GetModuleFileName(NULL, szPath, MAX_FITTLE_PATH);
@@ -64,8 +60,7 @@ void GetModuleParentDir(char *szParPath)
 }
 
 // 整数型で設定ファイル書き込み
-static int WritePrivateProfileInt(char *szAppName, char *szKeyName, int nData, char *szINIPath)
-{
+static int WritePrivateProfileInt(char *szAppName, char *szKeyName, int nData, char *szINIPath){
 	char szTemp[100];
 
 	wsprintf(szTemp, "%d", nData);
@@ -73,8 +68,7 @@ static int WritePrivateProfileInt(char *szAppName, char *szKeyName, int nData, c
 }
 
 // 設定を読込
-static void LoadConfig()
-{
+static void LoadConfig(){
 	char m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
 
 	// INIファイルの位置を取得
@@ -124,16 +118,14 @@ static void SaveConfig(){
 	WritePrivateProfileString(NULL, NULL, NULL, m_szINIPath);
 }
 
-static void ViewConfig(HWND hDlg)
-{
+static void ViewConfig(HWND hDlg){
 	int i;
 	SendDlgItemMessage(hDlg, IDC_CHECK1, BM_SETCHECK, (WPARAM)nMiniTop, 0);
 	SendDlgItemMessage(hDlg, IDC_CHECK2, BM_SETCHECK, (WPARAM)nTagReverse, 0);
 	SendDlgItemMessage(hDlg, IDC_CHECK3, BM_SETCHECK, (WPARAM)nMiniTimeShow, 0);
 	SendDlgItemMessage(hDlg, IDC_CHECK4, BM_SETCHECK, (WPARAM)nMiniScroll, 0);
 	SendDlgItemMessage(hDlg, IDC_CHECK5, BM_SETCHECK, (WPARAM)nMiniToolShow, 0);
-	for(i=0;i<6;i++)
-	{
+	for(i=0;i<6;i++){
 		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)0, (LPARAM)"なし");
 		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)1, (LPARAM)"再生");
 		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)2, (LPARAM)"一時停止");
@@ -147,51 +139,44 @@ static void ViewConfig(HWND hDlg)
 		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_SETCURSEL, (WPARAM)nTrayClick[i], (LPARAM)0);
 	}
 }
-static bool CheckConfig(HWND hDlg)
-{
+
+static bool CheckConfig(HWND hDlg){
 	int i;
 	if (nMiniTop !=      (int)SendDlgItemMessage(hDlg, IDC_CHECK1, BM_GETCHECK, 0, 0)) return true;
 	if (nTagReverse !=   (int)SendDlgItemMessage(hDlg, IDC_CHECK2, BM_GETCHECK, 0, 0)) return true;
 	if (nMiniTimeShow != (int)SendDlgItemMessage(hDlg, IDC_CHECK3, BM_GETCHECK, 0, 0)) return true;
 	if (nMiniScroll !=   (int)SendDlgItemMessage(hDlg, IDC_CHECK4, BM_GETCHECK, 0, 0)) return true;
 	if (nMiniToolShow != (int)SendDlgItemMessage(hDlg, IDC_CHECK5, BM_GETCHECK, 0, 0)) return true;
-	for(i=0;i<6;i++)
-	{
+	for(i=0;i<6;i++){
 		if (nTrayClick[i] != SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_GETCURSEL, (WPARAM)0, (LPARAM)0)) return true;
 	}
 	return false;
 }
 
-static void ApplyConfig(HWND hDlg)
-{
+static void ApplyConfig(HWND hDlg){
 	int i;
 	nMiniTop =      (int)SendDlgItemMessage(hDlg, IDC_CHECK1, BM_GETCHECK, 0, 0);
 	nTagReverse =   (int)SendDlgItemMessage(hDlg, IDC_CHECK2, BM_GETCHECK, 0, 0);
 	nMiniTimeShow = (int)SendDlgItemMessage(hDlg, IDC_CHECK3, BM_GETCHECK, 0, 0);
 	nMiniScroll =   (int)SendDlgItemMessage(hDlg, IDC_CHECK4, BM_GETCHECK, 0, 0);
 	nMiniToolShow = (int)SendDlgItemMessage(hDlg, IDC_CHECK5, BM_GETCHECK, 0, 0);
-	for(i=0;i<6;i++)
-	{
+	for(i=0;i<6;i++){
 		nTrayClick[i] = SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
 	}
 }
 
-static void ApplyFittle()
-{
+static void ApplyFittle(){
 	HWND hFittle = FindWindow("Fittle", NULL);
-	if (IsWindow(hFittle))
-	{
+	if (hFittle && IsWindow(hFittle)){
 		HWND hMiniPanel = (HWND)SendMessage(hFittle, WM_FITTLE, GET_MINIPANEL, 0);
-		if (IsWindow(hMiniPanel))
-		{
-			PostMessage(hMiniPanel, WM_USER_MINIPANEL, 3, 0);
+		if (hMiniPanel && IsWindow(hMiniPanel)){
+			PostMessage(hMiniPanel, WM_F4B24_IPC, WM_F4B24_IPC_APPLY_CONFIG, 0);
 		}
 	}
 }
 
 static BOOL CALLBACK MiniPanePageProc(HWND hWnd , UINT msg , WPARAM wp , LPARAM lp) {
-	switch (msg)
-	{
+	switch (msg){
 	case WM_INITDIALOG:
 		LoadConfig();
 		ViewConfig(hWnd);
@@ -203,8 +188,7 @@ static BOOL CALLBACK MiniPanePageProc(HWND hWnd , UINT msg , WPARAM wp , LPARAM 
 		return TRUE;
 
 	case WM_NOTIFY:
-		if (((NMHDR *)lp)->code == PSN_APPLY)
-		{
+		if (((NMHDR *)lp)->code == PSN_APPLY){
 			ApplyConfig(hWnd);
 			SaveConfig();
 			ApplyFittle();
@@ -218,8 +202,7 @@ static DWORD CALLBACK GetConfigPageCount(void){
 	return 1;
 }
 static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel, char *pszConfigPath, int nConfigPathSize){
-	if (nIndex == 0 && nLevel == 1)
-	{
+	if (nIndex == 0 && nLevel == 1){
 		PROPSHEETPAGE psp[1];
 
 		psp[0].dwSize = sizeof (PROPSHEETPAGE);

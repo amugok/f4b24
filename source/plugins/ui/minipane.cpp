@@ -8,6 +8,7 @@
 #include "../../fittle/resource/resource.h"
 #include "../../fittle/src/fittle.h"
 #include "../../fittle/src/plugin.h"
+#include "../../fittle/src/f4b24.h"
 
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")
@@ -22,9 +23,6 @@
 #pragma comment(linker,"/MERGE:.rdata=.text")
 #pragma comment(linker,"/OPT:NOWIN98")
 #endif
-
-
-#define WM_USER_MINIPANEL (WM_USER + 88)
 
 // ウィンドウをサブクラス化、プロシージャハンドルをウィンドウに関連付ける
 #define SET_SUBCLASS(hWnd, Proc) \
@@ -265,10 +263,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 		case IDM_PM_LIST:
 		case IDM_PM_RANDOM:
 		case IDM_PM_SINGLE:
-			PostMessage(m_hMiniPanel, WM_USER_MINIPANEL, 1, 0);
+			PostMessage(m_hMiniPanel, WM_F4B24_IPC, 1, 0);
 			break;
 		case IDM_PM_REPEAT:
-			PostMessage(m_hMiniPanel, WM_USER_MINIPANEL, 2, 0);
+			PostMessage(m_hMiniPanel, WM_F4B24_IPC, 2, 0);
 			break;
 		case IDM_MINIPANEL:
 			if(!m_hMiniPanel){
@@ -696,16 +694,19 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 				nMiniPanel_y = rc.top;
 			}
 			return TRUE;
+	
+		case WM_DESTROY:
+			if (s_hFont){
+				DeleteObject(s_hFont);
+				s_hFont = 0;
+			}
+			return FALSE;
 
 		case WM_COMMAND:
 			switch(LOWORD(wp)){
 				case IDCANCEL:
-					if (s_hFont){
-						DeleteObject(s_hFont);
-						s_hFont = 0;
-					}
-					KillTimer(hDlg, ID_SEEKTIMER);
 
+					KillTimer(hDlg, ID_SEEKTIMER);
 					nMiniPanelEnd = 0;
 					m_hMiniPanel = NULL;
 					m_hMiniTool = NULL;
@@ -799,12 +800,12 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			SendMessage(fpi.hParent, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
 			return TRUE;
 
-		case WM_USER_MINIPANEL:
+		case WM_F4B24_IPC:
 			if (wp == 1){
 				UpdateMenuPlayMode();
 			}else if (wp == 2){
 				UpdateMenuRepeatMode();
-			}else if (wp == 3){
+			}else if (wp == 3 || wp == WM_F4B24_IPC_APPLY_CONFIG){
 				LoadConfig();
 
 				SetWindowPos(hDlg, (nMiniTop?HWND_TOPMOST:HWND_NOTOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);

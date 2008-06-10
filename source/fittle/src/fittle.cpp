@@ -18,13 +18,7 @@
 #include "dsp.h"
 #include "cuesheet.h"
 #include "plugin.h"
-
-// ソフト名（バージョンアップ時に忘れずに更新）
-#ifndef _DEBUG
-#define FITTLE_VERSION "Fittle Ver.2.2.2 Preview 3 for bass 2.4"
-#else
-#define FITTLE_VERSION "Fittle Ver.2.2.2 <Debug>"
-#endif
+#include "f4b24.h"
 
 // ライブラリをリンク
 #pragma comment(lib, "comctl32.lib")
@@ -66,19 +60,16 @@ static LRESULT CALLBACK NewSliderProc(HWND, UINT, WPARAM, LPARAM);
 static LRESULT CALLBACK NewTabProc(HWND, UINT, WPARAM, LPARAM);
 static LRESULT CALLBACK NewTreeProc(HWND, UINT, WPARAM, LPARAM);
 static LRESULT CALLBACK NewSplitBarProc(HWND, UINT, WPARAM, LPARAM);
-static BOOL CALLBACK GeneralSheetProc(HWND, UINT, WPARAM, LPARAM);
-static BOOL CALLBACK PathSheetProc(HWND, UINT, WPARAM, LPARAM);
-static BOOL CALLBACK ControlSheetProc(HWND, UINT, WPARAM, LPARAM);
-static BOOL CALLBACK TaskTraySheetProc(HWND, UINT, WPARAM, LPARAM);
-static BOOL CALLBACK AboutSheetProc(HWND, UINT, WPARAM, LPARAM);
-static BOOL CALLBACK HotKeySheetProc(HWND, UINT, WPARAM, LPARAM);
 static BOOL CALLBACK BookMarkDlgProc(HWND, UINT, WPARAM, LPARAM);
 static BOOL CALLBACK AddURLDlgProc(HWND, UINT, WPARAM, LPARAM);
 static DWORD CALLBACK MainStreamProc(HSTREAM, void *, DWORD, void *);
 static void CALLBACK EventSync(HSYNC, DWORD, DWORD, void *);
-// コントロール関係
+// 設定関係
 static void LoadState();
+static void LoadConfig();
 static void SaveState(HWND);
+static void ApplyConfig(HWND hWnd);
+// コントロール関係
 static void DoTrayClickAction(HWND, int);
 static void PopupTrayMenu(HWND);
 static void PopupPlayModeMenu(HWND, NMTOOLBAR *);
@@ -102,7 +93,7 @@ static BOOL SetUIFont(void);
 static void UpdateWindowSize(HWND);
 static BOOL SetUIColor(void);
 static void SetStatusbarIcon(LPSTR, BOOL);
-//static void ShowSettingDialog(HWND, int);
+static void ShowSettingDialog(HWND, LPSTR);
 static LPSTR MallocAndConcatPath(LISTTAB *);
 static void MyShellExecute(HWND, LPSTR, LPSTR, BOOL);
 static int InitFileTypes();
@@ -262,6 +253,7 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 	if(!RegisterClassEx(&wc)) return 0;
 
 	LoadState();
+	LoadConfig();
 
 	// ウィンドウ作成
 	hWnd = CreateWindow(szClassName,
@@ -1197,7 +1189,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case IDM_SETTING:
-					//ShowSettingDialog(hWnd, 0);
+					ShowSettingDialog(hWnd, "fittle/general");
 					break;
 
 				case IDM_BM_ADD: //しおりに追加
@@ -1233,7 +1225,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case IDM_VER:	// バージョン情報
-//					ShowSettingDialog(hWnd, 5);
+					ShowSettingDialog(hWnd, "fittle/about");
 					break;
 
 				case IDM_LIST_MOVETOP:	// 一番上に移動
@@ -1335,7 +1327,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 							MyShellExecute(hWnd, g_cfg.szToolPath, pszFiles, TRUE);
 							HeapFree(GetProcessHeap(), 0, pszFiles);
 						}else{
-							//ShowSettingDialog(hWnd, 1);
+							ShowSettingDialog(hWnd, "fittle/path");
 						}
 					}
 					break;
@@ -1981,6 +1973,18 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			}
 			break;
 
+		case WM_F4B24_IPC:
+			switch(wp){
+			case WM_F4B24_IPC_GET_VERSION:
+				return 0;
+			case WM_F4B24_IPC_GET_IF_VERSION:
+				return 0;
+			case WM_F4B24_IPC_APPLY_CONFIG:
+				ApplyConfig(hWnd);
+				break;
+			}
+			break;
+
 		case WM_DEVICECHANGE:	// ドライブの数の変更に対応
 			switch (wp)
 			{
@@ -2080,20 +2084,20 @@ static void PopupPlayModeMenu(HWND hWnd, NMTOOLBAR *lpnmtb){
 }
 
 // グローバルな設定を読み込む
-static void LoadState(){
+static void LoadConfig(){
 	int i;
 	char szSec[10];
 
-	// システムの優先度の設定
-	g_cfg.nHighTask = GetPrivateProfileInt("Main", "Priority", 0, m_szINIPath);
 	// コントロールカラー
 	g_cfg.nBkColor = (int)GetPrivateProfileInt("Color", "BkColor", (int)GetSysColor(COLOR_WINDOW), m_szINIPath);
 	g_cfg.nTextColor = (int)GetPrivateProfileInt("Color", "TextColor", (int)GetSysColor(COLOR_WINDOWTEXT), m_szINIPath);
 	g_cfg.nPlayTxtCol = (int)GetPrivateProfileInt("Color", "PlayTxtCol", (int)RGB(0xFF, 0, 0), m_szINIPath);
 	g_cfg.nPlayBkCol = (int)GetPrivateProfileInt("Color", "PlayBkCol", (int)RGB(230, 234, 238), m_szINIPath);
+	// 表示方法
+	g_cfg.nPlayView = GetPrivateProfileInt("Color", "PlayView", 1, m_szINIPath);
 
-	g_cfg.nMiniPanelEnd = (int)GetPrivateProfileInt("MiniPanel", "End", 0, m_szINIPath);
-
+	// システムの優先度の設定
+	g_cfg.nHighTask = GetPrivateProfileInt("Main", "Priority", 0, m_szINIPath);
 	// グリッドライン
 	g_cfg.nGridLine = GetPrivateProfileInt("Main", "GridLine", 1, m_szINIPath);
 	g_cfg.nSingleExpand = GetPrivateProfileInt("Main", "SingleExp", 0, m_szINIPath);
@@ -2101,12 +2105,6 @@ static void LoadState(){
 	g_cfg.nExistCheck = GetPrivateProfileInt("Main", "ExistCheck", 0, m_szINIPath);
 	// プレイリストで更新日時を取得する
 	g_cfg.nTimeInList = GetPrivateProfileInt("Main", "TimeInList", 0, m_szINIPath);
-	// ツリーの幅を設定
-	g_cfg.nTreeWidth = GetPrivateProfileInt("Main", "TreeWidth", 200, m_szINIPath);
-	//g_cfg.nTWidthSub = GetPrivateProfileInt("Main", "TWidthSub", 200, m_szINIPath);
-	g_cfg.nTreeState = GetPrivateProfileInt("Main", "TreeState", TREE_SHOW, m_szINIPath);
-	// ステータスバー表示非表示
-	g_cfg.nShowStatus =  GetPrivateProfileInt("Main", "ShowStatus", 1, m_szINIPath);
 	// システムイメージリストを結合
 	g_cfg.nTreeIcon = GetPrivateProfileInt("Main", "TreeIcon", TRUE, m_szINIPath);
 	// タスクトレイに収納のチェック
@@ -2123,19 +2121,18 @@ static void LoadState(){
 	g_cfg.nPathTip = GetPrivateProfileInt("Main", "PathTip", 1, m_szINIPath);
 	// 曲名お知らせ機能
 	g_cfg.nInfoTip = GetPrivateProfileInt("Main", "Info", 1, m_szINIPath);
-	// 表示方法
-	g_cfg.nPlayView = GetPrivateProfileInt("Color", "PlayView", 1, m_szINIPath);
 	// タグを反転
 	g_cfg.nTagReverse = GetPrivateProfileInt("Main", "TagReverse", 0, m_szINIPath);
 	// ヘッダコントロールを表示する
 	g_cfg.nShowHeader = GetPrivateProfileInt("Main", "ShowHeader", 1, m_szINIPath);
 	// シーク量
 	g_cfg.nSeekAmount = GetPrivateProfileInt("Main", "SeekAmount", 5, m_szINIPath);
+	// 音量変化量(隠し設定)
 	g_cfg.nVolAmount = GetPrivateProfileInt("Main", "VolAmount", 5, m_szINIPath);
 	// 終了時に再生していた曲を起動時にも再生する
 	g_cfg.nResume = GetPrivateProfileInt("Main", "Resume", 0, m_szINIPath);
+	// 終了時の再生位置も記録復元する
 	g_cfg.nResPosFlag = GetPrivateProfileInt("Main", "ResPosFlag", 0, m_szINIPath);
-	g_cfg.nResPos = GetPrivateProfileInt("Main", "ResPos", 0, m_szINIPath);
 	// 閉じるボタンで最小化する
 	g_cfg.nCloseMin = GetPrivateProfileInt("Main", "CloseMin", 0, m_szINIPath);
 	// サブフォルダを検索で圧縮ファイルも検索する
@@ -2144,16 +2141,19 @@ static void LoadState(){
 	g_cfg.nTabHide = GetPrivateProfileInt("Main", "TabHide", 0, m_szINIPath);
 	// 32bit(float)で出力する
 	g_cfg.nOut32bit = GetPrivateProfileInt("Main", "Out32bit", 0, m_szINIPath);
-	m_bFLoat = (BOOL)g_cfg.nOut32bit;
 	// 停止時にフェードアウトする
 	g_cfg.nFadeOut = GetPrivateProfileInt("Main", "FadeOut", 1, m_szINIPath);
 	// スタートアップフォルダ読み込み
 	GetPrivateProfileString("Main", "StartPath", "", g_cfg.szStartPath, MAX_FITTLE_PATH, m_szINIPath);
+	// ファイラのパス
+	GetPrivateProfileString("Main", "FilerPath", "", g_cfg.szFilerPath, MAX_FITTLE_PATH, m_szINIPath);
+
 	// ホットキーの設定
 	for(i=0;i<HOTKEY_COUNT;i++){
 		wsprintf(szSec, "HotKey%d", i);
 		g_cfg.nHotKey[i] = GetPrivateProfileInt("HotKey", szSec, 0, m_szINIPath);
 	}
+
 	// クリック時の動作
 	g_cfg.nTrayClick[0] = GetPrivateProfileInt("TaskTray", "Click0", 6, m_szINIPath);
 	g_cfg.nTrayClick[1] = GetPrivateProfileInt("TaskTray", "Click1", 0, m_szINIPath);
@@ -2161,25 +2161,42 @@ static void LoadState(){
 	g_cfg.nTrayClick[3] = GetPrivateProfileInt("TaskTray", "Click3", 0, m_szINIPath);
 	g_cfg.nTrayClick[4] = GetPrivateProfileInt("TaskTray", "Click4", 5, m_szINIPath);
 	g_cfg.nTrayClick[5] = GetPrivateProfileInt("TaskTray", "Click5", 0, m_szINIPath);
+
 	// フォント設定読み込み
-	m_hFont = NULL;
 	GetPrivateProfileString("Font", "FontName", "", g_cfg.szFontName, 32, m_szINIPath);	// フォント名""がデフォルトの印
 	g_cfg.nFontHeight = GetPrivateProfileInt("Font", "Height", 10, m_szINIPath);
 	g_cfg.nFontStyle = GetPrivateProfileInt("Font", "Style", 0, m_szINIPath);
-	// しおりをルートとして扱う
-	g_cfg.nBMRoot = GetPrivateProfileInt("BookMark", "BMRoot", 1, m_szINIPath);
-	// しおりをフルパスで表示
-	g_cfg.nBMFullPath = GetPrivateProfileInt("BookMark", "BMFullPath", 1, m_szINIPath);
-	// ファイラのパス
-	GetPrivateProfileString("Main", "FilerPath", "", g_cfg.szFilerPath, MAX_FITTLE_PATH, m_szINIPath);
-	// 最後に再生していたファイル
-	GetPrivateProfileString("Main", "LastFile", "", g_cfg.szLastFile, MAX_FITTLE_PATH, m_szINIPath);
+
 	// 外部ツール
 	GetPrivateProfileString("Tool", "Path0", "", g_cfg.szToolPath, MAX_FITTLE_PATH, m_szINIPath);
 	return;
 }
 
-// 設定を保存
+/* 終了時の状態を読み込む */
+static void LoadState(){
+	// ミニパネル表示状態
+	g_cfg.nMiniPanelEnd = (int)GetPrivateProfileInt("MiniPanel", "End", 0, m_szINIPath);
+	// ツリーの幅を設定
+	g_cfg.nTreeWidth = GetPrivateProfileInt("Main", "TreeWidth", 200, m_szINIPath);
+	//g_cfg.nTWidthSub = GetPrivateProfileInt("Main", "TWidthSub", 200, m_szINIPath);
+	g_cfg.nTreeState = GetPrivateProfileInt("Main", "TreeState", TREE_SHOW, m_szINIPath);
+	// ステータスバー表示非表示
+	g_cfg.nShowStatus =  GetPrivateProfileInt("Main", "ShowStatus", 1, m_szINIPath);
+	// 終了時の再生位置も記録復元する
+	g_cfg.nResPos = GetPrivateProfileInt("Main", "ResPos", 0, m_szINIPath);
+	// 最後に再生していたファイル
+	GetPrivateProfileString("Main", "LastFile", "", g_cfg.szLastFile, MAX_FITTLE_PATH, m_szINIPath);
+
+	// しおりをルートとして扱う
+	g_cfg.nBMRoot = GetPrivateProfileInt("BookMark", "BMRoot", 1, m_szINIPath);
+	// しおりをフルパスで表示
+	g_cfg.nBMFullPath = GetPrivateProfileInt("BookMark", "BMFullPath", 1, m_szINIPath);
+
+	m_hFont = NULL;
+	m_bFLoat = (BOOL)g_cfg.nOut32bit;
+}
+
+/* 終了時の状態を保存する */
 static void SaveState(HWND hWnd){
 	int i;
 	char szLastPath[MAX_FITTLE_PATH];
@@ -2198,73 +2215,33 @@ static void SaveState(HWND hWnd){
 	WritePrivateProfileInt("Main", "Height", wpl.rcNormalPosition.bottom - wpl.rcNormalPosition.top, m_szINIPath); //ウィンドウ位置Height
 	WritePrivateProfileInt("Main", "Width", wpl.rcNormalPosition.right - wpl.rcNormalPosition.left, m_szINIPath); //ウィンドウ位置Width
 	ShowWindow(hWnd, SW_HIDE);	// 終了を高速化して見せるために非表示
+
+	WritePrivateProfileInt("Main", "TreeWidth", g_cfg.nTreeWidth, m_szINIPath); //ツリーの幅
+	WritePrivateProfileInt("Main", "TreeState", (g_cfg.nTreeState==TREE_SHOW), m_szINIPath);
 	WritePrivateProfileInt("Main", "Mode", m_nPlayMode, m_szINIPath); //プレイモード
 	WritePrivateProfileInt("Main", "Repeat", m_nRepeatFlag, m_szINIPath); //リピートモード
 	WritePrivateProfileInt("Main", "Volumes", (int)SendMessage(m_hVolume, TBM_GETPOS, 0, 0), m_szINIPath); //ボリューム
-	WritePrivateProfileInt("Main", "Tray", g_cfg.nTrayOpt, m_szINIPath); //タスクトレイモード
 	WritePrivateProfileInt("Main", "ShowStatus", g_cfg.nShowStatus, m_szINIPath);
-	WritePrivateProfileInt("Main", "TreeWidth", g_cfg.nTreeWidth, m_szINIPath); //ツリーの幅
-	WritePrivateProfileInt("Main", "TreeState", (g_cfg.nTreeState==TREE_SHOW), m_szINIPath);
-	WritePrivateProfileInt("Main", "MainMenu", (GetMenu(hWnd)?1:0), m_szINIPath);
-	WritePrivateProfileInt("Main", "TabIndex", (m_nPlayTab==-1?TabCtrl_GetCurSel(m_hTab):m_nPlayTab), m_szINIPath);	//TabのIndex
-
-	
-	
-	WritePrivateProfileInt("Main", "Info", g_cfg.nInfoTip, m_szINIPath); //曲名お知らせ
-	WritePrivateProfileInt("Main", "PathTip", g_cfg.nPathTip, m_szINIPath); // ツールチップでフルパスを表示
-	WritePrivateProfileInt("Main", "Priority", g_cfg.nHighTask, m_szINIPath); //システム優先度
-	WritePrivateProfileInt("Main", "TreeIcon", g_cfg.nTreeIcon, m_szINIPath);
-	WritePrivateProfileInt("Main", "HideShow", g_cfg.nHideShow, m_szINIPath);
-	WritePrivateProfileInt("Main", "AllSub", g_cfg.nAllSub, m_szINIPath);
-	WritePrivateProfileInt("Main", "ExistCheck", g_cfg.nExistCheck, m_szINIPath);
-	WritePrivateProfileInt("Main", "TimeInList", g_cfg.nTimeInList, m_szINIPath);
-	WritePrivateProfileInt("Main", "GridLine", g_cfg.nGridLine, m_szINIPath);
-	WritePrivateProfileInt("Main", "SingleExp", g_cfg.nSingleExpand, m_szINIPath);
-	WritePrivateProfileInt("Main", "TagReverse", g_cfg.nTagReverse, m_szINIPath);
-	WritePrivateProfileInt("Main", "SeekAmount", g_cfg.nSeekAmount, m_szINIPath);
-	WritePrivateProfileInt("Main", "VolAmount", g_cfg.nVolAmount, m_szINIPath);
-	WritePrivateProfileInt("Main", "TabHide", g_cfg.nTabHide, m_szINIPath);
-	WritePrivateProfileInt("Main", "ShowHeader", g_cfg.nShowHeader, m_szINIPath);
-	WritePrivateProfileInt("Main", "Resume", g_cfg.nResume, m_szINIPath);
-	WritePrivateProfileInt("Main", "ResPosFlag", g_cfg.nResPosFlag, m_szINIPath);
 	WritePrivateProfileInt("Main", "ResPos", g_cfg.nResPos, m_szINIPath);
-	WritePrivateProfileInt("Main", "CloseMin", g_cfg.nCloseMin, m_szINIPath);
-	WritePrivateProfileInt("Main", "ZipSearch", g_cfg.nZipSearch, m_szINIPath);
-	WritePrivateProfileInt("Main", "TabBottom", g_cfg.nTabBottom, m_szINIPath);
-	WritePrivateProfileInt("Main", "TabMulti", g_cfg.nTabMulti, m_szINIPath);
-	WritePrivateProfileInt("Main", "Out32bit", g_cfg.nOut32bit, m_szINIPath);
-	WritePrivateProfileInt("Main", "FadeOut", g_cfg.nFadeOut, m_szINIPath);
+
+	WritePrivateProfileInt("Main", "TabIndex", (m_nPlayTab==-1?TabCtrl_GetCurSel(m_hTab):m_nPlayTab), m_szINIPath);	//TabのIndex
+	WritePrivateProfileInt("Main", "MainMenu", (GetMenu(hWnd)?1:0), m_szINIPath);
+
+	WritePrivateProfileString("Main", "LastPath", szLastPath, m_szINIPath); //ラストパス
+	WritePrivateProfileString("Main", "LastFile", g_cfg.szLastFile, m_szINIPath);
+
 	WritePrivateProfileInt("MiniPanel", "End", g_cfg.nMiniPanelEnd, m_szINIPath);
-	WritePrivateProfileInt("Font", "Height", g_cfg.nFontHeight, m_szINIPath);
-	WritePrivateProfileInt("Font", "Style", g_cfg.nFontStyle, m_szINIPath);
-	WritePrivateProfileInt("Color", "PlayView", g_cfg.nPlayView, m_szINIPath);
-	WritePrivateProfileInt("Color", "TextColor", g_cfg.nTextColor, m_szINIPath);
-	WritePrivateProfileInt("Color", "BkColor", g_cfg.nBkColor, m_szINIPath);
-	WritePrivateProfileInt("Color", "PlayTxtCol", g_cfg.nPlayTxtCol, m_szINIPath);
-	WritePrivateProfileInt("Color", "PlayBkCol", g_cfg.nPlayBkCol, m_szINIPath);
+
 	WritePrivateProfileInt("Column", "Width0", ListView_GetColumnWidth(GetCurListTab(m_hTab)->hList, 0), m_szINIPath);
 	WritePrivateProfileInt("Column", "Width1", ListView_GetColumnWidth(GetCurListTab(m_hTab)->hList, 1), m_szINIPath);
 	WritePrivateProfileInt("Column", "Width2", ListView_GetColumnWidth(GetCurListTab(m_hTab)->hList, 2), m_szINIPath);
 	WritePrivateProfileInt("Column", "Width3", ListView_GetColumnWidth(GetCurListTab(m_hTab)->hList, 3), m_szINIPath);
 	WritePrivateProfileInt("Column", "Sort", GetCurListTab(m_hTab)->nSortState, m_szINIPath);
-	WritePrivateProfileString("Main", "LastPath", szLastPath, m_szINIPath); //ラストパス
-	WritePrivateProfileString("Main", "StartPath", g_cfg.szStartPath, m_szINIPath);
-	WritePrivateProfileString("Main", "FilerPath", g_cfg.szFilerPath, m_szINIPath);
-	WritePrivateProfileString("Main", "LastFile", g_cfg.szLastFile, m_szINIPath);
+
 	WritePrivateProfileInt("BookMark", "BMRoot", g_cfg.nBMRoot, m_szINIPath);
 	WritePrivateProfileInt("BookMark", "BMFullPath", g_cfg.nBMFullPath, m_szINIPath);
 	SaveBookMark(m_szINIPath);	// しおりの保存
-	WritePrivateProfileString("Font", "FontName", g_cfg.szFontName, m_szINIPath);
-	// ホットキーを保存
-	for(i=0;i<HOTKEY_COUNT;i++){
-		wsprintf(szSec, "HotKey%d", i);
-		WritePrivateProfileInt("HotKey", szSec, g_cfg.nHotKey[i], m_szINIPath); //ホットキー
-	}
-	// タスクトレイを保存
-	for(i=0;i<6;i++){
-		wsprintf(szSec, "Click%d", i);
-		WritePrivateProfileInt("TaskTray", szSec, g_cfg.nTrayClick[i], m_szINIPath); //ホットキー
-	}
+
 	//　レバーの状態を保存
 	rbbi.cbSize = sizeof(REBARBANDINFO);
 	rbbi.fMask = RBBIM_STYLE | RBBIM_SIZE | RBBIM_ID;
@@ -2277,10 +2254,11 @@ static void SaveState(HWND hWnd){
 		wsprintf(szSec, "wID%d", i);
 		WritePrivateProfileInt("Rebar2", szSec, rbbi.wID, m_szINIPath);
 	}
-	// 外部ツール保存
-	WritePrivateProfileString("Tool", "Path0", g_cfg.szToolPath, m_szINIPath);
-	return;
+
+	WritePrivateProfileString(NULL, NULL, NULL, m_szINIPath);
+
 }
+
 
 // ウィンドウの表示/非表示をトグル
 static void ToggleWindowView(HWND hWnd){
@@ -4319,3 +4297,63 @@ static LONG GetToolbarTrueWidth(HWND hToolbar){
 	SendMessage(hToolbar, TB_GETITEMRECT, SendMessage(hToolbar, TB_BUTTONCOUNT, 0, 0)-1, (LPARAM)&rct);
 	return rct.right;
 }
+
+static void ApplyConfig(HWND hWnd){
+	int nOldTrayOpt = g_cfg.nTrayOpt;
+	UnRegHotKey(hWnd);
+
+	LoadConfig();
+
+	if(g_cfg.nHighTask){
+		SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);		
+	}else{
+		SetPriorityClass(GetCurrentProcess(), NORMAL_PRIORITY_CLASS);	
+	}
+
+	if(g_cfg.nTreeIcon) RefreshComboIcon(m_hCombo);
+	InitTreeIconIndex(m_hCombo, m_hTree, (BOOL)g_cfg.nTreeIcon);
+
+	SetUIColor();
+	SetUIFont();
+
+	if (g_cfg.nTrayOpt == 0){
+		if(m_bTrayFlag){
+			Shell_NotifyIcon(NIM_DELETE, &m_ni);
+			m_bTrayFlag = FALSE;
+		}
+	} else if (g_cfg.nTrayOpt == 1){
+		if(m_bTrayFlag){
+			Shell_NotifyIcon(NIM_DELETE, &m_ni);
+			m_bTrayFlag = FALSE;
+		}
+	}else{
+		if(nOldTrayOpt != 2)
+			SetTaskTray(GetParent(m_hStatus));
+	}
+
+	RegHotKey(hWnd);
+	InvalidateRect(hWnd, NULL, TRUE);
+}
+
+static void ShowSettingDialog(HWND hWnd, LPSTR lpszConfigPath){
+	PROCESS_INFORMATION pi;
+  STARTUPINFO si;
+
+	char szCmd[MAX_FITTLE_PATH];
+	char szPath[MAX_FITTLE_PATH];
+
+	GetModuleParentDir(szPath);
+	lstrcat(szPath, "fconfig.exe");
+	
+	wsprintf(szCmd, "\"%s\" %s", szPath, lpszConfigPath);
+	
+
+	ZeroMemory(&si,sizeof(si));
+	si.cb=sizeof(si);
+
+	if (CreateProcess(NULL,(LPTSTR)szCmd,NULL,NULL,FALSE,NORMAL_PRIORITY_CLASS, NULL,NULL,&si,&pi)){
+		CloseHandle(pi.hThread);
+		CloseHandle(pi.hProcess);
+	}
+}
+
