@@ -25,6 +25,15 @@
 #pragma comment(lib, "shlwapi.lib")
 #pragma comment(lib, "../../extra/bass24/bass.lib")
 
+// ソフト名（バージョンアップ時に忘れずに更新）
+#ifndef _DEBUG
+#define FITTLE_VERSION "Fittle Ver.2.2.2 Preview 3"
+#else
+#define FITTLE_VERSION "Fittle Ver.2.2.2 Preview 3 <Debug>"
+#endif
+
+#define F4B24_VERSION "f4b24 - test12"
+
 //--マクロ--
 // 全ての選択状態を解除後、指定インデックスのアイテムを選択、表示
 #define ListView_SingleSelect(hLV, nIndex) \
@@ -69,6 +78,7 @@ static void LoadState();
 static void LoadConfig();
 static void SaveState(HWND);
 static void ApplyConfig(HWND hWnd);
+static void SendSupportList(HWND hWnd);
 // コントロール関係
 static void DoTrayClickAction(HWND, int);
 static void PopupTrayMenu(HWND);
@@ -1981,6 +1991,16 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				return 0;
 			case WM_F4B24_IPC_APPLY_CONFIG:
 				ApplyConfig(hWnd);
+				break;
+
+			case WM_F4B24_IPC_GET_VERSION_STRING:
+				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)FITTLE_VERSION);
+				break;
+			case WM_F4B24_IPC_GET_VERSION_STRING2:
+				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)F4B24_VERSION);
+				break;
+			case WM_F4B24_IPC_GET_SUPPORT_LIST:
+				SendSupportList((HWND)lp);
 				break;
 			}
 			break;
@@ -4337,7 +4357,7 @@ static void ApplyConfig(HWND hWnd){
 
 static void ShowSettingDialog(HWND hWnd, LPSTR lpszConfigPath){
 	PROCESS_INFORMATION pi;
-  STARTUPINFO si;
+	STARTUPINFO si;
 
 	char szCmd[MAX_FITTLE_PATH];
 	char szPath[MAX_FITTLE_PATH];
@@ -4355,5 +4375,22 @@ static void ShowSettingDialog(HWND hWnd, LPSTR lpszConfigPath){
 		CloseHandle(pi.hThread);
 		CloseHandle(pi.hProcess);
 	}
+}
+
+static void SendSupportList(HWND hWnd){
+	char szList[MAX_FITTLE_PATH];
+	int i;
+	int p=0;
+	for(i = 0; g_cfg.szTypeList[i][0]!='\0' && i<MAX_EXT_COUNT; i++){
+		int l = lstrlen(g_cfg.szTypeList[i]);
+		if (l > 0 && p + (p != 0) + l + 1 < MAX_FITTLE_PATH)
+		{
+			if (p != 0) szList[p++] = TEXT(' ');
+			lstrcpy(szList + p, g_cfg.szTypeList[i]);
+			p += l;
+		}
+	}
+	if (p < MAX_FITTLE_PATH) szList[p] = 0;
+	SendMessage(hWnd, WM_SETTEXT, 0, (LPARAM)szList);
 }
 

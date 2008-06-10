@@ -104,7 +104,7 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 196
         TOPMARGIN, 7
-        BOTTOMMARGIN, 134
+        BOTTOMMARGIN, 193
     END
 
     "TASKTRAY_SHEET", DIALOG
@@ -264,23 +264,28 @@ BEGIN
                     BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,12,217,111,11
 END
 
-ABOUT_SHEET DIALOG DISCARDABLE  0, 0, 203, 141
+ABOUT_SHEET DIALOG DISCARDABLE  0, 0, 203, 200
 STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "ÉoÅ[ÉWÉáÉìèÓïÒ"
 FONT 9, "ÇlÇr ÇoÉSÉVÉbÉN"
 BEGIN
-    GROUPBOX        "Fittle Ver.2.0.0",IDC_STATIC0,17,14,172,49
-    ICON            "MYICON",IDC_STATIC1,26,29,20,20
+    GROUPBOX        "Fittle",IDC_STATIC0,17,14,172,49
+    ICON            "",IDC_STATIC1,26,29,20,20
     LTEXT           "Copyright(C) 2004-2006 by Mallow",IDC_STATIC,53,29,119,
                     10
     LTEXT           "http://hp.vector.co.jp/authors/VA039869/",IDC_STATIC3,
                     53,43,123,10,SS_NOTIFY
-    GROUPBOX        "BASS Ver.2.4",IDC_STATIC,18,77,171,49
+    GROUPBOX        "BASS Ver.2.4",IDC_STATIC,17,77,172,48
     ICON            "",IDC_STATIC2,26,94,20,20
     LTEXT           "Copyright(C) 1999-2006 by Ian Luck",IDC_STATIC,53,93,
                     119,10
     LTEXT           "http://www.un4seen.com/",IDC_STATIC4,53,107,123,10,
                     SS_NOTIFY
+    GROUPBOX        "f4b24",IDC_STATIC5,17,140,172,48
+    ICON            "",IDC_STATIC6,25,156,20,20
+    LTEXT           "",IDC_STATIC,52,155,119,10
+    LTEXT           "http://code.google.com/p/f4b24/",IDC_STATIC7,52,169,123,
+                    10,SS_NOTIFY
 END
 
 TASKTRAY_SHEET DIALOGEX 0, 0, 193, 191

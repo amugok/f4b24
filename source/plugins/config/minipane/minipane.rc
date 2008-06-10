@@ -15,7 +15,6 @@
 #ifndef IDC_STATIC
 # define IDC_STATIC -1
 #endif
-#include "../../../fittle/resource/resource.h"
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
 
@@ -48,8 +47,7 @@ BEGIN
     "#endif\r\n"
     "#ifndef IDC_STATIC\r\n"
     "# define IDC_STATIC -1\r\n"
-    "#endif\r\n"
-    "#include ""../../../fittle/resource/resource.h""\0"
+    "#endif\0"
 END
 
 3 TEXTINCLUDE MOVEABLE PURE 

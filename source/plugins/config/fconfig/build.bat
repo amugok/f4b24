@@ -1,7 +1,7 @@
 @echo off
 if not "%MSVCDir%"=="" goto skipsetup
 
-if exist "C:\Program Files\Microsoft Visual Studio\VC98\Bin\VCVARS32.BAT" CALL "C:\Program Files\Microsoft Visual Studio\VC98\Bin\VCVARS32.BAT"
+if exist "%ProgramFiles%\Microsoft Visual Studio\VC98\Bin\VCVARS32.BAT" CALL "%ProgramFiles%\Microsoft Visual Studio\VC98\Bin\VCVARS32.BAT"
 
 :skipsetup
 

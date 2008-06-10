@@ -1,8 +1,8 @@
-#include "../../../fittle/resource/resource.h"
 #include "../../../fittle/src/fittle.h"
 #include "../../../fittle/src/f4b24.h"
 #include "../../../fittle/src/plugin.h"
 #include "../cplugin.h"
+#include "fittle.rh"
 
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")
@@ -55,12 +55,15 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 	return TRUE;
 }
 
-
-static void ApplyFittle(){
+static void PostF4B24Message(WPARAM wp, LPARAM lp){
 	HWND hFittle = FindWindow("Fittle", NULL);
 	if (hFittle && IsWindow(hFittle)){
-		PostMessage(hFittle, WM_F4B24_IPC, WM_F4B24_IPC_APPLY_CONFIG, 0);
+		PostMessage(hFittle, WM_F4B24_IPC, wp, lp);
 	}
+}
+
+static void ApplyFittle(){
+	PostF4B24Message(WM_F4B24_IPC_APPLY_CONFIG, 0);
 }
 
 // 実行ファイルのパスを取得
@@ -389,24 +392,16 @@ static BOOL PathCheckChanged(HWND hDlg){
 
 static BOOL CALLBACK PathSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 	char szBuff[MAX_FITTLE_PATH];
-
 	switch(msg)
 	{
 		case WM_INITDIALOG:
-			int i;
-
 			LoadConfig();
 
 			SetWindowText(GetDlgItem(hDlg, IDC_EDIT1), g_cfg.szStartPath);
 			SetWindowText(GetDlgItem(hDlg, IDC_EDIT3), g_cfg.szFilerPath);
 			SetWindowText(GetDlgItem(hDlg, IDC_EDIT4), g_cfg.szToolPath);
-			szBuff[0] = '\0';
-			for(i=0;i<MAX_EXT_COUNT;i++){
-				if(g_cfg.szTypeList[i][0]=='\0') break;
-				lstrcat(szBuff, g_cfg.szTypeList[i]);
-				lstrcat(szBuff, " ");
-			}
-			SetWindowText(GetDlgItem(hDlg, IDC_STATIC4), szBuff);
+			SetDlgItemText(hDlg, IDC_STATIC4, "");
+			PostF4B24Message(WM_F4B24_IPC_GET_SUPPORT_LIST, (LPARAM)GetDlgItem(hDlg, IDC_STATIC4));
 
 			return TRUE;
 
@@ -751,7 +746,13 @@ static BOOL CALLBACK AboutSheetProc(HWND hDlg, UINT msg, WPARAM /*wp*/, LPARAM l
 			SendDlgItemMessage(hDlg, IDC_STATIC2, STM_SETICON, (LPARAM)hIcon, (LPARAM)0);
 			SET_SUBCLASS(GetDlgItem(hDlg, IDC_STATIC3), ClickableURLProc);
 			SET_SUBCLASS(GetDlgItem(hDlg, IDC_STATIC4), ClickableURLProc);
-			SetDlgItemText(hDlg, IDC_STATIC0, FITTLE_VERSION);
+			SET_SUBCLASS(GetDlgItem(hDlg, IDC_STATIC7), ClickableURLProc);
+
+			SendDlgItemMessage(hDlg, IDC_STATIC1, STM_SETICON, (LPARAM)LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(1)), (LPARAM)0);
+			PostF4B24Message(WM_F4B24_IPC_GET_VERSION_STRING, (LPARAM)GetDlgItem(hDlg, IDC_STATIC0));
+
+			SendDlgItemMessage(hDlg, IDC_STATIC6, STM_SETICON, (LPARAM)LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(1)), (LPARAM)0);
+			PostF4B24Message(WM_F4B24_IPC_GET_VERSION_STRING2, (LPARAM)GetDlgItem(hDlg, IDC_STATIC5));
 			return TRUE;
 
 		case WM_CLOSE:
