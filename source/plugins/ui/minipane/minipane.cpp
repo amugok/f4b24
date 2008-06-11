@@ -5,10 +5,10 @@
  * All Rights Reserved
  */
 
-#include "../../fittle/resource/resource.h"
-#include "../../fittle/src/fittle.h"
-#include "../../fittle/src/plugin.h"
-#include "../../fittle/src/f4b24.h"
+#include "../../../fittle/resource/resource.h"
+#include "../../../fittle/src/fittle.h"
+#include "../../../fittle/src/plugin.h"
+#include "../../../fittle/src/f4b24.h"
 
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")
@@ -37,6 +37,12 @@ static void OnStatusChange();
 static void OnConfig();
 
 enum {PM_LIST=0, PM_RANDOM, PM_SINGLE};	// プレイモード
+
+enum {
+	WM_F4B24_INTERNAL_ON_PLAY_MODE = 1,
+	WM_F4B24_INTERNAL_ON_REPEAT_MODE = 2,
+	WM_F4B24_INTERNAL_APPLY_SETTING_OLD = 3
+};
 
 static HMENU hMiniMenu = 0;
 static HMODULE m_hinstDLL = 0;
@@ -263,10 +269,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 		case IDM_PM_LIST:
 		case IDM_PM_RANDOM:
 		case IDM_PM_SINGLE:
-			PostMessage(m_hMiniPanel, WM_F4B24_IPC, 1, 0);
+			PostMessage(m_hMiniPanel, WM_F4B24_IPC, WM_F4B24_INTERNAL_ON_PLAY_MODE, 0);
 			break;
 		case IDM_PM_REPEAT:
-			PostMessage(m_hMiniPanel, WM_F4B24_IPC, 2, 0);
+			PostMessage(m_hMiniPanel, WM_F4B24_IPC, WM_F4B24_INTERNAL_ON_REPEAT_MODE, 0);
 			break;
 		case IDM_MINIPANEL:
 			if(!m_hMiniPanel){
@@ -801,11 +807,11 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			return TRUE;
 
 		case WM_F4B24_IPC:
-			if (wp == 1){
+			if (wp == WM_F4B24_INTERNAL_ON_PLAY_MODE){
 				UpdateMenuPlayMode();
-			}else if (wp == 2){
+			}else if (wp == WM_F4B24_INTERNAL_ON_REPEAT_MODE){
 				UpdateMenuRepeatMode();
-			}else if (wp == 3 || wp == WM_F4B24_IPC_APPLY_CONFIG){
+			}else if (wp == WM_F4B24_INTERNAL_APPLY_SETTING_OLD || wp == WM_F4B24_IPC_APPLY_CONFIG){
 				LoadConfig();
 
 				SetWindowPos(hDlg, (nMiniTop?HWND_TOPMOST:HWND_NOTOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);

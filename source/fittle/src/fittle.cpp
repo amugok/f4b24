@@ -32,7 +32,8 @@
 #define FITTLE_VERSION "Fittle Ver.2.2.2 Preview 3 <Debug>"
 #endif
 
-#define F4B24_VERSION "f4b24 - test12"
+#define F4B24_VERSION "f4b24 - test13"
+#define F4B24_IF_VERSION 13
 
 //--マクロ--
 // 全ての選択状態を解除後、指定インデックスのアイテムを選択、表示
@@ -53,8 +54,8 @@
 	OutputDebugString(X); OutputDebugString("\n");
 
 enum {
-	IDM_SETUP_NEXT = 32769,
-	IDM_PLAY_NEXT
+	WM_F4B24_INTERNAL_SETUP_NEXT = 1,
+	WM_F4B24_INTERNAL_PLAY_NEXT = 2
 };
 // --列挙型の宣言--
 enum {PM_LIST=0, PM_RANDOM, PM_SINGLE};	// プレイモード
@@ -103,7 +104,7 @@ static BOOL SetUIFont(void);
 static void UpdateWindowSize(HWND);
 static BOOL SetUIColor(void);
 static void SetStatusbarIcon(LPSTR, BOOL);
-static void ShowSettingDialog(HWND, LPSTR);
+static void ShowSettingDialog(HWND, int);
 static LPSTR MallocAndConcatPath(LISTTAB *);
 static void MyShellExecute(HWND, LPSTR, LPSTR, BOOL);
 static int InitFileTypes();
@@ -1011,41 +1012,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					}
 					break;
 
-				case IDM_PLAY_NEXT:
-					EnterCriticalSection(&m_cs);
-
-					// ファイル切り替え
-					g_bNow = !g_bNow;
-					// 開放
-					FreeChannelInfo(!g_bNow);
-
-					LeaveCriticalSection(&m_cs);
-
-					PostMessage(GetParent(m_hStatus), WM_USER+1, 0, 0); 
-					break;
-
-				case IDM_SETUP_NEXT:
-					m_pNext = SelectNextFile(TRUE);
-					m_nGaplessState = GS_OK;
-
-					if(m_pNext){
-						// オープン
-						if(!SetChannelInfo(!g_bNow, m_pNext)){
-							m_nGaplessState = GS_FAILED;
-						}else{
-							BASS_CHANNELINFO info1,info2;
-							// 二つのファイルの周波数、チャンネル数、ビット数をチェック
-							BASS_ChannelGetInfo(g_cInfo[g_bNow].hChan, &info1);
-							BASS_ChannelGetInfo(g_cInfo[!g_bNow].hChan, &info2);
-							if(info1.freq!=info2.freq || info1.chans!=info2.chans || info1.flags!=info2.flags){
-								m_nGaplessState = GS_NEWFREQ;
-							}else{
-								m_nGaplessState = GS_OK;
-							}
-						}
-					}
-					break;
-
 				case IDM_SEEKFRONT:
 					_BASS_ChannelSeekSecond(g_cInfo[g_bNow].hChan, (float)g_cfg.nSeekAmount, 1);
 					break;
@@ -1199,7 +1165,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case IDM_SETTING:
-					ShowSettingDialog(hWnd, "fittle/general");
+					SendMessage(hWnd, WM_F4B24_IPC, WM_F4B24_IPC_SETTING, WM_F4B24_IPC_SETTING_LP_GENERAL);
 					break;
 
 				case IDM_BM_ADD: //しおりに追加
@@ -1235,7 +1201,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case IDM_VER:	// バージョン情報
-					ShowSettingDialog(hWnd, "fittle/about");
+					SendMessage(hWnd, WM_F4B24_IPC, WM_F4B24_IPC_SETTING, WM_F4B24_IPC_SETTING_LP_ABOUT);
 					break;
 
 				case IDM_LIST_MOVETOP:	// 一番上に移動
@@ -1337,7 +1303,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 							MyShellExecute(hWnd, g_cfg.szToolPath, pszFiles, TRUE);
 							HeapFree(GetProcessHeap(), 0, pszFiles);
 						}else{
-							ShowSettingDialog(hWnd, "fittle/path");
+							SendMessage(hWnd, WM_F4B24_IPC, WM_F4B24_IPC_SETTING, WM_F4B24_IPC_SETTING_LP_PATH);
 						}
 					}
 					break;
@@ -1985,10 +1951,44 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 		case WM_F4B24_IPC:
 			switch(wp){
+			case WM_F4B24_INTERNAL_PLAY_NEXT:
+				EnterCriticalSection(&m_cs);
+
+				// ファイル切り替え
+				g_bNow = !g_bNow;
+				// 開放
+				FreeChannelInfo(!g_bNow);
+
+				LeaveCriticalSection(&m_cs);
+
+				PostMessage(GetParent(m_hStatus), WM_USER+1, 0, 0); 
+				break;
+
+			case WM_F4B24_INTERNAL_SETUP_NEXT:
+				m_pNext = SelectNextFile(TRUE);
+				m_nGaplessState = GS_OK;
+
+				if(m_pNext){
+					// オープン
+					if(!SetChannelInfo(!g_bNow, m_pNext)){
+						m_nGaplessState = GS_FAILED;
+					}else{
+						BASS_CHANNELINFO info1,info2;
+						// 二つのファイルの周波数、チャンネル数、ビット数をチェック
+						BASS_ChannelGetInfo(g_cInfo[g_bNow].hChan, &info1);
+						BASS_ChannelGetInfo(g_cInfo[!g_bNow].hChan, &info2);
+						if(info1.freq!=info2.freq || info1.chans!=info2.chans || info1.flags!=info2.flags){
+							m_nGaplessState = GS_NEWFREQ;
+						}else{
+							m_nGaplessState = GS_OK;
+						}
+					}
+				}
+				break;
 			case WM_F4B24_IPC_GET_VERSION:
 				return 0;
 			case WM_F4B24_IPC_GET_IF_VERSION:
-				return 0;
+				return F4B24_IF_VERSION;
 			case WM_F4B24_IPC_APPLY_CONFIG:
 				ApplyConfig(hWnd);
 				break;
@@ -2001,6 +2001,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				break;
 			case WM_F4B24_IPC_GET_SUPPORT_LIST:
 				SendSupportList((HWND)lp);
+				break;
+
+			case WM_F4B24_IPC_SETTING:
+				ShowSettingDialog(hWnd, lp);
 				break;
 			}
 			break;
@@ -2422,7 +2426,7 @@ static DWORD CALLBACK MainStreamProc(HSTREAM /*handle*/, void *buf, DWORD len, v
 		if(m_bCueEnd || !BASS_ChannelIsActive(g_cInfo[g_bNow].hChan)){
 			m_bCueEnd = FALSE;
 
-			PostMessage(GetParent(m_hStatus), WM_COMMAND, MAKEWPARAM(IDM_PLAY_NEXT, 0), 0);
+			PostMessage(GetParent(m_hStatus), WM_F4B24_IPC, WM_F4B24_INTERNAL_PLAY_NEXT, 0);
 		}
 	}else{
 		r = BASS_STREAMPROC_END;
@@ -2476,7 +2480,7 @@ static BOOL PlayByUser(HWND hWnd, struct FILEINFO *pPlayFile){
 // 次のファイルをオープンする関数(99％地点で発動)
 static void CALLBACK EventSync(HSYNC /*handle*/, DWORD /*channel*/, DWORD /*data*/, void *user){
 	if(user==0){
-		PostMessage(GetParent(m_hStatus), WM_COMMAND, MAKEWPARAM(IDM_SETUP_NEXT, 0), 0);
+		PostMessage(GetParent(m_hStatus), WM_F4B24_IPC, WM_F4B24_INTERNAL_SETUP_NEXT, 0);
 	}else{
 		m_bCueEnd = TRUE;
 	}
@@ -4355,7 +4359,7 @@ static void ApplyConfig(HWND hWnd){
 	InvalidateRect(hWnd, NULL, TRUE);
 }
 
-static void ShowSettingDialog(HWND hWnd, LPSTR lpszConfigPath){
+static void ExecuteSettingDialog(HWND hWnd, LPCTSTR lpszConfigPath){
 	PROCESS_INFORMATION pi;
 	STARTUPINFO si;
 
@@ -4375,6 +4379,19 @@ static void ShowSettingDialog(HWND hWnd, LPSTR lpszConfigPath){
 		CloseHandle(pi.hThread);
 		CloseHandle(pi.hProcess);
 	}
+}
+
+static void ShowSettingDialog(HWND hWnd, int nPage){
+	static const LPCTSTR table[] = {
+		TEXT("fittle/general"),
+		TEXT("fittle/path"),
+		TEXT("fittle/control"),
+		TEXT("fittle/tasktray"),
+		TEXT("fittle/hotkey"),
+		TEXT("fittle/about")
+	};
+	if (nPage < 0 || nPage > WM_F4B24_IPC_SETTING_LP_MAX) nPage = 0;
+	ExecuteSettingDialog(hWnd, table[nPage]);
 }
 
 static void SendSupportList(HWND hWnd){
