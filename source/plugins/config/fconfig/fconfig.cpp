@@ -233,7 +233,7 @@ static int SheetSetup(PROPSHEETHEADER *ppsh, LPCTSTR lpszStartPath, int nStartPa
 			ppsh->dwFlags = PSH_USEICONID | PSH_USECALLBACK;
 			ppsh->hwndParent = 0;
 			ppsh->hInstance = GetModuleHandle(NULL);
-			ppsh->pszIcon = MAKEINTRESOURCE(1);
+			ppsh->pszIcon = TEXT("MYICON");
 			ppsh->pszCaption = TEXT("Ý’è");
 			ppsh->nPages = nNumPage;
 			ppsh->nStartPage = nStartPage;

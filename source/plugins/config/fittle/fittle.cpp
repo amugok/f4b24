@@ -750,10 +750,10 @@ static BOOL CALLBACK AboutSheetProc(HWND hDlg, UINT msg, WPARAM /*wp*/, LPARAM l
 			SET_SUBCLASS(GetDlgItem(hDlg, IDC_STATIC4), ClickableURLProc);
 			SET_SUBCLASS(GetDlgItem(hDlg, IDC_STATIC7), ClickableURLProc);
 
-			SendDlgItemMessage(hDlg, IDC_STATIC1, STM_SETICON, (LPARAM)LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(1)), (LPARAM)0);
+			SendDlgItemMessage(hDlg, IDC_STATIC1, STM_SETICON, (LPARAM)LoadIcon(GetModuleHandle(NULL), "MYICON"), (LPARAM)0);
 			PostF4B24Message(WM_F4B24_IPC_GET_VERSION_STRING, (LPARAM)GetDlgItem(hDlg, IDC_STATIC0));
 
-			SendDlgItemMessage(hDlg, IDC_STATIC6, STM_SETICON, (LPARAM)LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(1)), (LPARAM)0);
+			SendDlgItemMessage(hDlg, IDC_STATIC6, STM_SETICON, (LPARAM)LoadIcon(GetModuleHandle(NULL), "MYICON"), (LPARAM)0);
 			PostF4B24Message(WM_F4B24_IPC_GET_VERSION_STRING2, (LPARAM)GetDlgItem(hDlg, IDC_STATIC5));
 			return TRUE;
 
