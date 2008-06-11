@@ -150,7 +150,6 @@ BEGIN
         MENUITEM "再生(&P)\tZ",                 IDM_PLAY
         MENUITEM "停止(&S)\tC",                 40047
         MENUITEM SEPARATOR
-        MENUITEM "アドレスを追加(&U)\tCtrl+U",  IDM_LIST_URL
         MENUITEM "一番上に移動(&T)",            IDM_LIST_MOVETOP
         MENUITEM "一番下に移動(&B)",            IDM_LIST_MOVEBOTTOM
         MENUITEM "リストから削除(&D)\tDel",     IDM_LIST_DEL

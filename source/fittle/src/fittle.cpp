@@ -71,7 +71,6 @@ static LRESULT CALLBACK NewTabProc(HWND, UINT, WPARAM, LPARAM);
 static LRESULT CALLBACK NewTreeProc(HWND, UINT, WPARAM, LPARAM);
 static LRESULT CALLBACK NewSplitBarProc(HWND, UINT, WPARAM, LPARAM);
 static BOOL CALLBACK BookMarkDlgProc(HWND, UINT, WPARAM, LPARAM);
-static BOOL CALLBACK AddURLDlgProc(HWND, UINT, WPARAM, LPARAM);
 static DWORD CALLBACK MainStreamProc(HSTREAM, void *, DWORD, void *);
 static void CALLBACK EventSync(HSYNC, DWORD, DWORD, void *);
 // 設定関係
@@ -882,8 +881,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			}else{
 				struct FILEINFO *pSub = NULL;
 				char szTest[MAX_FITTLE_PATH];
-				//lstrcpyn(szTest, (char*)pcds->lpData, MAX_FITTLE_PATH);	// 一度バッファにコピーしないと落ちる
-				GetLongPathName((LPSTR)pcds->lpData, szTest, MAX_FITTLE_PATH);
+				if (IsURLPath((LPCSTR)pcds->lpData))
+					lstrcpyn(szTest, (char*)pcds->lpData, MAX_FITTLE_PATH);
+				else
+					GetLongPathName((LPSTR)pcds->lpData, szTest, MAX_FITTLE_PATH);
 				SearchFiles(&pSub, szTest, TRUE);
 				ListView_SetItemState(GetCurListTab(m_hTab)->hList, -1, 0, LVIS_FOCUSED | LVIS_SELECTED);
 				InsertList(GetCurListTab(m_hTab), -1, pSub);
@@ -1214,20 +1215,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case IDM_LIST_URL:
-					char szLabel[MAX_FITTLE_PATH];
-					struct FILEINFO *pSub;
-
-					szLabel[0] = '\0';
-					pSub = NULL;
-					if(DialogBoxParam(m_hInst, "TAB_NAME_DIALOG", hWnd, AddURLDlgProc, (LPARAM)szLabel)){
-						SearchFiles(&pSub, szLabel, FALSE);
-						ListView_SetItemState(GetCurListTab(m_hTab)->hList, -1, 0, LVIS_FOCUSED | LVIS_SELECTED);
-						InsertList(GetCurListTab(m_hTab), -1, pSub);
-						ListView_EnsureVisible(GetCurListTab(m_hTab)->hList, ListView_GetItemCount(GetCurListTab(m_hTab)->hList)-1, TRUE);
-					}
 					break;
 
 				case IDM_LIST_NEW:	// 新規プレイリスト
+					char szLabel[MAX_FITTLE_PATH];
 					lstrcpy(szLabel, "Default");
 					if(DialogBoxParam(m_hInst, "TAB_NAME_DIALOG", hWnd, TabNameDlgProc, (LPARAM)szLabel)){
 						MakeNewTab(m_hTab, szLabel, -1);
@@ -1356,6 +1347,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 				case IDM_TREE_ADD:
 				//case IDM_TREE_SUBADD:
+					struct FILEINFO *pSub;
 					pSub = NULL;
 
 					GetPathFromNode(m_hTree, m_hHitTree, szNowDir);
@@ -2399,7 +2391,7 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 		return TRUE;
 	}else{
 		BASS_SetConfig(BASS_CONFIG_NET_TIMEOUT, 60000); // 5secは短いので60secにする
-		g_cInfo[bFlag].hChan = BASS_StreamCreateURL(szFilePath, 0, BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT * m_bFLoat, NULL, 0);
+		g_cInfo[bFlag].hChan = BASS_StreamCreateURL(szFilePath, 0, BASS_STREAM_BLOCK | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT * m_bFLoat, NULL, 0);
 		if(g_cInfo[bFlag].hChan){
 			g_cInfo[bFlag].qDuration = BASS_ChannelGetLength(g_cInfo[bFlag].hChan, BASS_POS_BYTE);
 			if(g_cInfo[bFlag].qDuration<0){
@@ -4263,62 +4255,6 @@ static BOOL CALLBACK BookMarkDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM /*lp
 	}
 }
 
-static BOOL CALLBACK AddURLDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
-	static char *pszText;
-	char szTemp[MAX_FITTLE_PATH];
-
-	switch(msg)
-	{		
-		case WM_INITDIALOG:
-			pszText = (char *)lp;
-
-			// クリップボードに有効なURIが入っていればエディットボックスにコピー
-			if(IsClipboardFormatAvailable(CF_TEXT)){
-				if(OpenClipboard(NULL)){
-					HANDLE hMem = GetClipboardData(CF_TEXT);
-					LPTSTR pMem = (LPTSTR)GlobalLock(hMem);
-					lstrcpyn((LPTSTR)(LPCTSTR)szTemp, pMem, MAX_FITTLE_PATH);
-					GlobalUnlock(hMem);
-					CloseClipboard();
-				}
-				if(IsURLPath(szTemp) || FILE_EXIST(szTemp)){
-					SetWindowText(GetDlgItem(hDlg, IDC_EDIT1), szTemp);
-					SendMessage(GetDlgItem(hDlg, IDC_EDIT1), EM_SETSEL, (WPARAM)0, (LPARAM)lstrlen(szTemp));
-				}
-			}
-			SendMessage(hDlg, WM_SETTEXT, 0, (LPARAM)"アドレスを追加");
-			SetFocus(GetDlgItem(hDlg, IDC_EDIT1));
-			return FALSE;
-
-		case WM_COMMAND:
-			switch(LOWORD(wp))
-			{
-				case IDOK:	// 設定保存
-					GetWindowText(GetDlgItem(hDlg, IDC_EDIT1), szTemp, MAX_FITTLE_PATH);
-					if(lstrlen(szTemp)==0){
-						EndDialog(hDlg, FALSE);
-						return TRUE;
-					}else{
-						lstrcpyn(pszText, szTemp, MAX_FITTLE_PATH);
-						EndDialog(hDlg, TRUE);
-					}
-					return TRUE;
-
-				case IDCANCEL:	// 設定を保存せずに終了
-					EndDialog(hDlg, FALSE);
-					return TRUE;
-			}
-			return FALSE;
-
-		// 終了
-		case WM_CLOSE:
-			EndDialog(hDlg, FALSE);
-			return FALSE;
-
-		default:
-			return FALSE;
-	}
-}
 
 
 // ツールバーの幅を取得（ドロップダウンがあってもうまく行きます）
@@ -4329,6 +4265,7 @@ static LONG GetToolbarTrueWidth(HWND hToolbar){
 	return rct.right;
 }
 
+// 設定ファイルを読み直し適用する(一部設定を除く)
 static void ApplyConfig(HWND hWnd){
 	BOOL fIsIconic = IsIconic(hWnd);
 	BOOL fOldTrayVisible = m_bTrayFlag;
@@ -4376,6 +4313,7 @@ static void ApplyConfig(HWND hWnd){
 	InvalidateRect(hWnd, NULL, TRUE);
 }
 
+// 外部設定プログラムを起動する
 static void ExecuteSettingDialog(HWND hWnd, LPCTSTR lpszConfigPath){
 	PROCESS_INFORMATION pi;
 	STARTUPINFO si;
@@ -4398,6 +4336,7 @@ static void ExecuteSettingDialog(HWND hWnd, LPCTSTR lpszConfigPath){
 	}
 }
 
+// 設定画面を開く
 static void ShowSettingDialog(HWND hWnd, int nPage){
 	static const LPCTSTR table[] = {
 		TEXT("fittle/general"),
@@ -4411,6 +4350,7 @@ static void ShowSettingDialog(HWND hWnd, int nPage){
 	ExecuteSettingDialog(hWnd, table[nPage]);
 }
 
+// 対応拡張子リストを取得する
 static void SendSupportList(HWND hWnd){
 	char szList[MAX_FITTLE_PATH];
 	int i;
@@ -4428,6 +4368,7 @@ static void SendSupportList(HWND hWnd){
 	SendMessage(hWnd, WM_SETTEXT, 0, (LPARAM)szList);
 }
 
+// 音声出力デバイスが浮動小数点出力をサポートしているか調べる
 static BOOL IsSupportFloatOutput(){
 	DWORD floatable = BASS_StreamCreate(44100, 1, BASS_SAMPLE_FLOAT, NULL, 0); // try creating FP stream
 	if (floatable){
