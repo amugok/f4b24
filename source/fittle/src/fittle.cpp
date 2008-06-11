@@ -27,11 +27,12 @@
 
 // ソフト名（バージョンアップ時に忘れずに更新）
 #ifndef _DEBUG
-#define FITTLE_VERSION "Fittle Ver.2.2.2 Preview 3"
+#define FITTLE_TITLE "Fittle Ver.2.2.2 Preview 3 / BASS2.4 test13"
 #else
-#define FITTLE_VERSION "Fittle Ver.2.2.2 Preview 3 <Debug>"
+#define FITTLE_TITLE "Fittle Ver.2.2.2 Preview 3 / BASS2.4 test13 <Debug>"
 #endif
 
+#define FITTLE_VERSION "Fittle Ver.2.2.2 Preview 3"
 #define F4B24_VERSION "f4b24 - test13"
 #define F4B24_IF_VERSION 13
 
@@ -604,8 +605,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			}
 
 			// ウィンドウタイトルの設定
-			SetWindowText(hWnd, FITTLE_VERSION);
-			lstrcpy(m_ni.szTip, FITTLE_VERSION);
+			SetWindowText(hWnd, FITTLE_TITLE);
+			lstrcpy(m_ni.szTip, FITTLE_TITLE);
 
 			// タスクトレイ
 			if(g_cfg.nTrayOpt==2) SetTaskTray(hWnd);
@@ -2562,7 +2563,7 @@ static void OnChangeTrack(){
 	}
 
 	//タイトルバーの処理
-	wsprintf(szTitleCap, "%s - %s", m_szTag, FITTLE_VERSION);
+	wsprintf(szTitleCap, "%s - %s", m_szTag, FITTLE_TITLE);
 	SetWindowText(GetParent(m_hStatus), szTitleCap);
 
 	float time = BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, BASS_ChannelGetLength(g_cInfo[g_bNow].hChan, BASS_POS_BYTE)); // playback duration
@@ -2843,8 +2844,8 @@ static int StopOutputStream(HWND hWnd){
 	SendMessage(m_hToolBar,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(FALSE, 0));
 	
 	//文字列表示関係
-	SetWindowText(hWnd, FITTLE_VERSION);
-	lstrcpy(m_ni.szTip, FITTLE_VERSION);
+	SetWindowText(hWnd, FITTLE_TITLE);
+	lstrcpy(m_ni.szTip, FITTLE_TITLE);
 	if(m_bTrayFlag)
 		Shell_NotifyIcon(NIM_MODIFY, &m_ni); //ToolTipの変更
 
