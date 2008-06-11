@@ -12,6 +12,7 @@
 #pragma comment(lib,"comctl32.lib")
 #pragma comment(lib,"shlwapi.lib")
 #pragma comment(linker, "/EXPORT:GetCPluginInfo=_GetCPluginInfo@0")
+#pragma comment(linker, "/EXPORT:OldMode=_OldMode@4")
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/MERGE:.rdata=.text")
@@ -201,17 +202,21 @@ static BOOL CALLBACK MiniPanePageProc(HWND hWnd , UINT msg , WPARAM wp , LPARAM 
 static DWORD CALLBACK GetConfigPageCount(void){
 	return 1;
 }
+static HPROPSHEETPAGE CreateConfigPage(){
+	PROPSHEETPAGE psp;
+
+	psp.dwSize = sizeof (PROPSHEETPAGE);
+	psp.dwFlags = PSP_DEFAULT;
+	psp.hInstance = hDLL;
+	psp.pszTemplate = TEXT("MINIPANE_SHEET");
+	psp.pfnDlgProc = (DLGPROC)MiniPanePageProc;
+	return CreatePropertySheetPage(&psp);
+}
+
 static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel, char *pszConfigPath, int nConfigPathSize){
 	if (nIndex == 0 && nLevel == 1){
-		PROPSHEETPAGE psp[1];
-
-		psp[0].dwSize = sizeof (PROPSHEETPAGE);
-		psp[0].dwFlags = PSP_DEFAULT;
-		psp[0].hInstance = hDLL;
-		psp[0].pszTemplate = TEXT("MINIPANE_SHEET");
-		psp[0].pfnDlgProc = (DLGPROC)MiniPanePageProc;
 		lstrcpyn(pszConfigPath, "plugin/minipane", nConfigPathSize);
-		return CreatePropertySheetPage(psp);
+		return CreateConfigPage();
 	}
 	return 0;
 }
@@ -223,4 +228,32 @@ CONFIG_PLUGIN_INFO * CALLBACK GetCPluginInfo(void){
 	return &cpinfo;
 }
 
+
+#ifdef __cplusplus
+extern "C"
+#endif
+void CALLBACK OldMode(HWND hWnd){
+	HWND hTab = PropSheet_GetTabControl(hWnd);
+	int nTab = TabCtrl_GetItemCount(hTab);
+	BOOL fFound = FALSE;
+	int i;
+	for (i = 0; i < nTab; i++){
+		TCHAR szBuf[32];
+		TCITEM tci;
+		tci.mask = TCIF_TEXT;
+		tci.pszText = szBuf;
+		tci.cchTextMax = 32;
+		if (TabCtrl_GetItem(hTab, i, &tci)){
+			if (lstrcmp(tci.pszText, "ミニパネル") == 0){
+				fFound = TRUE;
+			}
+		}
+	}
+	if (!fFound){
+		HPROPSHEETPAGE hPage = CreateConfigPage();
+		if (hPage){
+			PropSheet_AddPage(hWnd, hPage);
+		}
+	}
+}
 

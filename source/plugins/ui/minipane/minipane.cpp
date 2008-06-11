@@ -50,6 +50,8 @@ static HWND m_hMiniTool = NULL;		// ミニパネルツールバー
 static HWND m_hMiniPanel = NULL;	// ミニパネルハンドル
 static WNDPROC m_hOldProc = 0;
 static HIMAGELIST m_hImageList = NULL;
+static HMODULE m_hdllConfig = NULL;
+static BOOL m_fHookConfig = FALSE;
 
 static int m_nTitleDisplayPos = 1;
 static char m_szTime[100];			// 再生時間
@@ -66,6 +68,17 @@ static int nMiniWidth;
 static int nMiniScroll;
 static int nMiniTimeShow;
 static int nMiniToolShow;
+
+static FITTLE_PLUGIN_INFO fpi = {
+	PDK_VER,
+	OnInit,
+	OnQuit,
+	OnTrackChange,
+	OnStatusChange,
+	OnConfig,
+	NULL,
+	NULL
+};
 
 void GetModuleParentDir(char *szParPath){
 	char szPath[MAX_FITTLE_PATH];
@@ -145,17 +158,6 @@ static void SaveState(){
 	WritePrivateProfileString(NULL, NULL, NULL, m_szINIPath);
 }
 
-static FITTLE_PLUGIN_INFO fpi = {
-	PDK_VER,
-	OnInit,
-	OnQuit,
-	OnTrackChange,
-	OnStatusChange,
-	OnConfig,
-	NULL,
-	NULL
-};
-
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 	(void)lpvReserved;
 	if (fdwReason == DLL_PROCESS_ATTACH){
@@ -166,7 +168,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 	return TRUE;
 }
 
-LRESULT FittlePluginInterface(int nCommand){
+static LRESULT FittlePluginInterface(int nCommand){
 	return SendMessage(fpi.hParent, WM_FITTLE, nCommand, 0);
 }
 
@@ -257,6 +259,19 @@ static void SetMiniToolCheck(int nCommand, int nSwitch){
 // サブクラス化したウィンドウプロシージャ
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 	switch(msg){
+	case WM_ACTIVATE:
+		{
+//			HWND hConfig = FindWindowEx(hWnd, NULL, "#32770", "設定");
+			HWND hConfig = FindWindow("#32770", "設定");
+			if (hConfig && IsWindow(hConfig) && GetWindowThreadProcessId(hWnd, NULL) == GetWindowThreadProcessId(hConfig, NULL)){
+				typedef void (CALLBACK * LPFNOLDMODE)(HWND hwnd);
+				LPFNOLDMODE pfnoldmode = (LPFNOLDMODE)GetProcAddress(m_hdllConfig, "OldMode");
+				if (pfnoldmode){
+					pfnoldmode(hConfig);
+				}
+			}
+		}
+		break;
 	case WM_SETFOCUS:
 		if(!m_hMiniPanel) break;
 		SetFocus(m_hMiniPanel);
@@ -306,6 +321,11 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 static BOOL OnInit(){
 	HMENU hMainMenu = (HMENU)FittlePluginInterface(GET_MENU);
 	EnableMenuItem(hMainMenu, IDM_MINIPANEL, MF_BYCOMMAND | MF_ENABLED);
+
+	if (SendMessage(fpi.hParent, WM_F4B24_IPC, WM_F4B24_IPC_GET_IF_VERSION, 0) < 12){
+		m_hdllConfig = LoadLibrary("minipane.fcp");
+		m_fHookConfig = (m_hdllConfig != NULL);
+	}
 
 	hMiniMenu = LoadMenu(m_hinstDLL, "TRAYMENU");
 	m_hOldProc = (WNDPROC)SetWindowLong(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
@@ -370,9 +390,6 @@ __declspec(dllexport) FITTLE_PLUGIN_INFO *GetPluginInfo(){
 #ifdef __cplusplus
 }
 #endif
-
-
-
 
 #define TB_BTN_NUM 8
 #define TB_BMP_NUM 9
@@ -535,6 +552,7 @@ static void UpdateMenuPlayMode(){
 
 	if (m_hMiniTool) SendMessage(m_hMiniTool,  TB_CHANGEBITMAP, (WPARAM)IDM_PM_TOGGLE, (LPARAM)MAKELONG(m_nPlayMode==PM_LIST?5:(m_nPlayMode==PM_RANDOM?7:8), 0));
 }
+
 static void UpdateMenuRepeatMode(){
 	int m_nRepeatFlag = GetRepeatFlag();
 	MENUITEMINFO mii;
@@ -834,4 +852,3 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			return FALSE;
 	}
 }
-
