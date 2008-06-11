@@ -106,7 +106,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 		break;
 	case WM_INITMENUPOPUP:
 		UpdateMenuItems((HMENU)wp);
-		DeleteMenu((HMENU)wp, IDM_LIST_DELFILE, MF_BYCOMMAND);
 		break;
 	}
 	return CallWindowProc(hOldProc, hWnd, msg, wp, lp);
