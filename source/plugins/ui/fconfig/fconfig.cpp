@@ -9,6 +9,7 @@
 
 #include "../../../fittle/src/plugin.h"
 #include "../../../fittle/src/f4b24.h"
+#include "../../../fittle/resource/resource.h"
 #include "../../config/cplugin.h"
 
 #if defined(_MSC_VER)
@@ -287,7 +288,15 @@ static void ShowSettingDialog(HWND hWnd, int nPage){
 
 // サブクラス化したウィンドウプロシージャ
 LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
-	if ((msg == WM_F4B24_IPC) && (wp == WM_F4B24_IPC_SETTING)){
+	if (msg == WM_COMMAND){
+		if (LOWORD(wp) == IDM_SETTING){
+			ShowSettingDialog(hWnd, 0);
+			return 0;
+		} else if (LOWORD(wp) == IDM_VER){
+			ShowSettingDialog(hWnd, 5);
+			return 0;
+		}
+	} else if ((msg == WM_F4B24_IPC) && (wp == WM_F4B24_IPC_SETTING)){
 		ShowSettingDialog(hWnd, lp);
 		return 0;
 	}
