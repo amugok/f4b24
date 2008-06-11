@@ -4330,7 +4330,10 @@ static LONG GetToolbarTrueWidth(HWND hToolbar){
 }
 
 static void ApplyConfig(HWND hWnd){
-	int nOldTrayOpt = g_cfg.nTrayOpt;
+	BOOL fIsIconic = IsIconic(hWnd);
+	BOOL fOldTrayVisible = m_bTrayFlag;
+	BOOL fNewTrayVisible = FALSE;
+
 	UnRegHotKey(hWnd);
 
 	LoadConfig();
@@ -4348,17 +4351,24 @@ static void ApplyConfig(HWND hWnd){
 	SetUIFont();
 
 	if (g_cfg.nTrayOpt == 0){
-		if(m_bTrayFlag){
-			Shell_NotifyIcon(NIM_DELETE, &m_ni);
-			m_bTrayFlag = FALSE;
+		fNewTrayVisible = FALSE;
+		if (!IsWindowVisible(hWnd))
+			ShowWindow(hWnd, SW_SHOWMINNOACTIVE);
+	} else {
+		if (g_cfg.nTrayOpt == 1){
+			fNewTrayVisible = !IsWindowVisible(hWnd) || fIsIconic;
+		}else{
+			fNewTrayVisible = TRUE;
 		}
-	} else if (g_cfg.nTrayOpt == 1){
-		if(m_bTrayFlag){
-			Shell_NotifyIcon(NIM_DELETE, &m_ni);
-			m_bTrayFlag = FALSE;
-		}
-	}else{
-		if(nOldTrayOpt != 2)
+		if (fIsIconic)
+			ShowWindow(hWnd, SW_HIDE);
+	}
+
+	if (fOldTrayVisible && !fNewTrayVisible){
+		Shell_NotifyIcon(NIM_DELETE, &m_ni);
+		m_bTrayFlag = FALSE;
+	}
+	if (!fOldTrayVisible && fNewTrayVisible){
 			SetTaskTray(GetParent(m_hStatus));
 	}
 
