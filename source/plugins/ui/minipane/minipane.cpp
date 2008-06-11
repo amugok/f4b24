@@ -323,7 +323,10 @@ static BOOL OnInit(){
 	EnableMenuItem(hMainMenu, IDM_MINIPANEL, MF_BYCOMMAND | MF_ENABLED);
 
 	if (SendMessage(fpi.hParent, WM_F4B24_IPC, WM_F4B24_IPC_GET_IF_VERSION, 0) < 12){
-		m_hdllConfig = LoadLibrary("minipane.fcp");
+		char m_szPathFCP[MAX_FITTLE_PATH];
+		GetModuleFileName(m_hinstDLL, m_szPathFCP, MAX_FITTLE_PATH);
+		lstrcpy(PathFindExtension(PathFindFileName(m_szPathFCP)), ".fcp");
+		m_hdllConfig = LoadLibrary(m_szPathFCP);
 		m_fHookConfig = (m_hdllConfig != NULL);
 	}
 
