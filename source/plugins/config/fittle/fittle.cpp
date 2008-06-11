@@ -62,6 +62,14 @@ static void PostF4B24Message(WPARAM wp, LPARAM lp){
 	}
 }
 
+static LRESULT SendF4B24Message(WPARAM wp, LPARAM lp){
+	HWND hFittle = FindWindow("Fittle", NULL);
+	if (hFittle && IsWindow(hFittle)){
+		return SendMessage(hFittle, WM_F4B24_IPC, wp, lp);
+	}
+	return 0;
+}
+
 static void ApplyFittle(){
 	PostF4B24Message(WM_F4B24_IPC_APPLY_CONFIG, 0);
 }
@@ -317,15 +325,9 @@ static BOOL CALLBACK GeneralSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 			}
 			SendDlgItemMessage(hDlg, IDC_COMBO1, CB_SETCURSEL, (WPARAM)g_cfg.nSeekAmount-1, (LPARAM)0);
 
-#if 0
-			DWORD floatable; // floating-point channel support? 0 = no, else yes
-			floatable = BASS_StreamCreate(44100, 1, BASS_SAMPLE_FLOAT, NULL, 0); // try creating FP stream
-			if (floatable){
-				BASS_StreamFree(floatable); // floating-point channels are supported!
-			}else{
+			if (SendF4B24Message(WM_F4B24_IPC_GET_CAPABLE, WM_F4B24_IPC_GET_CAPABLE_LP_FLOATOUTPUT) == WM_F4B24_IPC_GET_CAPABLE_RET_NOT_SUPPORTED){
 				EnableWindow(GetDlgItem(hDlg, IDC_CHECK13), FALSE);
 			}
-#endif
 
 			SendDlgItemMessage(hDlg, IDC_CHECK13, BM_SETCHECK, (WPARAM)g_cfg.nOut32bit, 0);
 			SendDlgItemMessage(hDlg, IDC_CHECK14, BM_SETCHECK, (WPARAM)g_cfg.nFadeOut, 0);

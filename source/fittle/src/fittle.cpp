@@ -80,6 +80,7 @@ static void LoadConfig();
 static void SaveState(HWND);
 static void ApplyConfig(HWND hWnd);
 static void SendSupportList(HWND hWnd);
+static BOOL IsSupportFloatOutput();
 // ÉRÉìÉgÉçÅ[Éãä÷åW
 static void DoTrayClickAction(HWND, int);
 static void PopupTrayMenu(HWND);
@@ -2005,6 +2006,12 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 			case WM_F4B24_IPC_SETTING:
 				ShowSettingDialog(hWnd, lp);
+				break;
+
+			case WM_F4B24_IPC_GET_CAPABLE:
+				if (lp == WM_F4B24_IPC_GET_CAPABLE_LP_FLOATOUTPUT){
+					return IsSupportFloatOutput() ? WM_F4B24_IPC_GET_CAPABLE_RET_SUPPORTED : WM_F4B24_IPC_GET_CAPABLE_RET_NOT_SUPPORTED;
+				}
 				break;
 			}
 			break;
@@ -4411,3 +4418,11 @@ static void SendSupportList(HWND hWnd){
 	SendMessage(hWnd, WM_SETTEXT, 0, (LPARAM)szList);
 }
 
+static BOOL IsSupportFloatOutput(){
+	DWORD floatable = BASS_StreamCreate(44100, 1, BASS_SAMPLE_FLOAT, NULL, 0); // try creating FP stream
+	if (floatable){
+		BASS_StreamFree(floatable); // floating-point channels are supported!
+		return TRUE;
+	}
+	return FALSE;
+}
