@@ -26,13 +26,14 @@
 
 // ソフト名（バージョンアップ時に忘れずに更新）
 #ifndef _DEBUG
-#define FITTLE_TITLE "Fittle Ver.2.2.2 Preview 3 / BASS2.4 test13"
+#define FITTLE_TITLE "Fittle Ver.2.2.2 Preview 3 for BASS 2.4 test14"
 #else
-#define FITTLE_TITLE "Fittle Ver.2.2.2 Preview 3 / BASS2.4 test13 <Debug>"
+#define FITTLE_TITLE "Fittle Ver.2.2.2 Preview 3 for BASS 2.4 test14 <Debug>"
 #endif
 
 #define FITTLE_VERSION "Fittle Ver.2.2.2 Preview 3"
-#define F4B24_VERSION "f4b24 - test13"
+#define F4B24_VERSION_STRING "f4b24 - test14"
+#define F4B24_VERSION 14
 #define F4B24_IF_VERSION 13
 
 //--マクロ--
@@ -1975,7 +1976,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				}
 				break;
 			case WM_F4B24_IPC_GET_VERSION:
-				return 0;
+				return F4B24_VERSION;
 			case WM_F4B24_IPC_GET_IF_VERSION:
 				return F4B24_IF_VERSION;
 			case WM_F4B24_IPC_APPLY_CONFIG:
@@ -1986,7 +1987,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)FITTLE_VERSION);
 				break;
 			case WM_F4B24_IPC_GET_VERSION_STRING2:
-				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)F4B24_VERSION);
+				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)F4B24_VERSION_STRING);
 				break;
 			case WM_F4B24_IPC_GET_SUPPORT_LIST:
 				SendSupportList((HWND)lp);

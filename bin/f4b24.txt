@@ -1,7 +1,7 @@
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test13
+              for BASS 2.4 test14
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
@@ -27,18 +27,11 @@ All rights reserved.
 	taskvol.dll  タスクバー上ホイールで音量を変えるプラグイン 強制終了時にエクスプローラごと落ちる問題に対処
 	xdelfile.dll ファイル削除機能無効化プラグイン
 
-追加したプラグイン(公式でも動くように見えてまともに動作しない)
-	fconfig.dll  設定画面 test12以降で利用しないと設定が適用されず本体終了時に元の値で上書きされる
-	addurl.dll   URLを追加プラグイン text13以降で利用しないと実在するファイルのパスしか登録できない
-
 追加したプログラム
-	fconfig.exe  設定画面
-
-追加したfconfig用プラグイン
-	fittle.fcp   fittle.exe 設定プラグイン
-	minipane.fcp minipane.dll 設定プラグイン
+	fconfig.exe  設定画面 fcpプラグインが無いと何もできない
 
 追加した専用プラグイン
+	cue.fap      cueシートプラグイン 要test14以降
 	arj.fap      arj書庫プラグイン 要統合アーカイバプロジェクト版unarj32j.dll
 	cab.fap      cab書庫プラグイン 要IE5以降(cabinet.dll又はfdi.dll)
 	gca.fap      gca書庫プラグイン
@@ -46,8 +39,15 @@ All rights reserved.
 	rar.fap      rar書庫プラグイン 要RARLABオフィシャル版unrar.dll
 	tar.fap      tar書庫プラグイン 要統合アーカイバプロジェクト版tar32.dll
 	zip.fap      zip書庫プラグイン 要統合アーカイバプロジェクト版unzip32.dll
+	fconfig.dll  設定画面 fcpプラグインが無いと何もできない 要test12以降
+	addurl.dll   URLを追加プラグイン text13以降推奨
+	fittle.fcp   fittle.exe 設定プラグイン 要fconfig.exe又はfconfig.dll
+	minipane.fcp minipane.dll 設定プラグイン 要fconfig.exe又はfconfig.dll
 
 実験履歴
+	test14
+		CUEシート読み込み機能を削除してみた
+
 	test13
 		「URLを追加」を削除してみた
 
