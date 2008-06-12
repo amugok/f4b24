@@ -100,10 +100,6 @@ SOURCE=.\src\bass_tag.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\src\cuesheet.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\src\dsp.cpp
 # End Source File
 # Begin Source File
@@ -153,10 +149,6 @@ SOURCE=.\src\archive.h
 # Begin Source File
 
 SOURCE=.\src\bass_tag.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\src\cuesheet.h
 # End Source File
 # Begin Source File
 

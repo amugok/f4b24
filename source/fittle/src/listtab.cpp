@@ -14,7 +14,6 @@
 #include "func.h"
 #include "bass_tag.h"
 #include "archive.h"
-#include "cuesheet.h"
 
 // êVÇµÇ¢É^ÉuÇ‡ÇÎÇ‡ÇÎÇçÏê¨
 struct LISTTAB *MakeNewTab(HWND hTab, char *szTabName, int nItem){
@@ -460,7 +459,7 @@ BOOL LoadPlaylists(HWND hTab){
 				szTempPath[i++] = *p;
 			}
 			szTempPath[i] = '\0';
-			if(!g_cfg.nExistCheck || FILE_EXIST(szTempPath) || IsArchivePath(szTempPath) || IsCueSheetPath(szTempPath) || IsURLPath(szTempPath))
+			if(!g_cfg.nExistCheck || FILE_EXIST(szTempPath) || IsArchivePath(szTempPath) || IsURLPath(szTempPath))
 			{
 				if(g_cfg.nTimeInList){
 					GetTimeAndSize(szTempPath, szSize, szTime);

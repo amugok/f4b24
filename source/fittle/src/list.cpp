@@ -14,7 +14,6 @@
 #include "func.h"
 #include "bass_tag.h"
 #include "archive.h"
-#include "cuesheet.h"
 
 // ローカル関数
 void Merge(struct FILEINFO **, struct FILEINFO **);
@@ -255,7 +254,7 @@ int ReadM3UFile(struct FILEINFO **pSub, char *pszFilePath){
 							wsprintf(szCombine, "%s\\%s", szParPath, szTempPath);
 							PathCanonicalize(szTempPath, szCombine);
 						}
-						if(!g_cfg.nExistCheck || (FILE_EXIST(szTempPath) || IsArchivePath(szTempPath) || IsCueSheet(szTempPath)))
+						if(!g_cfg.nExistCheck || (FILE_EXIST(szTempPath) || IsArchivePath(szTempPath)))
 						{
 							if(g_cfg.nTimeInList){
 								GetTimeAndSize(szTempPath, szSize, szTime);
@@ -450,9 +449,6 @@ int SearchFiles(struct FILEINFO **ppRoot, char *szFilePath, BOOL bSub){
 #endif
 
 		return ARCHIVES;
-	}else if(IsCueSheet(szFilePath)){
-		ReadCueSheet(ppRoot, szFilePath);			/* Cue Sheet */
-		return CUESHEETS;
 	}else if(FILE_EXIST(szFilePath) && CheckFileType(szFilePath)){
 		GetTimeAndSize(szFilePath, szSize, szTime);		/* 単体ファイル */
 		AddList(ppRoot, szFilePath, szSize, szTime);

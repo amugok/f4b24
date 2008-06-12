@@ -12,7 +12,6 @@
 #include "func.h"
 #include "bass_tag.h"
 #include "archive.h"
-#include "cuesheet.h"
 
 /* ファイル名のポインタを取得 */
 char *GetFileName(char *szIn){
@@ -24,7 +23,6 @@ char *GetFileName(char *szIn){
 		char *r = GetArchiveItemFileName(szIn);
 		if (r) return r;
 	}
-	if(IsCueSheetPath(szIn)) return StrStr(szIn, ".cue/") + 5;
 	while(*p){
 		if(IsDBCSLeadByte(*p)){
 			p++;
@@ -59,9 +57,6 @@ int GetParentDir(char *pszFilePath, char *pszParPath){
 			// アーカイブ
 			lstrcpyn(pszParPath, szLongPath, MAX_FITTLE_PATH);
 			return ARCHIVES;
-		}else if(IsCueSheet(szLongPath)){
-			lstrcpyn(pszParPath, szLongPath, MAX_FITTLE_PATH);
-			return CUESHEETS;
 		}else{
 			// 音楽ファイル
 			lstrcpyn(pszParPath, szLongPath, MAX_FITTLE_PATH);

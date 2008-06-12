@@ -10,7 +10,7 @@
 
 #include "fittle.h"
 
-enum {OTHERS=0, FOLDERS, FILES, LISTS, ARCHIVES, CUESHEETS, URLS};
+enum {OTHERS=0, FOLDERS, FILES, LISTS, ARCHIVES, NA_CUESHEETS_, URLS};
 
 //--É}ÉNÉç--
 #define FILE_EXIST(X) (GetFileAttributes(X)==0xFFFFFFFF ? FALSE : TRUE)

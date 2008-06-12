@@ -44,7 +44,7 @@ static BOOL CALLBACK IsArchiveExt(char *pszExt){
 
 static char * CALLBACK CheckArchivePath(char *pszFilePath)
 {
-	char *p = StrStrI(pszFilePath, ".cur/");
+	char *p = StrStrI(pszFilePath, ".cue/");
 	return p;
 }
 

@@ -15,7 +15,6 @@
 #include "bass_tag.h"
 #include "archive.h"
 #include <assert.h>
-#include "cuesheet.h"
 
 // ローカル関数
 static BOOL CheckHaveChild(char *);
@@ -67,7 +66,7 @@ int SetDrivesToCombo(HWND hCB){
 			citem.lParam = citem.iImage = citem.iSelectedImage = m_iFolderIcon;
 			SendMessage(hCB, CBEM_INSERTITEM, 0, (LPARAM)&citem);
 			i++;
-		}else if(IsPlayList(g_cfg.szBMPath[j]) || IsCueSheet(g_cfg.szBMPath[j]) || IsArchive(g_cfg.szBMPath[j])){
+		}else if(IsPlayList(g_cfg.szBMPath[j]) || IsArchive(g_cfg.szBMPath[j])){
 			wsprintf(szDrawBuff, "%s", g_cfg.szBMPath[j]);
 			citem.pszText = szDrawBuff;
 			citem.iItem = i;
@@ -204,7 +203,7 @@ HTREEITEM MakeTwoTree(HWND hTV,	HTREEITEM hTarNode){
 					}else if(IsArchive(szTargetPath)){
 						tvi.item.iImage = tvi.item.iSelectedImage = GetArchiveIconIndex(szTargetPath);
 						hChildNode = TreeView_InsertItem(hTV, &tvi);
-					}else if(IsPlayList(szTargetPath) || IsCueSheet(szTargetPath)){
+					}else if(IsPlayList(szTargetPath)){
 						tvi.item.iImage = tvi.item.iSelectedImage = m_iListIcon;
 						hChildNode = TreeView_InsertItem(hTV, &tvi);
 					}
@@ -231,7 +230,7 @@ BOOL CheckHaveChild(char *szTargetPath){
 			wsprintf(szNowDir, "%s\\%s", szTargetPath, (char *)wfd.cFileName);
 			//ゴミ以外のディレクトリだったらTRUE
 			if(lstrcmp((char *)wfd.cFileName, ".") && lstrcmp((char *)wfd.cFileName, "..")){
-				if((wfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) || IsPlayList(szNowDir) || IsCueSheet(szNowDir) || IsArchive(szNowDir)){
+				if((wfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) || IsPlayList(szNowDir) || IsArchive(szNowDir)){
 					FindClose(hFind);
 					return TRUE;
 				}

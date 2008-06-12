@@ -16,7 +16,6 @@
 #include "mt19937ar.h"
 #include "plugins.h"
 #include "dsp.h"
-#include "cuesheet.h"
 #include "plugin.h"
 #include "f4b24.h"
 
@@ -645,7 +644,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					case FOLDERS: // フォルダ
 					case LISTS:   // リスト
 					case ARCHIVES:// アーカイブ
-					case CUESHEETS:// CUEシート
 						if(g_cfg.nTreeState==TREE_SHOW){
 							MakeTreeFromPath(m_hTree, m_hCombo, szCmdParPath);
 						}else{
@@ -865,7 +863,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					case FOLDERS:
 					case LISTS:
 					case ARCHIVES:
-					case CUESHEETS:
 						MakeTreeFromPath(m_hTree, m_hCombo, szParPath);
 						m_nPlayTab = 0;
 						SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_NEXT, 0), 0);
@@ -921,7 +918,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					s_nHitTab = TabCtrl_GetCurSel(m_hTab);
 				case IDM_TAB_SAVE:
 					lstrcpyn(szNowDir, m_szTreePath, MAX_FITTLE_PATH);
-					if(IsPlayList(szNowDir) || IsArchive(szNowDir) || IsCueSheet(szNowDir)){
+					if(IsPlayList(szNowDir) || IsArchive(szNowDir)){
 						*PathFindFileName(szNowDir) = '\0';
 					}else{
 						MyPathAddBackslash(szNowDir);
@@ -1061,8 +1058,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						ReadM3UFile(&(GetListTab(m_hTab, 0)->pRoot), szNowDir);
 					}else if(IsArchive(szNowDir)){
 						ReadArchive(&(GetListTab(m_hTab, 0)->pRoot), szNowDir);
-					}else if(IsCueSheet(szNowDir)){
-						ReadCueSheet(&(GetListTab(m_hTab, 0)->pRoot), szNowDir);
 					}else{
 						SearchFolder(&(GetListTab(m_hTab, 0)->pRoot), szNowDir, TRUE);
 						MergeSort(&(GetListTab(m_hTab, 0)->pRoot), GetListTab(m_hTab, 0)->nSortState);
@@ -1188,7 +1183,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					if(FILE_EXIST(g_cInfo[g_bNow].szFilePath)){
 						GetParentDir(g_cInfo[g_bNow].szFilePath, szNowDir);
 						MakeTreeFromPath(m_hTree, m_hCombo, szNowDir);
-					}else if(IsArchivePath(g_cInfo[g_bNow].szFilePath) || IsCueSheet(g_cInfo[g_bNow].szFilePath)){
+					}else if(IsArchivePath(g_cInfo[g_bNow].szFilePath)){
 						p = StrStr(g_cInfo[g_bNow].szFilePath, "/");
 						*p = '\0';
 						lstrcpyn(szNowDir, g_cInfo[g_bNow].szFilePath, MAX_FITTLE_PATH);
@@ -1254,7 +1249,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					while(i!=-1){
 						pszTarget = GetPtrFromIndex(GetCurListTab(m_hTab)->pRoot, i)->szFilePath;
 						if(i==GetCurListTab(m_hTab)->nPlaying) bPlaying = TRUE;	// 削除ファイルが演奏中
-						if(!IsURLPath(pszTarget) && !IsArchivePath(pszTarget) && !IsCueSheetPath(pszTarget)){	// 削除できないファイルでなければ
+						if(!IsURLPath(pszTarget) && !IsArchivePath(pszTarget)){	// 削除できないファイルでなければ
 							j++;
 							p = (char *)HeapReAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, p,
 								HeapSize(GetProcessHeap(), 0, p) + (lstrlen(pszTarget) + 2) * sizeof(char));
@@ -1364,7 +1359,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 					GetPathFromNode(m_hTree, m_hHitTree, szNowDir);
 					lstrcpyn(szLabel, PathFindFileName(szNowDir), MAX_FITTLE_PATH);
-					if(IsPlayList(szNowDir) || IsArchive(szNowDir) || IsCueSheet(szNowDir)){
+					if(IsPlayList(szNowDir) || IsArchive(szNowDir)){
 						// ".m3u"を削除
 						PathRemoveExtension(szLabel);
 					}
@@ -1387,7 +1382,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						GetPathFromNode(m_hTree, m_hHitTree, szNowDir);
 					}
 					// 前処理
-					if(IsPlayList(szNowDir) || IsArchive(szNowDir) || IsCueSheet(szNowDir)){
+					if(IsPlayList(szNowDir) || IsArchive(szNowDir)){
 						*PathFindFileName(szNowDir) = '\0';
 					}else{
 						MyPathAddBackslash(szNowDir);
@@ -2349,6 +2344,31 @@ static int InitFileTypes(){
 	return i;
 }
 
+/* xx:xx:xxという表記とハンドルから時間をQWORDで取得 */
+static QWORD GetByteFromSecStr(HCHANNEL hChan, char *pszSecStr){
+	int min, sec, frame;
+
+	if(*pszSecStr=='\0'){
+		return BASS_ChannelGetLength(hChan, BASS_POS_BYTE);
+	}
+
+	min = atoi(pszSecStr);
+	sec = 0;
+	frame = 0;
+
+	while (*pszSecStr && *pszSecStr!=':') pszSecStr++;
+
+	if (*pszSecStr){
+		sec = atoi(++pszSecStr);
+		while (*pszSecStr && *pszSecStr!=':') pszSecStr++;
+		if (*pszSecStr){
+			frame = atoi(++pszSecStr);
+		}
+	}
+
+	return BASS_ChannelSeconds2Bytes(hChan, (float)((min * 60 + sec) * 75 + frame) / 75.0);
+}
+
 // ファイルをオープン、構造体を設定
 static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 	char szFilePath[MAX_FITTLE_PATH];
@@ -2363,9 +2383,6 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 
 	if(IsArchivePath(pInfo->szFilePath)){
 		AnalyzeArchivePath(&g_cInfo[bFlag], szFilePath, szStart, szEnd);
-	}else if(IsCueSheetPath(pInfo->szFilePath)){
-		GetCueSheetRealPath(pInfo->szFilePath, szFilePath, szStart, szEnd);
-		g_cInfo[bFlag].qDuration = 0;
 	}else{
 		lstrcpyn(szFilePath, pInfo->szFilePath, MAX_FITTLE_PATH);
 		g_cInfo[bFlag].qDuration = 0;
@@ -2376,7 +2393,7 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 												0, (DWORD)g_cInfo[bFlag].qDuration,
 												BASS_STREAM_DECODE | m_bFLoat*BASS_SAMPLE_FLOAT);
 	if(g_cInfo[bFlag].hChan){
-		if(szStart[0] && szEnd[0]){
+		if(szStart[0]){
 			qStart = GetByteFromSecStr(g_cInfo[bFlag].hChan, szStart);
 			qEnd = GetByteFromSecStr(g_cInfo[bFlag].hChan, szEnd);
 			BASS_ChannelSetPosition(g_cInfo[bFlag].hChan, qStart, BASS_POS_BYTE);
@@ -2553,7 +2570,6 @@ static void OnChangeTrack(){
 
 	// タグを
 	if(GetArchiveTagInfo(g_cInfo[g_bNow].szFilePath, &m_taginfo)
-	|| GetCueSheetTagInfo(g_cInfo[g_bNow].szFilePath, &m_taginfo)
 	|| BASS_TAG_Read(g_cInfo[g_bNow].hChan, &m_taginfo)){
 		if(!g_cfg.nTagReverse){
 			wsprintf(m_szTag, "%s / %s", m_taginfo.szTitle, m_taginfo.szArtist);
@@ -3064,7 +3080,7 @@ static LPSTR MallocAndConcatPath(LISTTAB *pListTab){
 	int i = -1;
 	while( (i = ListView_GetNextItem(pListTab->hList, i, LVNI_SELECTED)) != -1 ){
 		LPSTR pszTarget = GetPtrFromIndex(pListTab->pRoot, i)->szFilePath;
-		if(!IsURLPath(pszTarget) && !IsArchivePath(pszTarget) && !IsCueSheetPath(pszTarget)){	// 削除できないファイルでなければ
+		if(!IsURLPath(pszTarget) && !IsArchivePath(pszTarget)){	// 削除できないファイルでなければ
 			int nNewSize = HeapSize(GetProcessHeap(), 0, pszRet) + (lstrlen(pszTarget) + 5) * sizeof(TCHAR);
 			pszRet = (LPSTR)HeapReAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, pszRet, nNewSize);
 			lstrcat(pszRet, "\"");
@@ -3227,12 +3243,7 @@ static void SetStatusbarIcon(LPSTR pszPath, BOOL bShow){
 	if(bShow){
 		s_hIcon = IsArchivePath(pszPath) ? GetArchiveItemIcon(pszPath) : NULL;
 		if (!s_hIcon){
-			if(IsCueSheetPath(pszPath)){
-				char szStart[100], szEnd[100];
-				GetCueSheetRealPath(pszPath, szIconPath, szStart, szEnd);
-			}else{
-				lstrcpyn(szIconPath, pszPath, MAX_FITTLE_PATH);
-			}
+			lstrcpyn(szIconPath, pszPath, MAX_FITTLE_PATH);
 			SHGetFileInfo(szIconPath, FILE_ATTRIBUTE_NORMAL, &shfinfo, sizeof(shfinfo), SHGFI_USEFILEATTRIBUTES | SHGFI_ICON | SHGFI_SMALLICON); 
 			s_hIcon = shfinfo.hIcon;
 		}
@@ -3644,8 +3655,6 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 										if(IsURLPath(pszPath)){
 											lstrcpyn(item->pszText, "URL", item->cchTextMax);
 										}else if(IsArchivePath(pszPath) && GetArchiveItemType(pszPath, item->pszText, item->cchTextMax)){
-										}else if(IsCueSheetPath(pszPath)){
-											lstrcpyn(item->pszText, "CUE", item->cchTextMax);
 										}else{
 											char *p = PathFindExtension(pszPath);
 											if (p && *p) lstrcpyn(item->pszText, p+1, item->cchTextMax);
