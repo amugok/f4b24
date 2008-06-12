@@ -12,6 +12,7 @@
 #include "fittle.h"
 #include "listtab.h"
 #include "func.h"
+#include "bass_tag.h"
 #include "archive.h"
 #include "cuesheet.h"
 

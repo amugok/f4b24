@@ -12,6 +12,7 @@
 #include "fittle.h"
 #include "tree.h"
 #include "func.h"
+#include "bass_tag.h"
 #include "archive.h"
 #include <assert.h>
 #include "cuesheet.h"
@@ -23,7 +24,6 @@ static int DeleteAllChildNode(HWND, HTREEITEM);
 // アイコンインデックス
 static int m_iFolderIcon = -1;
 static int m_iListIcon = -1;
-static int m_iZipIcon = -1;
 
 // マクロ
 #define OnEndDragTree()	ReleaseCapture()
@@ -133,18 +133,7 @@ int InitTreeIconIndex(HWND hCB, HWND hTV, BOOL bShow){
 	m_iFolderIcon = shfi.iIcon;
 
 	// リストアイコンインデックス取得
-	SHGetFileInfo("*.m3u", FILE_ATTRIBUTE_NORMAL, &shfi, sizeof(SHFILEINFO),
-		SHGFI_USEFILEATTRIBUTES | SHGFI_SMALLICON | SHGFI_SYSICONINDEX);
-	DestroyIcon(shfi.hIcon);
-	m_iListIcon = shfi.iIcon;
-
-	if(IsArchiveInitialized()){
-		// アーカイブアイコンインデックス取得
-		SHGetFileInfo("*.zip", FILE_ATTRIBUTE_NORMAL, &shfi, sizeof(SHFILEINFO),
-			SHGFI_USEFILEATTRIBUTES | SHGFI_SMALLICON | SHGFI_SYSICONINDEX);
-		DestroyIcon(shfi.hIcon);
-		m_iZipIcon = shfi.iIcon;
-	}
+	m_iListIcon = GetArchiveIconIndex("*.m3u");
 
 	return 0;
 }
@@ -212,11 +201,11 @@ HTREEITEM MakeTwoTree(HWND hTV,	HTREEITEM hTarNode){
 							TreeView_InsertItem(hTV, &tvi);
 							tvi.hParent = hTarNode;
 						}
+					}else if(IsArchive(szTargetPath)){
+						tvi.item.iImage = tvi.item.iSelectedImage = GetArchiveIconIndex(szTargetPath);
+						hChildNode = TreeView_InsertItem(hTV, &tvi);
 					}else if(IsPlayList(szTargetPath) || IsCueSheet(szTargetPath)){
 						tvi.item.iImage = tvi.item.iSelectedImage = m_iListIcon;
-						hChildNode = TreeView_InsertItem(hTV, &tvi);
-					}else if(IsArchive(szTargetPath)){
-						tvi.item.iImage = tvi.item.iSelectedImage = m_iZipIcon;
 						hChildNode = TreeView_InsertItem(hTV, &tvi);
 					}
 				}

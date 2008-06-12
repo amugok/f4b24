@@ -11,8 +11,8 @@
 #include "list.h"
 #include "listtab.h"
 #include "finddlg.h"
-#include "archive.h"
 #include "bass_tag.h"
+#include "archive.h"
 #include "mt19937ar.h"
 #include "plugins.h"
 #include "dsp.h"
@@ -2354,13 +2354,15 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 	char szFilePath[MAX_FITTLE_PATH];
 	QWORD qStart, qEnd;
 	char szStart[100], szEnd[100];
+	szStart[0] = 0;
+	szEnd[0] = 0;
 
 	lstrcpyn(g_cInfo[bFlag].szFilePath, pInfo->szFilePath, MAX_FITTLE_PATH);
 	g_cInfo[bFlag].pBuff = 0;
 	g_cInfo[bFlag].qStart = 0;
 
 	if(IsArchivePath(pInfo->szFilePath)){
-		AnalyzeArchivePath(&g_cInfo[bFlag], szFilePath);
+		AnalyzeArchivePath(&g_cInfo[bFlag], szFilePath, szStart, szEnd);
 	}else if(IsCueSheetPath(pInfo->szFilePath)){
 		GetCueSheetRealPath(pInfo->szFilePath, szFilePath, szStart, szEnd);
 		g_cInfo[bFlag].qDuration = 0;
@@ -2374,7 +2376,7 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 												0, (DWORD)g_cInfo[bFlag].qDuration,
 												BASS_STREAM_DECODE | m_bFLoat*BASS_SAMPLE_FLOAT);
 	if(g_cInfo[bFlag].hChan){
-		if(IsCueSheetPath(pInfo->szFilePath)){
+		if(szStart[0] && szEnd[0]){
 			qStart = GetByteFromSecStr(g_cInfo[bFlag].hChan, szStart);
 			qEnd = GetByteFromSecStr(g_cInfo[bFlag].hChan, szEnd);
 			BASS_ChannelSetPosition(g_cInfo[bFlag].hChan, qStart, BASS_POS_BYTE);
@@ -2550,7 +2552,8 @@ static void OnChangeTrack(){
 
 
 	// ƒ^ƒO‚ð
-	if(GetCueSheetTagInfo(g_cInfo[g_bNow].szFilePath, &m_taginfo)
+	if(GetArchiveTagInfo(g_cInfo[g_bNow].szFilePath, &m_taginfo)
+	|| GetCueSheetTagInfo(g_cInfo[g_bNow].szFilePath, &m_taginfo)
 	|| BASS_TAG_Read(g_cInfo[g_bNow].hChan, &m_taginfo)){
 		if(!g_cfg.nTagReverse){
 			wsprintf(m_szTag, "%s / %s", m_taginfo.szTitle, m_taginfo.szArtist);
@@ -3222,15 +3225,17 @@ static void SetStatusbarIcon(LPSTR pszPath, BOOL bShow){
 		s_hIcon = NULL;
 	}
 	if(bShow){
-		if(IsCueSheetPath(pszPath)){
-			char szStart[100], szEnd[100];
-			GetCueSheetRealPath(pszPath, szIconPath, szStart, szEnd);
-		}else{
-			lstrcpyn(szIconPath, pszPath, MAX_FITTLE_PATH);
+		s_hIcon = IsArchivePath(pszPath) ? GetArchiveItemIcon(pszPath) : NULL;
+		if (!s_hIcon){
+			if(IsCueSheetPath(pszPath)){
+				char szStart[100], szEnd[100];
+				GetCueSheetRealPath(pszPath, szIconPath, szStart, szEnd);
+			}else{
+				lstrcpyn(szIconPath, pszPath, MAX_FITTLE_PATH);
+			}
+			SHGetFileInfo(szIconPath, FILE_ATTRIBUTE_NORMAL, &shfinfo, sizeof(shfinfo), SHGFI_USEFILEATTRIBUTES | SHGFI_ICON | SHGFI_SMALLICON); 
+			s_hIcon = shfinfo.hIcon;
 		}
-
-		SHGetFileInfo(szIconPath, FILE_ATTRIBUTE_NORMAL, &shfinfo, sizeof(shfinfo), SHGFI_USEFILEATTRIBUTES | SHGFI_ICON | SHGFI_SMALLICON); 
-		s_hIcon = shfinfo.hIcon;
 		SendMessage(m_hStatus, SB_SETICON, (WPARAM)0, (LPARAM)s_hIcon);
 	}else{
 		SendMessage(m_hStatus, SB_SETICON, (WPARAM)0, (LPARAM)NULL);
@@ -3628,25 +3633,26 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 								pTmp = GetListTab(m_hTab, i)->pRoot;
 								switch(item->iSubItem){
 									case 0:
-										lstrcpyn(item->pszText, GetFileName(GetPtrFromIndex(pTmp, item->iItem)->szFilePath), MAX_FITTLE_PATH);
+										lstrcpyn(item->pszText, GetFileName(GetPtrFromIndex(pTmp, item->iItem)->szFilePath), item->cchTextMax);
 										break;
 									case 1:
-										lstrcpyn(item->pszText, GetPtrFromIndex(pTmp, item->iItem)->szSize, MAX_FITTLE_PATH);
+										lstrcpyn(item->pszText, GetPtrFromIndex(pTmp, item->iItem)->szSize, item->cchTextMax);
 										break;
 									case 2:
 										LPSTR pszPath;
 										pszPath = GetPtrFromIndex(pTmp, item->iItem)->szFilePath;
 										if(IsURLPath(pszPath)){
-											lstrcpyn(item->pszText, "URL", MAX_FITTLE_PATH);
+											lstrcpyn(item->pszText, "URL", item->cchTextMax);
+										}else if(IsArchivePath(pszPath) && GetArchiveItemType(pszPath, item->pszText, item->cchTextMax)){
 										}else if(IsCueSheetPath(pszPath)){
-											lstrcpyn(item->pszText, "CUE", MAX_FITTLE_PATH);
+											lstrcpyn(item->pszText, "CUE", item->cchTextMax);
 										}else{
 											char *p = PathFindExtension(pszPath);
-											if (p && *p) lstrcpyn(item->pszText, p+1, MAX_FITTLE_PATH);
+											if (p && *p) lstrcpyn(item->pszText, p+1, item->cchTextMax);
 										}
 										break;
 									case 3:
-										lstrcpyn(item->pszText, GetPtrFromIndex(pTmp, item->iItem)->szTime, MAX_FITTLE_PATH);
+										lstrcpyn(item->pszText, GetPtrFromIndex(pTmp, item->iItem)->szTime, item->cchTextMax);
 										break;
 								}
 							}

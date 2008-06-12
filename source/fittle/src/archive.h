@@ -12,9 +12,13 @@
 
 BOOL InitArchive(char *pszPath, HWND hWnd);
 BOOL ReadArchive(struct FILEINFO **, char *);
-BOOL AnalyzeArchivePath(CHANNELINFO *, char *);
+BOOL AnalyzeArchivePath(CHANNELINFO *, char *, char *, char *);
 BOOL IsArchive(char *);
 BOOL IsArchivePath(char *);
-BOOL IsArchiveInitialized();
+BOOL GetArchiveTagInfo(LPCSTR, TAGINFO *);
+HICON GetArchiveItemIcon(char *);
+int GetArchiveIconIndex(char *);
+BOOL GetArchiveItemType(char *, char *, int);
+#define GetArchiveFileName(x) 0
 
 #endif

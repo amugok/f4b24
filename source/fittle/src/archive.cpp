@@ -5,6 +5,7 @@
  * All Rights Reserved
  */
 
+#include "bass_tag.h"
 #include "archive.h"
 #include "list.h"
 #include "func.h"
@@ -120,22 +121,26 @@ BOOL ReadArchive(struct FILEINFO **pSub, char *pszFilePath){
 	return pPlugin ? pPlugin->EnumArchive(pszFilePath, &ArchiveEnumProc, &ew) : FALSE;
 }
 
+static LPTSTR GetArchivePath(LPTSTR pDst, LPTSTR pSrc, int nDstMax){
+	int i;
+	for(i = 0;i < nDstMax - 1 && pSrc[i] && pSrc[i] != TEXT('/'); i++){
+		pDst[i] = pSrc[i];
+	}
+	if (pSrc[i] != '/') return NULL;
+	pDst[i] = TEXT('\0');
+	return pSrc + i + 1;
+}
+
 /* 圧縮ファイルをメモリに展開 */
-BOOL AnalyzeArchivePath(CHANNELINFO *pInfo, char *pszArchivePath){
+BOOL AnalyzeArchivePath(CHANNELINFO *pInfo, char *pszArchivePath, char *pszStart, char *pszEnd){
 	ARCHIVE_PLUGIN_INFO *pPlugin;
 	void *pBuf;
 	DWORD dwSize;
 	char *p;
-	int i=0;
 
-	/* アーカイブを含むパスを分解 */
-	for(p=pInfo->szFilePath;*p;p++){
-		if(*p=='/')	break;
-		pszArchivePath[i++] = *p;
-	}
-	if (*p!='/') return FALSE;
-	pszArchivePath[i] = '\0';
-	p++;
+	p = GetArchivePath(pszArchivePath, p=pInfo->szFilePath, MAX_PATH);
+
+	if (!p) return FALSE;
 
 	pPlugin = GetAPlugin(pszArchivePath);
 
@@ -145,14 +150,6 @@ BOOL AnalyzeArchivePath(CHANNELINFO *pInfo, char *pszArchivePath){
 		return TRUE;
 	}
 	return FALSE;
-}
-
-BOOL IsArchiveInitialized()
-{
-/* 
-	return pTop != NULL;
-*/
-	return TRUE;
 }
 
 BOOL InitArchive(char *pszPath, HWND hWnd){
@@ -182,6 +179,30 @@ BOOL InitArchive(char *pszPath, HWND hWnd){
 	}
 
 	return TRUE;
+}
+
+BOOL GetArchiveTagInfo(LPCSTR pszPath, TAGINFO *){
+	return FALSE;
+}
+
+HICON GetArchiveItemIcon(char *pszPath){
+	SHFILEINFO shfinfo = {0};
+	SHGetFileInfo(pszPath, FILE_ATTRIBUTE_NORMAL, &shfinfo, sizeof(shfinfo), SHGFI_USEFILEATTRIBUTES | SHGFI_ICON | SHGFI_SMALLICON); 
+	return shfinfo.hIcon;
+}
+
+int GetArchiveIconIndex(char *pszPath){
+	SHFILEINFO shfinfo = {0};
+	char szArchivePath[MAX_PATH];
+	GetArchivePath(szArchivePath, pszPath, MAX_PATH);
+	SHGetFileInfo(szArchivePath, FILE_ATTRIBUTE_NORMAL, &shfinfo, sizeof(SHFILEINFO),
+		SHGFI_USEFILEATTRIBUTES | SHGFI_SMALLICON | SHGFI_SYSICONINDEX);
+	if (shfinfo.hIcon) DestroyIcon(shfinfo.hIcon);
+	return shfinfo.iIcon;
+}
+
+BOOL GetArchiveItemType(char *pszPath, char *pBuf, int nBufMax){
+	return FALSE;
 }
 
 
