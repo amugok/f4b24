@@ -20,9 +20,8 @@ char *GetFileName(char *szIn){
 
 	p = q = szIn;
 	if(IsURLPath(szIn)) return q;
-	if(IsArchivePath(szIn))
-	{
-		char *r = GetArchiveFileName(szIn);
+	if(IsArchivePath(szIn)){
+		char *r = GetArchiveItemFileName(szIn);
 		if (r) return r;
 	}
 	if(IsCueSheetPath(szIn)) return StrStr(szIn, ".cue/") + 5;

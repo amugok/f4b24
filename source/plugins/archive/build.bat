@@ -18,6 +18,7 @@ goto exitcmd
 :buildall
 
 call %0 cab /MD
+call %0 cue /MD
 call %0 lha /MD
 call %0 zip /MD
 call %0 rar /MD

@@ -15,10 +15,10 @@ BOOL ReadArchive(struct FILEINFO **, char *);
 BOOL AnalyzeArchivePath(CHANNELINFO *, char *, char *, char *);
 BOOL IsArchive(char *);
 BOOL IsArchivePath(char *);
-BOOL GetArchiveTagInfo(LPCSTR, TAGINFO *);
+BOOL GetArchiveTagInfo(LPSTR, TAGINFO *);
 HICON GetArchiveItemIcon(char *);
 int GetArchiveIconIndex(char *);
 BOOL GetArchiveItemType(char *, char *, int);
-#define GetArchiveFileName(x) 0
+char *GetArchiveItemFileName(char *);
 
 #endif
