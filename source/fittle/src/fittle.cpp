@@ -26,14 +26,14 @@
 
 // ソフト名（バージョンアップ時に忘れずに更新）
 #ifndef _DEBUG
-#define FITTLE_TITLE "Fittle Ver.2.2.2 Preview 3 for BASS 2.4 test14"
+#define FITTLE_TITLE "Fittle Ver.2.2.2 Preview 3 for BASS 2.4 test15"
 #else
-#define FITTLE_TITLE "Fittle Ver.2.2.2 Preview 3 for BASS 2.4 test14 <Debug>"
+#define FITTLE_TITLE "Fittle Ver.2.2.2 Preview 3 for BASS 2.4 test15 <Debug>"
 #endif
 
 #define FITTLE_VERSION "Fittle Ver.2.2.2 Preview 3"
-#define F4B24_VERSION_STRING "f4b24 - test14"
-#define F4B24_VERSION 14
+#define F4B24_VERSION_STRING "f4b24 - test15"
+#define F4B24_VERSION 15
 #define F4B24_IF_VERSION 13
 
 //--マクロ--

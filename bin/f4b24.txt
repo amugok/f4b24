@@ -1,7 +1,7 @@
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test14
+              for BASS 2.4 test15
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
@@ -21,6 +21,7 @@ All rights reserved.
 	zip書庫機能を削除
 	ミニパネルを削除
 	設定を削除
+	CUEシート読み込み機能を削除
 
 追加したプラグイン(公式でも利用可能)
 	minipane.dll ミニパネル
@@ -45,6 +46,9 @@ All rights reserved.
 	minipane.fcp minipane.dll 設定プラグイン 要fconfig.exe又はfconfig.dll
 
 実験履歴
+	test15
+		メニュー項目を削除したのが原因でtest13からプレイリストへ送るが正常動作しなかった問題の修正
+
 	test14
 		CUEシート読み込み機能を削除してみた
 
