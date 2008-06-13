@@ -111,6 +111,7 @@ static void MyShellExecute(HWND, LPSTR, LPSTR, BOOL);
 static int InitFileTypes();
 static int SaveFileDialog(char *, char *);
 static LONG GetToolbarTrueWidth(HWND);
+static int GetMenuPosFromString(HMENU hMenu, LPTSTR lpszText);
 // 演奏制御関係
 static BOOL SetChannelInfo(BOOL, struct FILEINFO *);
 static BOOL _BASS_ChannelSetPosition(DWORD, int);
@@ -627,7 +628,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			SetUIFont();
 
 			// しおりの読み込み
-			LoadBookMark(GetSubMenu(GetMenu(hWnd), 3), m_szINIPath);
+			LoadBookMark(GetSubMenu(GetMenu(hWnd), GetMenuPosFromString(GetMenu(hWnd), TEXT("しおり(&B)"))), m_szINIPath);
 
 			// メニューの非表示
 			if(!GetPrivateProfileInt("Main", "MainMenu", 1, m_szINIPath))
@@ -1168,14 +1169,14 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case IDM_BM_ADD: //しおりに追加
-					if(AddBookMark(GetSubMenu(m_hMainMenu, 3), hWnd)!=-1){
+					if(AddBookMark(GetSubMenu(m_hMainMenu, GetMenuPosFromString(m_hMainMenu, TEXT("しおり(&B)"))), hWnd)!=-1){
 						SetDrivesToCombo(m_hCombo);
 					}
 					break;
 
 				case IDM_BM_ORG:
 					DialogBox(m_hInst, "BOOKMARK_DIALOG", hWnd, (DLGPROC)BookMarkDlgProc);
-					DrawBookMark(GetSubMenu(m_hMainMenu, 3));
+					DrawBookMark(GetSubMenu(m_hMainMenu, GetMenuPosFromString(m_hMainMenu, TEXT("しおり(&B)"))));
 					break;
 
 				case IDM_BM_PLAYING:
@@ -1573,8 +1574,9 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 					case ID_REBAR:
 						POINT pt;
+						HMENU hOptionMenu = GetSubMenu(m_hMainMenu, GetMenuPosFromString(m_hMainMenu, TEXT("オプション(&O)")));
 						GetCursorPos(&pt);
-						TrackPopupMenu(GetSubMenu(GetSubMenu(m_hMainMenu, 2), 12), TPM_LEFTALIGN | TPM_TOPALIGN, /*(short)LOWORD(lp)*/pt.x, /*(short)HIWORD(lp)*/pt.y, 0, hWnd, NULL);
+						TrackPopupMenu(GetSubMenu(hOptionMenu, GetMenuPosFromString(hOptionMenu, TEXT("ツールバー(&B)"))), TPM_LEFTALIGN | TPM_TOPALIGN, /*(short)LOWORD(lp)*/pt.x, /*(short)HIWORD(lp)*/pt.y, 0, hWnd, NULL);
 						break;
 				}
 			}
@@ -3608,7 +3610,7 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 
 					for(i=0;i<TabCtrl_GetItemCount(hTC);i++){
 						wsprintf(szMenu, "&%d: %s", i, GetListTab(hTC, i)->szTitle);
-						AppendMenu(GetSubMenu(hPopMenu, 8), MF_STRING, IDM_SENDPL_FIRST+i, szMenu); 
+						AppendMenu(GetSubMenu(hPopMenu, GetMenuPosFromString(hPopMenu, TEXT("プレイリストに送る(&S)"))), MF_STRING, IDM_SENDPL_FIRST+i, szMenu); 
 					}
 
 					/*if(ListView_GetSelectedCount((HWND)wp)!=1){
@@ -4393,4 +4395,17 @@ static BOOL IsSupportFloatOutput(){
 		return TRUE;
 	}
 	return FALSE;
+}
+
+// 指定した文字列を持つメニュー項目を探す
+static int GetMenuPosFromString(HMENU hMenu, LPTSTR lpszText){
+	int i;
+	TCHAR szBuf[64];
+	int c = GetMenuItemCount(hMenu);
+	for (i = 0; i < c; i++){
+		GetMenuString(hMenu, i, szBuf, 64, MF_BYPOSITION);
+		if (lstrcmp(lpszText, szBuf) == 0)
+			return i;
+	}
+	return 0;
 }
