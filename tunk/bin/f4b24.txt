@@ -1,0 +1,72 @@
+□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
+
+              Fittle Ver.2.2.2 Preview 3
+              for BASS 2.4 test14
+
+□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
+
+Copyright (c) 2004-2008 Mallow <mallow at livedoor.com>
+All rights reserved.
+
+このソフトはオープンソース化されたfittleを基にした非公式で実験的なバージョンです
+
+改変の方針
+	改変点も含めソースを公開する
+	基本的には本体に機能を追加しない
+	本体から分離可能な機能は問答無用に削除する
+	削除した機能は何らかの方法で補う
+
+主な変更点
+	bass 2.4専用
+	zip書庫機能を削除
+	ミニパネルを削除
+	設定を削除
+
+追加したプラグイン(公式でも利用可能)
+	minipane.dll ミニパネル
+	taskvol.dll  タスクバー上ホイールで音量を変えるプラグイン 強制終了時にエクスプローラごと落ちる問題に対処
+	xdelfile.dll ファイル削除機能無効化プラグイン
+
+追加したプログラム
+	fconfig.exe  設定画面 fcpプラグインが無いと何もできない
+
+追加した専用プラグイン
+	cue.fap      cueシートプラグイン 要test14以降
+	arj.fap      arj書庫プラグイン 要統合アーカイバプロジェクト版unarj32j.dll
+	cab.fap      cab書庫プラグイン 要IE5以降(cabinet.dll又はfdi.dll)
+	gca.fap      gca書庫プラグイン
+	lha.fap      lzh書庫プラグイン 要統合アーカイバプロジェクト版unlha32.dll
+	rar.fap      rar書庫プラグイン 要RARLABオフィシャル版unrar.dll
+	tar.fap      tar書庫プラグイン 要統合アーカイバプロジェクト版tar32.dll
+	zip.fap      zip書庫プラグイン 要統合アーカイバプロジェクト版unzip32.dll
+	fconfig.dll  設定画面 fcpプラグインが無いと何もできない 要test12以降
+	addurl.dll   URLを追加プラグイン text13以降推奨
+	fittle.fcp   fittle.exe 設定プラグイン 要fconfig.exe又はfconfig.dll
+	minipane.fcp minipane.dll 設定プラグイン 要fconfig.exe又はfconfig.dll
+
+実験履歴
+	test14
+		CUEシート読み込み機能を削除してみた
+
+	test13
+		「URLを追加」を削除してみた
+
+	test12
+		設定を削除してみた
+
+	test11
+		次曲へ移る処理の安定性向上
+
+	test10
+		ミニパネルを削除してみた
+
+	test9
+		mkimg.dll対策
+
+	test8
+		次曲ボタン連打対策
+
+	test7
+		書庫関連付け対策
+		巨大プレイリスト保存問題対策
+

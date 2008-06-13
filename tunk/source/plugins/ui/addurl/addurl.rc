@@ -1,0 +1,110 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "addurl.rh"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#if defined(_MSC_VER) && (_MSC_VER < 1400)
+# include <winres.h>
+#else
+# include <WinResrc.h>
+#endif
+#ifndef IDC_STATIC
+# define IDC_STATIC -1
+#endif
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// 日本語 resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_JPN)
+#ifdef _WIN32
+LANGUAGE LANG_JAPANESE, SUBLANG_DEFAULT
+#pragma code_page(932)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE MOVEABLE PURE 
+BEGIN
+    "addurl.rh\0"
+END
+
+2 TEXTINCLUDE MOVEABLE PURE 
+BEGIN
+    "#if defined(_MSC_VER) && (_MSC_VER < 1400)\r\n"
+    "# include <winres.h>\r\n"
+    "#else\r\n"
+    "# include <WinResrc.h>\r\n"
+    "#endif\r\n"
+    "#ifndef IDC_STATIC\r\n"
+    "# define IDC_STATIC -1\r\n"
+    "#endif\0"
+END
+
+3 TEXTINCLUDE MOVEABLE PURE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+TAB_NAME_DIALOG DIALOGEX 0, 0, 231, 47
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION
+CAPTION "新しい名前の入力"
+FONT 9, "ＭＳ Ｐゴシック", 400, 0, 0x80
+BEGIN
+    EDITTEXT        IDC_EDIT1,7,7,217,14,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,118,26,50,14
+    PUSHBUTTON      "キャンセル",IDCANCEL,174,26,50,14
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    "TAB_NAME_DIALOG", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 224
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 40
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+#endif    // 日本語 resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

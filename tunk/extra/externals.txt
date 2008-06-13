@@ -1,0 +1,37 @@
+
+bass24/
+	bass.h
+	bass.lib
+
+		BASS 2.4 audio library
+		http://www.un4seen.com/
+
+
+cabsdk/
+	FDI.H
+
+		Microsoft Cabinet SDK
+		http://support.microsoft.com/kb/310618
+
+
+gcasdk/
+	GcaSDK.h
+	GcaSDK.lib
+
+		GcaSDK (Warning:This library has strict dependency on Microsoft Visual Studio version)
+		http://www.emit.jp/gca/gcasdk.html
+
+
+unlha32/
+	UNLHA32.H
+
+		UNLHA32.DLL Common Archivers Library Project
+		http://www.madobe.net/archiver/index-e.html
+
+
+unrar/
+	unrar.h
+	unrar.lib
+
+		UnRAR.dll
+		http://www.rarlab.com/rar_add.htm

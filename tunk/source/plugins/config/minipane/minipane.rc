@@ -1,0 +1,138 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "minipane.rh"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#if defined(_MSC_VER) && (_MSC_VER < 1400)
+# include <winres.h>
+#else
+# include <WinResrc.h>
+#endif
+#ifndef IDC_STATIC
+# define IDC_STATIC -1
+#endif
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// 日本語 resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_JPN)
+#ifdef _WIN32
+LANGUAGE LANG_JAPANESE, SUBLANG_DEFAULT
+#pragma code_page(932)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE MOVEABLE PURE 
+BEGIN
+    "minipane.rh\0"
+END
+
+2 TEXTINCLUDE MOVEABLE PURE 
+BEGIN
+    "#if defined(_MSC_VER) && (_MSC_VER < 1400)\r\n"
+    "# include <winres.h>\r\n"
+    "#else\r\n"
+    "# include <WinResrc.h>\r\n"
+    "#endif\r\n"
+    "#ifndef IDC_STATIC\r\n"
+    "# define IDC_STATIC -1\r\n"
+    "#endif\0"
+END
+
+3 TEXTINCLUDE MOVEABLE PURE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO MOVEABLE PURE 
+BEGIN
+    "MINIPANE_SHEET", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 200
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 198
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+MINIPANE_SHEET DIALOG DISCARDABLE  0, 0, 207, 205
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "ミニパネル"
+FONT 9, "ＭＳ Ｐゴシック"
+BEGIN
+    CONTROL         "常に手前に表示する",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | 
+                    WS_GROUP | WS_TABSTOP,10,15,171,11
+    GROUPBOX        "表示",IDC_STATIC,5,5,193,75
+    CONTROL         "タイトルとアーティストの表示を逆にする",IDC_CHECK2,
+                    "Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,10,27,
+                    180,11
+    CONTROL         "経過時間/再生時間を表示する",IDC_CHECK3,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,10,39,180,11
+    CONTROL         "長いタイトルをスクロールする",IDC_CHECK4,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,10,51,180,11
+    CONTROL         "ツールバーアイコンを表示する",IDC_CHECK5,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,10,63,180,11
+    GROUPBOX        "クリック時の動作",IDC_STATIC,5,85,169,111
+    COMBOBOX        IDC_COMBO1,78,95,85,103,CBS_DROPDOWNLIST | WS_DISABLED | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "左シングルクリック",IDC_STATIC,10,97,62,12
+    COMBOBOX        IDC_COMBO2,78,111,85,103,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    LTEXT           "左ダブルクリック",IDC_STATIC,10,113,62,12
+    COMBOBOX        IDC_COMBO3,78,127,85,103,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    LTEXT           "右シングルクリック",IDC_STATIC,10,129,62,12
+    COMBOBOX        IDC_COMBO4,78,143,85,103,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    LTEXT           "右ダブルクリック",IDC_STATIC,10,145,62,12
+    COMBOBOX        IDC_COMBO5,78,159,85,103,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    LTEXT           "中シングルクリック",IDC_STATIC,10,161,62,12
+    COMBOBOX        IDC_COMBO6,78,175,85,103,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    LTEXT           "中ダブルクリック",IDC_STATIC,10,177,62,12
+END
+
+#endif    // 日本語 resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

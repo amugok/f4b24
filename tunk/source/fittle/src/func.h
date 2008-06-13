@@ -1,0 +1,27 @@
+/*
+ * Fund.h
+ *
+ * Copyright(C) 2004-2008 Mallow <mallow at livedoor.com>
+ * All Rights Reserved
+ */
+
+#ifndef _FUNC_H_
+#define _FUNC_H_
+
+#include "fittle.h"
+
+enum {OTHERS=0, FOLDERS, FILES, LISTS, ARCHIVES, NA_CUESHEETS_, URLS};
+
+//--É}ÉNÉç--
+#define FILE_EXIST(X) (GetFileAttributes(X)==0xFFFFFFFF ? FALSE : TRUE)
+#define IsURLPath(X) StrStr(X, TEXT("://"))
+
+LPTSTR GetFileName(LPTSTR);
+int GetParentDir(LPCTSTR, LPTSTR);
+BOOL IsPlayList(LPTSTR);
+int WritePrivateProfileInt(LPTSTR, LPTSTR, int, LPTSTR);
+BOOL GetTimeAndSize(LPCTSTR, LPTSTR, LPTSTR);
+void SetOLECursor(int);
+void GetModuleParentDir(LPTSTR);
+LPTSTR MyPathAddBackslash(LPTSTR);
+#endif

@@ -1,0 +1,345 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "fittle.rh"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#if defined(_MSC_VER) && (_MSC_VER < 1400)
+# include <winres.h>
+#else
+# include <WinResrc.h>
+#endif
+#ifndef IDC_STATIC
+# define IDC_STATIC -1
+#endif
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// 日本語 resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_JPN)
+#ifdef _WIN32
+LANGUAGE LANG_JAPANESE, SUBLANG_DEFAULT
+#pragma code_page(932)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE MOVEABLE PURE 
+BEGIN
+    "fittle.rh\0"
+END
+
+2 TEXTINCLUDE MOVEABLE PURE 
+BEGIN
+    "#if defined(_MSC_VER) && (_MSC_VER < 1400)\r\n"
+    "# include <winres.h>\r\n"
+    "#else\r\n"
+    "# include <WinResrc.h>\r\n"
+    "#endif\r\n"
+    "#ifndef IDC_STATIC\r\n"
+    "# define IDC_STATIC -1\r\n"
+    "#endif\0"
+END
+
+3 TEXTINCLUDE MOVEABLE PURE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO MOVEABLE PURE 
+BEGIN
+    "GENERAL_SHEET", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 200
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 188
+    END
+
+    "HOTKEY_SHEET", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 194
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 168
+    END
+
+    "PATH_SHEET", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 208
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 213
+    END
+
+    "CONTROL_SHEET", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 224
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 238
+    END
+
+    "ABOUT_SHEET", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 196
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 193
+    END
+
+    "TASKTRAY_SHEET", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 186
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 184
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+GENERAL_SHEET DIALOG DISCARDABLE  0, 0, 207, 195
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "全般"
+FONT 9, "ＭＳ Ｐゴシック"
+BEGIN
+    GROUPBOX        "動作",IDC_STATIC,7,7,193,133
+    CONTROL         "プレイリスト内のファイルの存在確認を行う",IDC_CHECK12,
+                    "Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,12,16,
+                    171,11
+    CONTROL         "サイズと更新日時を取得する",IDC_CHECK1,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,12,28,171,11
+    CONTROL         "タイトルとアーティストの表示を逆にする",IDC_CHECK2,
+                    "Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,12,40,
+                    171,11
+    CONTROL         "起動と同時に再生を開始する",IDC_CHECK3,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,12,53,180,10
+    CONTROL         "再生位置も復元する",IDC_CHECK10,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,21,66,152,10
+    CONTROL         "システムの優先度を上げる",IDC_CHECK4,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,12,78,104,11
+    CONTROL         "閉じるボタンで最小化する",IDC_CHECK5,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,12,90,104,11
+    CONTROL         "サブフォルダを検索で圧縮ファイルも検索する",IDC_CHECK6,
+                    "Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,12,102,
+                    178,11
+    CONTROL         "32bit(float)で出力する(要再起動)",IDC_CHECK13,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,12,114,178,11
+    CONTROL         "停止時にフェードアウトする",IDC_CHECK14,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,12,125,178,11
+    GROUPBOX        "シーク量の設定",IDC_STATIC,7,145,193,34
+    COMBOBOX        IDC_COMBO1,12,159,26,103,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    LTEXT           "秒",IDC_STATIC,40,162,10,12
+    LTEXT           "一度にシークする量を指定してください\n単位は秒で1～60の間で指定できます",
+                    IDC_STATIC,56,157,133,18
+END
+
+HOTKEY_SHEET DIALOGEX 0, 0, 201, 175
+STYLE DS_CONTROL | WS_POPUP | WS_CAPTION
+CAPTION "ホットキー"
+FONT 9, "ＭＳ Ｐゴシック", 400, 0, 0x80
+BEGIN
+    GROUPBOX        "グローバルホットキー",IDC_STATIC,7,7,165,139
+    LTEXT           "再生",IDC_STATIC,17,21,17,8
+    CONTROL         "",IDC_HOTKEY1,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,
+                    95,19,59,13
+    LTEXT           "再生/一時停止",IDC_STATIC,17,36,56,8
+    CONTROL         "",IDC_HOTKEY2,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,
+                    95,34,59,13
+    LTEXT           "停止",IDC_STATIC,17,51,39,8
+    CONTROL         "",IDC_HOTKEY3,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,
+                    95,48,59,13
+    LTEXT           "前の曲",IDC_STATIC,17,66,39,8
+    CONTROL         "",IDC_HOTKEY4,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,
+                    95,63,59,13
+    LTEXT           "次の曲",IDC_STATIC,17,81,39,8
+    CONTROL         "",IDC_HOTKEY5,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,
+                    95,78,59,13
+    LTEXT           "音量を上げる",IDC_STATIC,17,96,58,8
+    CONTROL         "",IDC_HOTKEY6,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,
+                    95,93,59,13
+    LTEXT           "音量を下げる",IDC_STATIC,17,110,64,8
+    CONTROL         "",IDC_HOTKEY7,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,
+                    95,108,59,13
+    LTEXT           "ウィンドウ表示/非表示",IDC_STATIC,17,125,68,8
+    CONTROL         "",IDC_HOTKEY8,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,
+                    95,123,59,13
+END
+
+PATH_SHEET DIALOGEX 0, 0, 215, 220
+STYLE DS_CONTROL | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "パス"
+FONT 9, "ＭＳ Ｐゴシック", 400, 0, 0x80
+BEGIN
+    GROUPBOX        "スタートアップフォルダ",IDC_STATIC,7,7,198,51
+    EDITTEXT        IDC_EDIT1,15,19,182,12,ES_AUTOHSCROLL
+    LTEXT           "起動時に開くフォルダを指定してください。\n空白にすると終了時のフォルダを開きます。",
+                    IDC_STATIC,16,35,145,18
+    PUSHBUTTON      "参照(&R)...",IDC_BUTTON1,151,37,46,15
+    GROUPBOX        "検索する拡張子",IDC_STATIC,7,62,198,33
+    LTEXT           "スタティック",IDC_STATIC4,15,75,182,12,0,
+                    WS_EX_CLIENTEDGE
+    GROUPBOX        "ファイラのパス",IDC_STATIC,7,99,198,51
+    EDITTEXT        IDC_EDIT3,15,111,182,12,ES_AUTOHSCROLL
+    LTEXT           "フォルダを開くソフトを指定してください\n空白にするとエクスプローラを使用します。",
+                    IDC_STATIC,15,127,145,18
+    PUSHBUTTON      "参照(&P)...",IDC_BUTTON2,151,129,46,15
+    GROUPBOX        "外部ツールのパス",IDC_STATIC,7,154,198,51
+    EDITTEXT        IDC_EDIT4,15,166,182,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "参照(&Q)...",IDC_BUTTON3,151,184,46,15
+END
+
+CONTROL_SHEET DIALOGEX 0, 0, 231, 245
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "コントロール"
+FONT 9, "ＭＳ Ｐゴシック", 400, 0, 0x80
+BEGIN
+    GROUPBOX        "ツリービュー・コンボボックス",IDC_STATIC,7,7,217,60
+    CONTROL         "アイコンを表示する",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | 
+                    WS_GROUP | WS_TABSTOP,12,17,165,11
+    CONTROL         "隠しフォルダを表示する",IDC_CHECK2,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,12,29,165,11
+    CONTROL         "全てのフォルダがサブフォルダを持つと仮定して高速化する",
+                    IDC_CHECK3,"Button",BS_AUTOCHECKBOX | WS_GROUP | 
+                    WS_TABSTOP,12,41,190,11
+    CONTROL         "ツリーのフォルダを一つだけ開く(要再起動)",IDC_CHECK9,
+                    "Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,12,53,
+                    190,11
+    GROUPBOX        "リストビュー",IDC_STATIC,7,69,138,50
+    CONTROL         "ツールチップでフルパスを表示する",IDC_CHECK4,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,12,79,117,11
+    CONTROL         "グリッドラインを表示する（要再起動）",IDC_CHECK5,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,12,91,116,11
+    CONTROL         "ヘッダコントロールを表示する（要再起動）",IDC_CHECK6,
+                    "Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,12,103,
+                    129,11
+    GROUPBOX        "ユーザーインターフェイス",IDC_STATIC,7,125,138,54
+    PUSHBUTTON      "背景色の設定",IDC_BUTTON3,17,139,54,14
+    PUSHBUTTON      "文字色の設定",IDC_BUTTON4,17,157,54,14
+    PUSHBUTTON      "フォントの設定",IDC_BUTTON2,81,139,54,14
+    PUSHBUTTON      "標準に戻す",IDC_BUTTON5,81,157,54,14
+    GROUPBOX        "再生曲の表示方法",IDC_STATIC,155,70,69,109
+    CONTROL         "何もしない",IDC_RADIO1,"Button",BS_AUTORADIOBUTTON | 
+                    WS_GROUP,159,83,60,9
+    CONTROL         "太字で表示する",IDC_RADIO2,"Button",BS_AUTORADIOBUTTON,
+                    159,95,60,9
+    CONTROL         "文字色を変える",IDC_RADIO3,"Button",BS_AUTORADIOBUTTON,
+                    159,107,59,9
+    CONTROL         "背景色を変える",IDC_RADIO10,"Button",BS_AUTORADIOBUTTON,
+                    159,119,55,9
+    PUSHBUTTON      "文字色の設定",IDC_BUTTON6,160,137,54,14,WS_GROUP
+    PUSHBUTTON      "背景色の設定",IDC_BUTTON7,160,156,54,14
+    GROUPBOX        "タブコントロール",IDC_STATIC,7,183,217,50
+    CONTROL         "タブが一つの時はタブを隠す",IDC_CHECK7,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,12,193,171,11
+    CONTROL         "タブを下に表示する(要再起動)",IDC_CHECK8,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,12,205,171,11
+    CONTROL         "タブを多段表示する(要再起動)",IDC_CHECK11,"Button",
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,12,217,111,11
+END
+
+ABOUT_SHEET DIALOG DISCARDABLE  0, 0, 203, 200
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "バージョン情報"
+FONT 9, "ＭＳ Ｐゴシック"
+BEGIN
+    GROUPBOX        "Fittle",IDC_STATIC0,17,14,172,49
+    ICON            "",IDC_STATIC1,26,29,20,20
+    LTEXT           "Copyright(C) 2004-2006 by Mallow",IDC_STATIC,53,29,119,
+                    10
+    LTEXT           "http://hp.vector.co.jp/authors/VA039869/",IDC_STATIC3,
+                    53,43,123,10,SS_NOTIFY
+    GROUPBOX        "BASS Ver.2.4",IDC_STATIC,17,77,172,48
+    ICON            "",IDC_STATIC2,26,94,20,20
+    LTEXT           "Copyright(C) 1999-2006 by Ian Luck",IDC_STATIC,53,93,
+                    119,10
+    LTEXT           "http://www.un4seen.com/",IDC_STATIC4,53,107,123,10,
+                    SS_NOTIFY
+    GROUPBOX        "f4b24",IDC_STATIC5,17,140,172,48
+    ICON            "",IDC_STATIC6,25,156,20,20
+    LTEXT           "",IDC_STATIC,52,155,119,10
+    LTEXT           "http://code.google.com/p/f4b24/",IDC_STATIC7,52,169,123,
+                    10,SS_NOTIFY
+END
+
+TASKTRAY_SHEET DIALOGEX 0, 0, 193, 191
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "タスクトレイ"
+FONT 9, "ＭＳ Ｐゴシック", 400, 0, 0x80
+BEGIN
+    GROUPBOX        "タスクトレイアイコン",IDC_STATIC,7,7,81,50
+    CONTROL         "使用しない",IDC_RADIO1,"Button",BS_AUTORADIOBUTTON | 
+                    WS_TABSTOP,14,18,63,11
+    CONTROL         "最小化時",IDC_RADIO2,"Button",BS_AUTORADIOBUTTON | 
+                    WS_TABSTOP,14,30,63,11
+    CONTROL         "常に表示する",IDC_RADIO3,"Button",BS_AUTORADIOBUTTON | 
+                    WS_TABSTOP,14,42,63,11
+    GROUPBOX        "曲名お知らせ機能",IDC_STATIC,94,7,81,50
+    CONTROL         "使用しない",IDC_RADIO7,"Button",BS_AUTORADIOBUTTON | 
+                    WS_GROUP | WS_TABSTOP,101,19,70,11
+    CONTROL         "タスクトレイ収納時",IDC_RADIO8,"Button",
+                    BS_AUTORADIOBUTTON | WS_TABSTOP,101,31,70,11
+    CONTROL         "常に表示する",IDC_RADIO9,"Button",BS_AUTORADIOBUTTON | 
+                    WS_TABSTOP,101,43,70,11
+    GROUPBOX        "クリック時の動作",IDC_STATIC,7,62,169,111
+    COMBOBOX        IDC_COMBO1,83,73,85,103,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    LTEXT           "左シングルクリック",IDC_STATIC,14,75,62,12
+    COMBOBOX        IDC_COMBO2,83,89,85,103,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    LTEXT           "左ダブルクリック",IDC_STATIC,14,91,62,12
+    COMBOBOX        IDC_COMBO3,83,105,85,103,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    LTEXT           "右シングルクリック",IDC_STATIC,14,107,62,12
+    COMBOBOX        IDC_COMBO4,83,121,85,103,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    LTEXT           "右ダブルクリック",IDC_STATIC,14,123,62,12
+    COMBOBOX        IDC_COMBO5,83,137,85,103,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    LTEXT           "中シングルクリック",IDC_STATIC,14,139,62,12
+    COMBOBOX        IDC_COMBO6,83,153,85,103,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    LTEXT           "中ダブルクリック",IDC_STATIC,14,155,62,12
+END
+
+#endif    // 日本語 resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
