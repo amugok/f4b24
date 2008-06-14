@@ -3757,6 +3757,22 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 					{
 
 						// リストビューからの要求
+#if 1
+						/* Windowsの挙動が異常 */
+						case LVN_GETDISPINFOA:
+						case LVN_GETDISPINFOW:
+							{
+								LVITEM *item = &((NMLVDISPINFO*)lp)->item;
+								// テキストをセット
+								if(item->mask & LVIF_TEXT){
+									TCHAR szBuf[32];
+									LPCTSTR lpszColText = GetColumnText(pnmhdr->hwndFrom, item->iItem, item->iSubItem, szBuf, 32);
+									if (lpszColText)
+										lstrcpyn(item->pszText, lpszColText, item->cchTextMax);
+								}
+							}
+							break;
+#else
 						case LVN_GETDISPINFOA:
 							{
 								LVITEMA *item = &((NMLVDISPINFOA*)lp)->item;
@@ -3780,7 +3796,8 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 										lstrcpyntW(item->pszText, lpszColText, item->cchTextMax);
 								}
 							}
-							break;					
+							break;
+#endif
 						case LVN_GETINFOTIPA:
 							if(g_cfg.nPathTip){
 								NMLVGETINFOTIPA *lvgit = (NMLVGETINFOTIPA *)lp;
