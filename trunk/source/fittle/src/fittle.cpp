@@ -204,6 +204,35 @@ static void lstrcpynWt(LPTSTR lpDst, LPCWSTR lpSrc, int nDstMax){
 #endif
 }
 
+static void SendCopyData(HWND hFittle, int iType, LPTSTR lpszString){
+#ifdef UNICODE
+	CHAR nameA[MAX_FITTLE_PATH];
+	LPBYTE lpWork;
+	COPYDATASTRUCT cds;
+	DWORD la, lw, cbData;
+	WideCharToMultiByte(CP_ACP, 0, lpszString, -1, nameA, MAX_FITTLE_PATH, NULL, NULL);
+	la = lstrlenA(nameA) + 1;
+	if (la & 1) la++; /* WORD align */
+	lw = lstrlenW(lpszString) + 1;
+	cbData = la * sizeof(CHAR) + lw * sizeof(WCHAR);
+	lpWork = (LPBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, cbData);
+	if (!lpWork) return;
+	lstrcpyA((LPSTR)(lpWork), nameA);
+	lstrcpyW((LPWSTR)(lpWork + la), lpszString);
+	cds.dwData = iType;
+	cds.lpData = (LPVOID)lpWork;
+	cds.cbData = cbData;
+	SendMessage(hFittle, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
+	HeapFree(GetProcessHeap(), 0, lpWork);
+#else
+	COPYDATASTRUCT cds;
+	cds.dwData = iType;
+	cds.lpData = (LPVOID)lpszString;
+	cds.cbData = (lstrlenA(lpszString) + 1) * sizeof(CHAR);
+	// 文字列送信
+	SendMessage(hFittle, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
+#endif
+}
 
 int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLine*/, int nCmdShow){
 	WNDCLASSEX wc;
@@ -226,7 +255,6 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 #ifndef _DEBUG	// 多重起動の防止
 	HANDLE hMutex;
 	HWND hFittle;
-	COPYDATASTRUCT cds;
 	int i;
 	hMutex = CreateMutex(NULL, TRUE, TEXT("Mutex of Fittle"));
 
@@ -249,30 +277,19 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 				}else if(!lstrcmpi(XARGV[1], TEXT("/exit"))){
 					return SendMessage(hFittle, WM_COMMAND, MAKEWPARAM(IDM_END, 0), 0);
 				}else if(!lstrcmpi(XARGV[1], TEXT("/add"))){
-					cds.dwData = 1;
 					for(i=2;i<XARGC;i++){
-						cds.lpData = (void *)XARGV[i];
-						cds.cbData = (lstrlen(XARGV[i]) + 1) * sizeof(TCHAR);
-						SendMessage(hFittle, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
+						SendCopyData(hFittle, 1, XARGV[i]);
 					}
 					if(XARGC>2) return 0;
 				}else if(!lstrcmpi(XARGV[1], TEXT("/addplay"))){
-					cds.dwData = 1;
 					for(i=2;i<XARGC;i++){
-						cds.lpData = (void *)XARGV[i];
-						cds.cbData = (lstrlen(XARGV[i]) + 1) * sizeof(TCHAR);
-						SendMessage(hFittle, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
+						SendCopyData(hFittle, 1, XARGV[i]);
 					}
 					SendMessage(hFittle, WM_COMMAND, MAKEWPARAM(IDM_PLAY, 0), 0);
 					return 0;
 				}
 			}else{
-				// ファイルを投げる
-				cds.dwData = 0;
-				cds.lpData = (void *)XARGV[1];
-				cds.cbData = (lstrlen(XARGV[1]) + 1) * sizeof(TCHAR);
-				// 文字列送信
-				SendMessage(hFittle, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
+				SendCopyData(hFittle, 0, XARGV[1]);
 				return 0;
 			}
 		}
@@ -903,40 +920,54 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			break;
 
 		case WM_COPYDATA: // 文字列受信
-			COPYDATASTRUCT *pcds;
-			TCHAR szParPath[MAX_FITTLE_PATH];
-
-			pcds= (COPYDATASTRUCT *)lp;
-			if(pcds->dwData==0){
-				switch(GetParentDir((LPTSTR)(pcds->lpData), szParPath)){
-					case FOLDERS:
-					case LISTS:
-					case ARCHIVES:
-						MakeTreeFromPath(m_hTree, m_hCombo, szParPath);
-						m_nPlayTab = 0;
-						SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_NEXT, 0), 0);
-						return TRUE;
-
-					case FILES:
-						MakeTreeFromPath(m_hTree, m_hCombo, (LPTSTR)szParPath);
-						GetLongPathName((LPTSTR)(pcds->lpData), szParPath, MAX_FITTLE_PATH); // 98以降
-						nFileIndex = GetIndexFromPath(GetListTab(m_hTab, 0)->pRoot, szParPath);
-						ListView_SingleSelect(GetCurListTab(m_hTab)->hList, nFileIndex);
-						SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_PLAY, 0), 0);
-						return TRUE;
+			{
+				COPYDATASTRUCT *pcds= (COPYDATASTRUCT *)lp;
+	#ifdef UNICODE
+				WCHAR wszRecievedPath[MAX_FITTLE_PATH];
+				LPTSTR pRecieved;
+				size_t la = lstrlenA((LPSTR)pcds->lpData) + 1;
+				if (la == pcds->cbData){
+					MultiByteToWideChar(CP_ACP, 0, (LPSTR)pcds->lpData, -1, wszRecievedPath, MAX_FITTLE_PATH);
+					pRecieved = wszRecievedPath;
+				} else {
+					if (la & 1) la++;
+					lstrcpynW(wszRecievedPath, (LPWSTR)(((LPBYTE)pcds->lpData) + la), MAX_FITTLE_PATH);
 				}
-			}else{
-				struct FILEINFO *pSub = NULL;
-				TCHAR szTest[MAX_FITTLE_PATH];
-				if (IsURLPath((LPCTSTR)pcds->lpData))
-					lstrcpyn(szTest, (LPTSTR)pcds->lpData, MAX_FITTLE_PATH);
-				else
-					GetLongPathName((LPTSTR)pcds->lpData, szTest, MAX_FITTLE_PATH);
-				SearchFiles(&pSub, szTest, TRUE);
-				ListView_SetItemState(GetCurListTab(m_hTab)->hList, -1, 0, LVIS_FOCUSED | LVIS_SELECTED);
-				InsertList(GetCurListTab(m_hTab), -1, pSub);
-				ListView_EnsureVisible(GetCurListTab(m_hTab)->hList, ListView_GetItemCount(GetCurListTab(m_hTab)->hList)-1, TRUE);
-				return TRUE;
+	#else
+				LPTSTR pRecieved = (LPTSTR)pcds->lpData;
+	#endif
+				if(pcds->dwData==0){
+					TCHAR szParPath[MAX_FITTLE_PATH];
+					switch(GetParentDir(pRecieved, szParPath)){
+						case FOLDERS:
+						case LISTS:
+						case ARCHIVES:
+							MakeTreeFromPath(m_hTree, m_hCombo, szParPath);
+							m_nPlayTab = 0;
+							SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_NEXT, 0), 0);
+							return TRUE;
+
+						case FILES:
+							MakeTreeFromPath(m_hTree, m_hCombo, (LPTSTR)szParPath);
+							GetLongPathName(pRecieved, szParPath, MAX_FITTLE_PATH); // 98以降
+							nFileIndex = GetIndexFromPath(GetListTab(m_hTab, 0)->pRoot, szParPath);
+							ListView_SingleSelect(GetCurListTab(m_hTab)->hList, nFileIndex);
+							SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_PLAY, 0), 0);
+							return TRUE;
+					}
+				}else{
+					struct FILEINFO *pSub = NULL;
+					TCHAR szTest[MAX_FITTLE_PATH];
+					if (IsURLPath(pRecieved))
+						lstrcpyn(szTest, pRecieved, MAX_FITTLE_PATH);
+					else
+						GetLongPathName(pRecieved, szTest, MAX_FITTLE_PATH);
+					SearchFiles(&pSub, szTest, TRUE);
+					ListView_SetItemState(GetCurListTab(m_hTab)->hList, -1, 0, LVIS_FOCUSED | LVIS_SELECTED);
+					InsertList(GetCurListTab(m_hTab), -1, pSub);
+					ListView_EnsureVisible(GetCurListTab(m_hTab)->hList, ListView_GetItemCount(GetCurListTab(m_hTab)->hList)-1, TRUE);
+					return TRUE;
+				}
 			}
 
 			break;
