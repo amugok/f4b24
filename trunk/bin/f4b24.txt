@@ -1,7 +1,7 @@
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test16
+              for BASS 2.4 test17
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
@@ -54,6 +54,10 @@ All rights reserved.
 	minipane.fcp minipane.dll 設定プラグイン 要fconfig.exe又はfconfig.dll
 
 実験履歴
+	test17/test17u
+		TAR32.DLLがGetPluginInfoをエクスポートしている問題に対処
+		Unicode版のプラグインインタフェースの互換性向上
+
 	test16/test16u
 		Unicode版
 		m3u8対応

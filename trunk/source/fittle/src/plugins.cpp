@@ -29,8 +29,12 @@ void InitPlugins(LPTSTR pszPath, HWND hWnd){
 			wsprintf(szDllPath, TEXT("%s%s"), pszPath, wfd.cFileName);
 			hDll = LoadLibrary(szDllPath);
 			if(hDll){
+				/*
+					TAR32.DLLがGetPluginInfoをエクスポートしている問題に対処	
+				*/
+				FARPROC fnTarCheck = GetProcAddress(hDll, "TarGetVersion");
 				GetPluginInfo = (GetPluginInfoFunc)GetProcAddress(hDll, "GetPluginInfo");
-				if(GetPluginInfo){
+				if(!fnTarCheck && GetPluginInfo){
 
 					fpi = GetPluginInfo();
 					if(fpi->nPDKVer==PDK_VER){

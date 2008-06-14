@@ -27,12 +27,12 @@
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test16u")
+#define F4B24_VERSION_STRING TEXT("test17u")
 #else
-#define F4B24_VERSION_STRING TEXT("test16")
+#define F4B24_VERSION_STRING TEXT("test17")
 #endif
-#define F4B24_VERSION 16
-#define F4B24_IF_VERSION 13
+#define F4B24_VERSION 17
+#define F4B24_IF_VERSION 17
 #ifndef _DEBUG
 #define FITTLE_TITLE FITTLE_VERSION TEXT(" for BASS 2.4 ") F4B24_VERSION_STRING
 #else
@@ -127,21 +127,35 @@ static int StopOutputStream(HWND);
 static struct FILEINFO *SelectNextFile(BOOL);
 static void FreeChannelInfo(BOOL bFlag);
 
+// メンバ変数
+static CRITICAL_SECTION m_cs;
+
 // メンバ変数（状態編）
-static HINSTANCE m_hInst = NULL;	// インスタンス
-static NOTIFYICONDATA m_ni;			// タスクトレイのアイコンのデータ
+static int m_nPlayTab = -1;			// 再生中のタブインデックス
+static int m_nGaplessState = GS_OK;	// ギャップレス再生用のステータス
 static int m_nPlayMode = PM_LIST;	// プレイモード
+static HINSTANCE m_hInst = NULL;	// インスタンス
+static NOTIFYICONDATA m_ni = {0};	// タスクトレイのアイコンのデータ
 static BOOL m_nRepeatFlag = FALSE;	// リピート中かどうか
 static BOOL m_bTrayFlag = FALSE;	// タスクトレイに入ってるかどうか
-static int m_nPlayTab = -1;			// 再生中のタブインデックス
 static struct FILEINFO *m_pNext = NULL;	// 再生曲
-static int m_nGaplessState = GS_OK;	// ギャップレス再生用のステータス
-static TCHAR m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
-static TCHAR m_szTime[100];			// 再生時間
-static TCHAR m_szTag[MAX_FITTLE_PATH];	// タグ
-static TCHAR m_szTreePath[MAX_FITTLE_PATH];	// ツリーのパス
+static TCHAR m_szINIPath[MAX_FITTLE_PATH] = {0};	// INIファイルのパス
+static TCHAR m_szTime[100] = {0};			// 再生時間
+static TCHAR m_szTag[MAX_FITTLE_PATH] = {0};	// タグ
+static TCHAR m_szTreePath[MAX_FITTLE_PATH] = {0};	// ツリーのパス
 static BOOL m_bFLoat = FALSE;
 static TAGINFO m_taginfo = {0};
+#ifdef UNICODE
+typedef struct{
+	CHAR szTitle[256];
+	CHAR szArtist[256];
+	CHAR szAlbum[256];
+	CHAR szTrack[10];
+}TAGINFOA;
+static TAGINFOA m_taginfoA = {0};
+static CHAR m_szTreePathA[MAX_FITTLE_PATH] = {0};	// ツリーのパス
+static CHAR m_szFilePathA[MAX_FITTLE_PATH] = {0};	// ツリーのパス
+#endif
 static volatile BOOL m_bCueEnd = FALSE;
 // メンバ変数（ハンドル編）
 static HWND m_hCombo = NULL;		// コンボボックスハンドル
@@ -161,11 +175,10 @@ static HFONT m_hFont = NULL;		// フォントハンドル
 static HSTREAM m_hChanOut = NULL;	// ストリームハンドル
 static HTREEITEM m_hHitTree = NULL;	// ツリーのヒットアイテム
 static HMENU m_hMainMenu = NULL;	// メインメニューハンドル
-static CRITICAL_SECTION m_cs;
 
 
 // グローバル変数
-struct CONFIG g_cfg;				// 設定構造体
+struct CONFIG g_cfg = {0};			// 設定構造体
 CHANNELINFO g_cInfo[2] = {0};		// チャンネル情報
 BOOL g_bNow = FALSE;				// アクティブなチャンネル0 or 1
 
@@ -204,6 +217,8 @@ static void lstrcpynWt(LPTSTR lpDst, LPCWSTR lpSrc, int nDstMax){
 #endif
 }
 
+#ifndef _DEBUG
+/*  既に実行中のFittleにパラメータを送信する */
 static void SendCopyData(HWND hFittle, int iType, LPTSTR lpszString){
 #ifdef UNICODE
 	CHAR nameA[MAX_FITTLE_PATH];
@@ -233,6 +248,7 @@ static void SendCopyData(HWND hFittle, int iType, LPTSTR lpszString){
 	SendMessage(hFittle, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
 #endif
 }
+#endif
 
 int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLine*/, int nCmdShow){
 	WNDCLASSEX wc;
@@ -926,12 +942,14 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				WCHAR wszRecievedPath[MAX_FITTLE_PATH];
 				LPTSTR pRecieved;
 				size_t la = lstrlenA((LPSTR)pcds->lpData) + 1;
-				if (la == pcds->cbData){
-					MultiByteToWideChar(CP_ACP, 0, (LPSTR)pcds->lpData, -1, wszRecievedPath, MAX_FITTLE_PATH);
-					pRecieved = wszRecievedPath;
-				} else {
-					if (la & 1) la++;
-					lstrcpynW(wszRecievedPath, (LPWSTR)(((LPBYTE)pcds->lpData) + la), MAX_FITTLE_PATH);
+				MultiByteToWideChar(CP_ACP, 0, (LPSTR)pcds->lpData, -1, wszRecievedPath, MAX_FITTLE_PATH);
+				pRecieved = wszRecievedPath;
+				if (la & 1) la++; /* WORD align */
+				if (la < pcds->cbData){
+					LPWSTR pw = (LPWSTR)(((LPBYTE)pcds->lpData) + la);
+					size_t lw = lstrlenW(pw) + 1;
+					//if (la * sizeof(CHAR) + lw * sizeof(WCHAR)==pcds->cbData)
+					lstrcpynW(wszRecievedPath, pw, (lw > MAX_FITTLE_PATH) ? MAX_FITTLE_PATH : lw);
 				}
 	#else
 				LPTSTR pRecieved = (LPTSTR)pcds->lpData;
@@ -1955,13 +1973,26 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 		case WM_FITTLE:	// プラグインインターフェイス
 			switch(wp){
 				case GET_TITLE:
+#ifdef UNICODE
+					return (LRESULT)&m_taginfoA;
+#else
 					return (LRESULT)&m_taginfo;
+#endif
 
 				case GET_ARTIST:
+#ifdef UNICODE
+					return (LRESULT)m_taginfoA.szArtist;
+#else
 					return (LRESULT)m_taginfo.szArtist;
+#endif
 
 				case GET_PLAYING_PATH:
+#ifdef UNICODE
+					lstrcpyntA(m_szFilePathA, g_cInfo[g_bNow].szFilePath, MAX_FITTLE_PATH);
+					return (LRESULT)m_szFilePathA;
+#else
 					return (LRESULT)g_cInfo[g_bNow].szFilePath;
+#endif
 
 				case GET_PLAYING_INDEX:
 					return (LRESULT)GetCurListTab(m_hTab)->nPlaying;
@@ -2006,7 +2037,12 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case GET_CURPATH:
-					return (LRESULT)(LPCTSTR)m_szTreePath;
+#ifdef UNICODE
+					lstrcpyntA(m_szTreePathA, m_szTreePath, MAX_FITTLE_PATH);
+					return (LRESULT)m_szTreePathA;
+#else
+					return (LRESULT)m_szTreePath;
+#endif
 
 				case GET_MENU:
 					return (HRESULT)m_hMainMenu;
@@ -2071,6 +2107,18 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				break;
 			case WM_F4B24_IPC_GET_SUPPORT_LIST:
 				SendSupportList((HWND)lp);
+				break;
+			case WM_F4B24_IPC_GET_PLAYING_PATH:
+				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)g_cInfo[g_bNow].szFilePath);
+				break;
+			case WM_F4B24_IPC_GET_PLAYING_TITLE:
+				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)m_taginfo.szTitle);
+				break;
+			case WM_F4B24_IPC_GET_PLAYING_ARTIST:
+				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)m_taginfo.szArtist);
+				break;
+			case WM_F4B24_IPC_GET_PLAYING_ALBUM:
+				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)m_taginfo.szAlbum);
 				break;
 
 			case WM_F4B24_IPC_SETTING:
@@ -2409,12 +2457,8 @@ static int InitFileTypes(){
 				const BASS_PLUGININFO *info = BASS_PluginGetInfo(hPlugin);
 				for(DWORD d=0;d<info->formatc;d++){
 					TCHAR szTemp[100] = {0};
-#ifdef UNICODE
-					MultiByteToWideChar(CP_ACP, 0, info->formats[d].exts, -1, szTemp, 100);
-#else
-					lstrcpyn(szTemp, info->formats[d].exts, 100);
-#endif
 					LPTSTR q = szTemp;
+					lstrcpynAt(q, info->formats[d].exts, 100);
 					while(*q){
 						LPTSTR p = StrStr(q, TEXT(";"));
 						if(p){
@@ -2691,6 +2735,12 @@ static void OnChangeTrack(){
 		lstrcpyn(m_szTag, GetFileName(g_cInfo[g_bNow].szFilePath), MAX_FITTLE_PATH);
 		lstrcpyn(m_taginfo.szTitle, m_szTag, 256);
 	}
+#ifdef UNICODE
+	lstrcpyntA(m_taginfoA.szTitle, m_taginfo.szTitle, 256);
+	lstrcpyntA(m_taginfoA.szArtist, m_taginfo.szArtist, 256);
+	lstrcpyntA(m_taginfoA.szAlbum, m_taginfo.szAlbum, 256);
+	lstrcpyntA(m_taginfoA.szTrack, m_taginfo.szTrack, 1);
+#endif
 
 	//タイトルバーの処理
 	wsprintf(szTitleCap, TEXT("%s - %s"), m_szTag, FITTLE_TITLE);

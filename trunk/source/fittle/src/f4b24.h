@@ -11,6 +11,11 @@
 #define WM_F4B24_IPC_GET_VERSION_STRING 200		/* test12 or later */
 #define WM_F4B24_IPC_GET_VERSION_STRING2 201	/* test12 or later */
 #define WM_F4B24_IPC_GET_SUPPORT_LIST 202		/* test12 or later */
+#define WM_F4B24_IPC_GET_CURPATH 203			/* test17 or later */
+#define WM_F4B24_IPC_GET_PLAYING_PATH 204		/* test17 or later */
+#define WM_F4B24_IPC_GET_PLAYING_TITLE 205		/* test17 or later */
+#define WM_F4B24_IPC_GET_PLAYING_ALBUM 206		/* test17 or later */
+#define WM_F4B24_IPC_GET_PLAYING_ARTIST 207		/* test17 or later */
 
 /* WPARAM:ã@î\î‘çÜ LPARAM:êîíl */
 #define WM_F4B24_IPC_SETTING 300				/* test13 or later */
