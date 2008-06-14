@@ -249,7 +249,7 @@ int ReadM3UFile(struct FILEINFO **pSub, LPTSTR pszFilePath){
 	// 読み込んだバッファを処理
 	if(lpszBuf[0] != '\0'){
 		// UTF-8 BOM
-		if (lpszBuf[0] == 0xef && lpszBuf[1] == 0xbb && lpszBuf[2] == 0xbf){
+		if (lpszBuf[0] == '\xef' && lpszBuf[1] == '\xbb' && lpszBuf[2] == '\xbf'){
 			fUTF8 = TRUE;
 			i = 3;
 		}
