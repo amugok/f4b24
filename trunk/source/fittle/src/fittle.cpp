@@ -25,16 +25,20 @@
 #pragma comment(lib, "../../extra/bass24/bass.lib")
 
 // ソフト名（バージョンアップ時に忘れずに更新）
-#ifndef _DEBUG
-#define FITTLE_TITLE "Fittle Ver.2.2.2 Preview 3 for BASS 2.4 test14"
+#define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
+#ifdef UNICODE
+#define F4B24_VERSION_STRING TEXT("test16u")
 #else
-#define FITTLE_TITLE "Fittle Ver.2.2.2 Preview 3 for BASS 2.4 test14 <Debug>"
+#define F4B24_VERSION_STRING TEXT("test16")
+#endif
+#define F4B24_VERSION 16
+#define F4B24_IF_VERSION 13
+#ifndef _DEBUG
+#define FITTLE_TITLE FITTLE_VERSION TEXT(" for BASS 2.4 ") F4B24_VERSION_STRING
+#else
+#define FITTLE_TITLE FITTLE_VERSION TEXT(" for BASS 2.4 ") F4B24_VERSION_STRING TEXT(" <Debug>")
 #endif
 
-#define FITTLE_VERSION "Fittle Ver.2.2.2 Preview 3"
-#define F4B24_VERSION_STRING "f4b24 - test14"
-#define F4B24_VERSION 14
-#define F4B24_IF_VERSION 13
 
 //--マクロ--
 // 全ての選択状態を解除後、指定インデックスのアイテムを選択、表示
@@ -649,8 +653,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			}
 
 			// ウィンドウタイトルの設定
-			SetWindowText(hWnd, TEXT(FITTLE_TITLE));
-			lstrcpy(m_ni.szTip, TEXT(FITTLE_TITLE));
+			SetWindowText(hWnd, FITTLE_TITLE);
+			lstrcpy(m_ni.szTip, FITTLE_TITLE);
 
 			// タスクトレイ
 			if(g_cfg.nTrayOpt==2) SetTaskTray(hWnd);
@@ -2029,10 +2033,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				break;
 
 			case WM_F4B24_IPC_GET_VERSION_STRING:
-				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)TEXT(FITTLE_VERSION));
+				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)FITTLE_VERSION);
 				break;
 			case WM_F4B24_IPC_GET_VERSION_STRING2:
-				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)TEXT(F4B24_VERSION_STRING));
+				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)TEXT("f4b24 - ") F4B24_VERSION_STRING);
 				break;
 			case WM_F4B24_IPC_GET_SUPPORT_LIST:
 				SendSupportList((HWND)lp);
@@ -2658,7 +2662,7 @@ static void OnChangeTrack(){
 	}
 
 	//タイトルバーの処理
-	wsprintf(szTitleCap, TEXT("%s - %s"), m_szTag, TEXT(FITTLE_TITLE));
+	wsprintf(szTitleCap, TEXT("%s - %s"), m_szTag, FITTLE_TITLE);
 	SetWindowText(GetParent(m_hStatus), szTitleCap);
 
 	float time = (float)BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, BASS_ChannelGetLength(g_cInfo[g_bNow].hChan, BASS_POS_BYTE)); // playback duration
@@ -2939,8 +2943,8 @@ static int StopOutputStream(HWND hWnd){
 	SendMessage(m_hToolBar,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(FALSE, 0));
 	
 	//文字列表示関係
-	SetWindowText(hWnd, TEXT(FITTLE_TITLE));
-	lstrcpy(m_ni.szTip, TEXT(FITTLE_TITLE));
+	SetWindowText(hWnd, FITTLE_TITLE);
+	lstrcpy(m_ni.szTip, FITTLE_TITLE);
 	if(m_bTrayFlag)
 		Shell_NotifyIcon(NIM_MODIFY, &m_ni); //ToolTipの変更
 
@@ -3177,7 +3181,12 @@ static int SaveFileDialog(LPTSTR szDir, LPTSTR szDefTitle){
 	lstrcpyn(szFileTitle, szDefTitle, MAX_FITTLE_PATH);
 	ZeroMemory(&ofn, sizeof(ofn));
 	ofn.lStructSize = sizeof(ofn);
-	ofn.lpstrFilter = TEXT("プレイリスト(絶対パス) (*.m3u)\0*.m3u\0プレイリスト(相対パス) (*.m3u)\0*.m3u\0すべてのファイル(*.*)\0*.*\0\0");
+	ofn.lpstrFilter = 
+		TEXT("プレイリスト(絶対パス) (*.m3u)\0*.m3u\0")
+		TEXT("プレイリスト(相対パス) (*.m3u)\0*.m3u\0")
+		TEXT("UTF8プレイリスト(絶対パス) (*.m3u8)\0*.m3u8\0")
+		TEXT("UTF8プレイリスト(相対パス) (*.m3u8)\0*.m3u8\0")
+		TEXT("すべてのファイル(*.*)\0*.*\0\0");
 	ofn.lpstrFile = szFile;
 	ofn.lpstrFileTitle = szFileTitle;
 	ofn.lpstrInitialDir = szDir;

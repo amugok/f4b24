@@ -6,7 +6,12 @@
 #pragma comment(lib,"kernel32.lib")
 #pragma comment(lib,"user32.lib")
 #pragma comment(lib,"shlwapi.lib")
+#ifdef UNICODE
+#pragma comment(linker, "/EXPORT:GetAPluginInfoW=_GetAPluginInfoW@0")
+#define GetAPluginInfo GetAPluginInfoW
+#else
 #pragma comment(linker, "/EXPORT:GetAPluginInfo=_GetAPluginInfo@0")
+#endif
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/MERGE:.rdata=.text")
@@ -35,25 +40,24 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 	return TRUE;
 }
 
-static BOOL CALLBACK IsArchiveExt(char *pszExt){
-	if(lstrcmpi(pszExt, "cue")==0){
+static BOOL CALLBACK IsArchiveExt(LPTSTR pszExt){
+	if(lstrcmpi(pszExt, TEXT("cue"))==0){
 		return TRUE;
 	}
 	return FALSE;
 }
 
-static char * CALLBACK CheckArchivePath(char *pszFilePath)
+static LPTSTR CALLBACK CheckArchivePath(LPTSTR pszFilePath)
 {
-	char *p = StrStrI(pszFilePath, ".cue/");
-	return p;
+	return StrStrI(pszFilePath, TEXT(".cue/"));
 }
 
-static BOOL CALLBACK EnumArchive(char *pszFilePath, LPFNARCHIVEENUMPROC lpfnProc, void *pData)
+static BOOL CALLBACK EnumArchive(LPTSTR pszFilePath, LPFNARCHIVEENUMPROC lpfnProc, void *pData)
 {
 	return FALSE;
 }
 
-static BOOL CALLBACK ExtractArchive(char *pszArchivePath, char *pszFileName, void **ppBuf, DWORD *pSize)
+static BOOL CALLBACK ExtractArchive(LPTSTR pszArchivePath, LPTSTR pszFileName, void **ppBuf, DWORD *pSize)
 {
 	return FALSE;
 }
@@ -91,14 +95,14 @@ static CueCharset DetectCharset(HANDLE hFile){
 // copied from bass_tag.cpp
 static BOOL UTF8toShift_Jisn(LPSTR szOut, LPCSTR szIn, int cbOutBytes){
 	int nSize;
-	wchar_t *wTmp;
+	LPWSTR wTmp;
 
 	// サイズ取得
 	nSize = MultiByteToWideChar(CP_UTF8, 0, szIn, -1, NULL, 0);
 	if(!nSize) return FALSE;
 
 	// 領域確保
-	wTmp = (wchar_t *)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(wchar_t)*(nSize+1));
+	wTmp = (LPWSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(WCHAR)*(nSize+1));
 	if(!wTmp) return FALSE;
 	wTmp[nSize] = L'\0';
 
@@ -108,7 +112,7 @@ static BOOL UTF8toShift_Jisn(LPSTR szOut, LPCSTR szIn, int cbOutBytes){
 		return FALSE;
 	}
 
-	WideCharToMultiByte(CP_ACP, 0, wTmp, lstrlenW(wTmp), szOut, cbOutBytes*sizeof(char), NULL, NULL);
+	WideCharToMultiByte(CP_ACP, 0, wTmp, lstrlenW(wTmp), szOut, cbOutBytes*sizeof(CHAR), NULL, NULL);
 	szOut[cbOutBytes-1] = '\0';
 	HeapFree(GetProcessHeap(), 0, wTmp);
 
@@ -116,38 +120,46 @@ static BOOL UTF8toShift_Jisn(LPSTR szOut, LPCSTR szIn, int cbOutBytes){
 }
 
 /* 単語を取得 */
-static LPSTR GetWord(LPSTR pszLine, LPSTR szToken, int nSize){
+static LPTSTR GetWord(LPTSTR pszLine, LPTSTR szToken, int nSize){
 	int j = 0;
-	LPSTR p = pszLine;
+	LPTSTR p = pszLine;
 	BOOL bInQuate = FALSE;
 
 	// skip whitespace
-	while (*p==' ' || *p=='\t'){
+	while (*p==TEXT(' ') || *p== TEXT('\t')){
 		p++;
 	}
 
 	// get word
 	do {
-		if (*p=='\"') bInQuate = !bInQuate;
+		if (*p==TEXT('\"')) bInQuate = !bInQuate;
 
 		*(szToken + j++) = *p++;
 		if(j>=nSize) return NULL;
-	} while( bInQuate || !(*p==' ' || *p=='\t') && !*p=='\0');
-	*(szToken + j) = '\0';
+	} while( bInQuate || !(*p==TEXT(' ') || *p==TEXT('\t')) && !*p==TEXT('\0'));
+	*(szToken + j) = TEXT('\0');
 	return p;
 }
 
 // convert string to SJIS
-static void ConverttoShift_Jis(LPSTR pszOut, LPCSTR pszIn, int cbOutBytes, CueCharset Charset){
+static void ConvertLine(LPTSTR pszOut, LPCSTR pszIn, int nOutSize, CueCharset Charset){
 	int i;
 	LPSTR tmp = NULL;
-	ZeroMemory(pszOut,cbOutBytes);
+	ZeroMemory(pszOut, nOutSize * sizeof(TCHAR));
 	switch(Charset){
 		case CUECHAR_UTF8:
-			UTF8toShift_Jisn(pszOut,pszIn,cbOutBytes);
+#ifdef UNICODE
+			MultiByteToWideChar(CP_UTF8, 0, pszIn, -1, pszOut, nOutSize);
+#else
+			UTF8toShift_Jisn(pszOut,pszIn,nOutSize);
+#endif
 			break;
 		case CUECHAR_UTF16LE:
-			WideCharToMultiByte(CP_ACP,0,(LPWSTR)(pszIn+(pszIn[0]==0?1:0)),-1,pszOut,cbOutBytes,0,0);
+#ifdef UNICODE
+			lstrcpynW(pszOut, (LPWSTR)(pszIn+(pszIn[0]==0?1:0)), nOutSize);
+#else
+			WideCharToMultiByte(CP_ACP,0,(LPWSTR)(pszIn+(pszIn[0]==0?1:0)),-1,pszOut,nOutSize,0,0);
+#endif
 			break;
 		case CUECHAR_UTF16BE:
 			tmp = (LPSTR)HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY,(lstrlenW((LPCWSTR)pszIn)+1)*2);
@@ -155,17 +167,25 @@ static void ConverttoShift_Jis(LPSTR pszOut, LPCSTR pszIn, int cbOutBytes, CueCh
 				tmp[i*2] = pszIn[i*2+1];
 				tmp[i*2+1] = pszIn[i*2];
 			}
-			WideCharToMultiByte(CP_ACP,0,(LPWSTR)tmp,-1,pszOut,cbOutBytes,0,0);
+#ifdef UNICODE
+			lstrcpynW(pszOut, (LPWSTR)tmp, nOutSize);
+#else
+			WideCharToMultiByte(CP_ACP,0,(LPWSTR)tmp,-1,pszOut,nOutSize,0,0);
+#endif
 			HeapFree(GetProcessHeap(),0,tmp);
 			break;
 		default:
-			memcpy(pszOut,pszIn,cbOutBytes);
+#ifdef UNICODE
+			MultiByteToWideChar(CP_ACP, 0, pszIn, -1, pszOut, nOutSize);
+#else
+			memcpy(pszOut,pszIn,nOutSize);
+#endif
 			break;
 	}
 
 }
 
-static int ReadLine(HANDLE hFile, LPSTR pszBuff, int nSize, CueCharset charset){
+static int ReadLine(HANDLE hFile, LPTSTR pszBuff, int nSize, CueCharset charset){
 	DWORD bpc = (charset==CUECHAR_UTF16BE||charset==CUECHAR_UTF16LE?2:1);
 	DWORD dwAccBytes = bpc;
 	char buf[MAX_FITTLE_PATH];
@@ -201,20 +221,20 @@ static int ReadLine(HANDLE hFile, LPSTR pszBuff, int nSize, CueCharset charset){
 		i+=bpc;
 		if( i+bpc >= MAX_FITTLE_PATH) return -1;
 	}
-	ConverttoShift_Jis(pszBuff,buf,nSize,charset);
+	ConvertLine(pszBuff,buf,nSize,charset);
 
 	return i;
 }
 
 /* CUEシートを読み込む */
-static BOOL CALLBACK EnumArchive2(char *pszFilePath, LPFNADDLISTPROC lpfnAddListProc, LPFNCHECKFILETYPEPROC lpfnCheckProc, void *pData){
+static BOOL CALLBACK EnumArchive2(LPTSTR pszFilePath, LPFNADDLISTPROC lpfnAddListProc, LPFNCHECKFILETYPEPROC lpfnCheckProc, void *pData){
 	HANDLE hFile;
-	char szLine[MAX_FITTLE_PATH] = {0};
-	char szCuePath[MAX_FITTLE_PATH] = {0};
-	char szAddPath[MAX_FITTLE_PATH] = {0};
-	char szToken[MAX_FITTLE_PATH] = {0};
-	char szAudioPath[MAX_FITTLE_PATH] = {0};
-	char szTitle[256] = {0};
+	TCHAR szLine[MAX_FITTLE_PATH] = {0};
+	TCHAR szCuePath[MAX_FITTLE_PATH] = {0};
+	TCHAR szAddPath[MAX_FITTLE_PATH] = {0};
+	TCHAR szToken[MAX_FITTLE_PATH] = {0};
+	TCHAR szAudioPath[MAX_FITTLE_PATH] = {0};
+	TCHAR szTitle[256] = {0};
 	CueCharset charset = CUECHAR_NA;
 
 	// オープン
@@ -224,30 +244,30 @@ static BOOL CALLBACK EnumArchive2(char *pszFilePath, LPFNADDLISTPROC lpfnAddList
 
 	// 一行ずつ読み込む
 	while(ReadLine(hFile, szLine, MAX_FITTLE_PATH,charset) > 0){
-		LPSTR p = GetWord(szLine, szToken, MAX_FITTLE_PATH);
-		if(!lstrcmp(szToken, "FILE")){
+		LPTSTR p = GetWord(szLine, szToken, MAX_FITTLE_PATH);
+		if(!lstrcmp(szToken, TEXT("FILE"))){
 			// 対応形式であるかチェック
 			GetWord(p, szToken, MAX_FITTLE_PATH);
 			PathUnquoteSpaces(szToken);
 			if(!lpfnCheckProc(szToken)) return -1;
 			lstrcpyn(szAudioPath, szToken, MAX_FITTLE_PATH);
-		}else if(!lstrcmp(szToken, "TRACK")){
+		}else if(!lstrcmp(szToken, TEXT("TRACK"))){
 			if (szAddPath[0]){
-				lpfnAddListProc(szAddPath, "-", "-", pData);
+				lpfnAddListProc(szAddPath, TEXT("-"), TEXT("-"), pData);
 			}
 			GetWord(p, szToken, MAX_FITTLE_PATH);
-			wsprintf(szCuePath, "%s/%s.", pszFilePath, szToken);
+			wsprintf(szCuePath, TEXT("%s/%s."), pszFilePath, szToken);
 			lstrcpyn(szAddPath, szCuePath, MAX_FITTLE_PATH);
 			lstrcpyn(szTitle, PathFindFileName(szAudioPath), 256);
-		}else if(!lstrcmp(szToken, "TITLE")){
+		}else if(!lstrcmp(szToken, TEXT("TITLE"))){
 			// タイトル
 			p = GetWord(p, szToken, MAX_FITTLE_PATH);
 			PathUnquoteSpaces(szToken);
 			lstrcpyn(szTitle, szToken, 256);
-		}else if(!lstrcmp(szToken, "INDEX")){
+		}else if(!lstrcmp(szToken, TEXT("INDEX"))){
 			// タイトルを連結
 			p = GetWord(p, szToken, MAX_FITTLE_PATH);
-			if(!lstrcmp(szToken, "01")){
+			if(!lstrcmp(szToken, TEXT("01"))){
 				//lstrcpyn(szAddPath, szCuePath, MAX_FITTLE_PATH);
 				lstrcat(szAddPath, szTitle);
 			}
@@ -255,7 +275,7 @@ static BOOL CALLBACK EnumArchive2(char *pszFilePath, LPFNADDLISTPROC lpfnAddList
 	}
 
 	if (szAddPath[0]){
-		lpfnAddListProc(szAddPath, "-", "-", pData);
+		lpfnAddListProc(szAddPath, TEXT("-"), TEXT("-"), pData);
 	}
 
 	// クローズ
@@ -266,17 +286,17 @@ static BOOL CALLBACK EnumArchive2(char *pszFilePath, LPFNADDLISTPROC lpfnAddList
 
 
 /* CUEシートをパースし、実際のファイルと時間を取得 */
-static BOOL CALLBACK ResolveIndirect(char *pszArchivePath, char *pszTrackPart, char *pszStart, char *pszEnd){
+static BOOL CALLBACK ResolveIndirect(LPTSTR pszArchivePath, LPTSTR pszTrackPart, LPTSTR pszStart, LPTSTR pszEnd){
 	HANDLE hFile;
-	char szLine[MAX_FITTLE_PATH] = {0};
-	char szCuePath[MAX_FITTLE_PATH] = {0};
-	char szToken[MAX_FITTLE_PATH] = {0};
+	TCHAR szLine[MAX_FITTLE_PATH] = {0};
+	TCHAR szCuePath[MAX_FITTLE_PATH] = {0};
+	TCHAR szToken[MAX_FITTLE_PATH] = {0};
 	int nCurrent = -1;
 	CueCharset charset = CUECHAR_NA;
 	int nIndex = XATOI(pszTrackPart);
 
-	*pszStart = '\0';
-	*pszEnd = '\0';
+	*pszStart = TEXT('\0');
+	*pszEnd = TEXT('\0');
 
 	lstrcpyn(szCuePath, pszArchivePath, MAX_FITTLE_PATH);
 
@@ -287,8 +307,8 @@ static BOOL CALLBACK ResolveIndirect(char *pszArchivePath, char *pszTrackPart, c
 
 	// 一行ずつ処理
 	while(ReadLine(hFile, szLine, MAX_FITTLE_PATH,charset) > 0){
-		LPSTR p = GetWord(szLine, szToken, MAX_FITTLE_PATH);
-		if(!lstrcmp(szToken, "FILE")){
+		LPTSTR p = GetWord(szLine, szToken, MAX_FITTLE_PATH);
+		if(!lstrcmp(szToken, TEXT("FILE"))){
 			GetWord(p, szToken, MAX_FITTLE_PATH);
 			PathUnquoteSpaces(szToken);
 			if(PathIsRelative(szToken)){
@@ -297,19 +317,19 @@ static BOOL CALLBACK ResolveIndirect(char *pszArchivePath, char *pszTrackPart, c
 			}else{
 				lstrcpyn(pszArchivePath, szToken, MAX_FITTLE_PATH);
 			}
-		}else if(!lstrcmp(szToken, "TRACK")){
+		}else if(!lstrcmp(szToken, TEXT("TRACK"))){
 			GetWord(p, szToken, MAX_FITTLE_PATH);
 			nCurrent = XATOI(szToken);
-		}else if(!lstrcmp(szToken, "INDEX")){
+		}else if(!lstrcmp(szToken, TEXT("INDEX"))){
 			p = GetWord(p, szToken, MAX_FITTLE_PATH);
-			if(!lstrcmp(szToken, "01")){
+			if(!lstrcmp(szToken, TEXT("01"))){
 				GetWord(p, szToken, MAX_FITTLE_PATH);
 				if(nIndex==nCurrent){
 					lstrcpyn(pszStart, szToken, 100);
-				}else if(nIndex+1==nCurrent && *pszEnd=='\0'){
+				}else if(nIndex+1==nCurrent && *pszEnd==TEXT('\0')){
 					lstrcpyn(pszEnd, szToken, 100);
 				}
-			}else if(!lstrcmp(szToken, "00")){
+			}else if(!lstrcmp(szToken, TEXT("00"))){
 				GetWord(p, szToken, MAX_FITTLE_PATH);
 				if(nIndex+1==nCurrent){
 					lstrcpyn(pszEnd, szToken, 100);
@@ -324,15 +344,15 @@ static BOOL CALLBACK ResolveIndirect(char *pszArchivePath, char *pszTrackPart, c
 }
 
 /* CUEシートをパースし、タグ情報を取得 */
-static BOOL  CALLBACK GetBasicTag(char *pszArchivePath, char *pszTrackPart, char *pszTrack, char *pszTitle, char *pszAlbum, char *pszArtist){
+static BOOL  CALLBACK GetBasicTag(LPTSTR pszArchivePath, LPTSTR pszTrackPart, LPTSTR pszTrack, LPTSTR pszTitle, LPTSTR pszAlbum, LPTSTR pszArtist){
 	HANDLE hFile;
-	char szLine[MAX_FITTLE_PATH] = {0};
-	char szToken[MAX_FITTLE_PATH] = {0};
+	TCHAR szLine[MAX_FITTLE_PATH] = {0};
+	TCHAR szToken[MAX_FITTLE_PATH] = {0};
 	int nCurrent = -1;
 	CueCharset charset = CUECHAR_NA;
 	int nIndex = XATOI(pszTrackPart);
 
-	wsprintf(pszTrack, "%d", nIndex);
+	wsprintf(pszTrack, TEXT("%d"), nIndex);
 
 	// オープン
 	hFile = CreateFile(pszArchivePath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -341,11 +361,11 @@ static BOOL  CALLBACK GetBasicTag(char *pszArchivePath, char *pszTrackPart, char
 
 	// 一行ずつ処理
 	while(ReadLine(hFile, szLine, MAX_FITTLE_PATH,charset) > 0){
-		LPSTR p = GetWord(szLine, szToken, MAX_FITTLE_PATH);
-		if(!lstrcmp(szToken, "TRACK")){
+		LPTSTR p = GetWord(szLine, szToken, MAX_FITTLE_PATH);
+		if(!lstrcmp(szToken, TEXT("TRACK"))){
 			GetWord(p, szToken, MAX_FITTLE_PATH);
 			nCurrent = XATOI(szToken);
-		}else if(!lstrcmp(szToken, "TITLE")){
+		}else if(!lstrcmp(szToken, TEXT("TITLE"))){
 			p = GetWord(p, szToken, MAX_FITTLE_PATH);
 			PathUnquoteSpaces(szToken);
 			if(nCurrent==-1){
@@ -353,7 +373,7 @@ static BOOL  CALLBACK GetBasicTag(char *pszArchivePath, char *pszTrackPart, char
 			}else if(nIndex==nCurrent){
 				lstrcpyn(pszTitle, szToken, 256);
 			}
-		}else if(!lstrcmp(szToken, "PERFORMER")){
+		}else if(!lstrcmp(szToken, TEXT("PERFORMER"))){
 			p = GetWord(p, szToken, MAX_FITTLE_PATH);
 			PathUnquoteSpaces(szToken);
 			if(nCurrent==-1 || nIndex==nCurrent){
@@ -367,12 +387,12 @@ static BOOL  CALLBACK GetBasicTag(char *pszArchivePath, char *pszTrackPart, char
 	return (lstrlen(pszTitle) > 0);
 }
 
-static BOOL  CALLBACK GetItemType(char *pszArchivePath, char *pszTrackPart, char *pBuf, int nBufMax){
-	lstrcpyn(pBuf, "CUE", nBufMax);
+static BOOL  CALLBACK GetItemType(LPTSTR pszArchivePath, LPTSTR pszTrackPart, LPTSTR pBuf, int nBufMax){
+	lstrcpyn(pBuf, TEXT("CUE"), nBufMax);
 	return TRUE;
 }
 
-static char * CALLBACK GetItemFileName(char *pszArchivePath, char *pszTrackPart){
+static LPTSTR  CALLBACK GetItemFileName(LPTSTR pszArchivePath, LPTSTR pszTrackPart){
 	return pszTrackPart;
 }
 
@@ -397,7 +417,9 @@ static BOOL InitArchive(){
 	return TRUE;
 }
 
-extern "C" ARCHIVE_PLUGIN_INFO * CALLBACK GetAPluginInfo(void)
-{
+#ifdef __cplusplus
+extern "C"
+#endif
+ARCHIVE_PLUGIN_INFO * CALLBACK GetAPluginInfo(void){
 	return InitArchive() ? &apinfo : 0;
 }

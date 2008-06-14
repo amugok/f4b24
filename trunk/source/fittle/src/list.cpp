@@ -203,12 +203,22 @@ BOOL SearchFolder(struct FILEINFO **pRoot, LPTSTR pszSearchPath, BOOL bSubFlag){
 int ReadM3UFile(struct FILEINFO **pSub, LPTSTR pszFilePath){
 	HANDLE hFile;
 	DWORD dwSize = 0L;
-	LPTSTR lpszBuf;
+	LPSTR lpszBuf;
 	DWORD dwAccBytes;
+	BOOL fUTF8 = FALSE;
 	int i=0, j=0;
-	TCHAR szTempPath[MAX_FITTLE_PATH];
-	TCHAR szParPath[MAX_FITTLE_PATH];
+	CHAR szTempPath[MAX_FITTLE_PATH];
+
 	TCHAR szCombine[MAX_FITTLE_PATH];
+	TCHAR szParPath[MAX_FITTLE_PATH];
+
+	WCHAR szWideTemp[MAX_FITTLE_PATH];
+#ifdef UNICODE
+#else
+	CHAR szAnsiTemp[MAX_FITTLE_PATH];
+#endif
+	TCHAR szTstrTemp[MAX_FITTLE_PATH];
+
 	TCHAR szTime[50] = TEXT("-"), szSize[50] = TEXT("-");
 	struct FILEINFO **pTale = pSub;
 
@@ -221,13 +231,15 @@ int ReadM3UFile(struct FILEINFO **pSub, LPTSTR pszFilePath){
 	if((hFile = CreateFile(pszFilePath, GENERIC_READ, 0, NULL,
 		OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL))==INVALID_HANDLE_VALUE) return -1;
 	//GetParentDir(pszFilePath, szParPath);
+
 	lstrcpyn(szParPath, pszFilePath, MAX_FITTLE_PATH);
-	*(PathFindFileName(szParPath)-1) = TEXT('\0');
+	*(PathFindFileName(szParPath)-1) = '\0';
+
 	dwSize = GetFileSize(hFile, NULL);
-	lpszBuf = (LPTSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwSize + 1);
+	lpszBuf = (LPSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwSize + sizeof(CHAR));
 	if(!lpszBuf) return -1;
-	ReadFile(hFile, lpszBuf, dwSize+1, &dwAccBytes, NULL);
-	lpszBuf[dwAccBytes] = TEXT('\0');
+	ReadFile(hFile, lpszBuf, dwSize, &dwAccBytes, NULL);
+	lpszBuf[dwAccBytes] = '\0';
 
 #ifdef _DEBUG
 		wsprintf(szBuff, TEXT("ReadAlloc time: %d ms\n"), GetTickCount() - dTime);
@@ -235,42 +247,64 @@ int ReadM3UFile(struct FILEINFO **pSub, LPTSTR pszFilePath){
 #endif
 
 	// 読み込んだバッファを処理
-	if(lpszBuf[0]!=TEXT('\0')){ 
-		do{
-			if(lpszBuf[i]==TEXT('\0') || lpszBuf[i]==TEXT('\n')){
-				szTempPath[j] = TEXT('\0');
-				if(j!=0){
+	if(lpszBuf[0] != '\0'){
+		// UTF-8 BOM
+		if (lpszBuf[0] == 0xef && lpszBuf[1] == 0xbb && lpszBuf[2] == 0xbf){
+			fUTF8 = TRUE;
+			i = 3;
+		}
+		do {
+			if(lpszBuf[i]=='\0' || lpszBuf[i]=='\n' || lpszBuf[i]=='\r'){
+				szTempPath[j] = '\0';
+				if(j != 0){
 					// plsチェック
-					if(!StrCmpN(szTempPath, TEXT("File"), 4)){
-						lstrcpyn(szTempPath, StrStr(szTempPath, TEXT("=")) + 1, MAX_FITTLE_PATH);
+					if(!StrCmpNA(szTempPath, "File", 4) && StrStrA(szTempPath, "=")){
+						lstrcpynA(szTempPath, StrStrA(szTempPath, "=") + 1, MAX_FITTLE_PATH);
 					}
+					MultiByteToWideChar(fUTF8 ? CP_UTF8 : CP_ACP, 0, szTempPath, -1, szWideTemp, MAX_FITTLE_PATH);
 					// URLチェック
-					if(IsURLPath(szTempPath)){
-						 pTale = AddList(pTale, szTempPath, szSize, szTime);
+					if(IsURLPathA(szTempPath)){
+						lstrcpy(szSize, TEXT("-"));
+						lstrcpy(szTime, TEXT("-"));
+#ifdef UNICODE
+						pTale = AddList(pTale, szWideTemp, szSize, szTime);
+#else
+						WideCharToMultiByte(CP_ACP, 0, szWideTemp, -1, szAnsiTemp, MAX_FITTLE_PATH, NULL, NULL);
+						pTale = AddList(pTale, szAnsiTemp, szSize, szTime);
+#endif
 					}else{
 						// 相対パスの処理
 						//if(!(szTempPath[1] == TEXT(':') && szTempPath[2] == TEXT('\\'))){
-						if(PathIsRelative(szTempPath)){
-							wsprintf(szCombine, TEXT("%s\\%s"), szParPath, szTempPath);
-							PathCanonicalize(szTempPath, szCombine);
+						if(PathIsRelativeA(szTempPath)){
+#ifdef UNICODE
+							wsprintfW(szTstrTemp, L"%s\\%s", szParPath, szWideTemp);
+#else
+							WideCharToMultiByte(CP_ACP, 0, szWideTemp, -1, szAnsiTemp, MAX_FITTLE_PATH, NULL, NULL);
+							wsprintfA(szTstrTemp, "%s\\%s", szParPath, szAnsiTemp);
+#endif
+							PathCanonicalize(szCombine, szTstrTemp);
+						}else{
+#ifdef UNICODE
+							lstrcpyn(szCombine, szWideTemp, MAX_FITTLE_PATH);
+#else
+							WideCharToMultiByte(CP_ACP, 0, szWideTemp, -1, szCombine, MAX_FITTLE_PATH, NULL, NULL);
+#endif
 						}
-						if(!g_cfg.nExistCheck || (FILE_EXIST(szTempPath) || IsArchivePath(szTempPath)))
+						if(!g_cfg.nExistCheck || (FILE_EXIST(szCombine) || IsArchivePath(szCombine)))
 						{
 							if(g_cfg.nTimeInList){
-								GetTimeAndSize(szTempPath, szSize, szTime);
+								GetTimeAndSize(szCombine, szSize, szTime);
 							}
-							pTale = AddList(pTale, szTempPath, szSize, szTime);
+							pTale = AddList(pTale, szCombine, szSize, szTime);
 						}
 					}
 				}
 				j=0;
 			}else{
-				if(lpszBuf[i]!=TEXT('\r')){
-					szTempPath[j] = lpszBuf[i];
-					j++;
-				}
+				szTempPath[j] = lpszBuf[i];
+				j++;
 			}
-		}while(lpszBuf[i++]!=TEXT('\0'));
+		}while(lpszBuf[i++] != '\0');
 	}
 	CloseHandle(hFile);
 	HeapFree(GetProcessHeap(), 0, lpszBuf);
@@ -285,39 +319,53 @@ int ReadM3UFile(struct FILEINFO **pSub, LPTSTR pszFilePath){
 
 // リストをM3Uファイルで保存
 BOOL WriteM3UFile(struct FILEINFO *pRoot, LPTSTR szFile, int nMode){
-	LPTSTR szBuff;
 	FILEINFO *pTmp;
 	HANDLE hFile;
 	DWORD dwAccBytes;
-	int nTotal;
 	TCHAR szLine[MAX_FITTLE_PATH];
+#ifdef UNICODE
+#else
+	WCHAR szWideTemp[MAX_FITTLE_PATH];
+#endif
+	CHAR szAnsiTemp[MAX_FITTLE_PATH * 3];
 
-	// メモリの確保
-	nTotal = GetListCount(pRoot);
-	szBuff = (LPTSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (nTotal * (MAX_FITTLE_PATH + 2) + 1) * sizeof(TCHAR));
-	if(!szBuff) return FALSE;
+		// ファイルの書き込み
+	hFile = CreateFile(szFile, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFile == INVALID_HANDLE_VALUE)
+		return FALSE;
+
+	if(nMode==3 || nMode==4){
+		WriteFile(hFile, "\xef\xbb\xbf", 3, &dwAccBytes, NULL);
+	}
 
 	// ここでszBuffに保存内容を転写
-	for(pTmp = pRoot;pTmp!=NULL;pTmp = pTmp->pNext){
-		if(nMode==2){
+	for(pTmp = pRoot; pTmp!=NULL; pTmp = pTmp->pNext){
+		if(nMode==2 || nMode==4){
 			// 相対パスの処理
 			PathRelativePathTo(szLine, szFile, 0, pTmp->szFilePath, 0);
 		}else{
 			lstrcpyn(szLine, pTmp->szFilePath, MAX_FITTLE_PATH);
 		}
-		lstrcat(szBuff, szLine);
-		lstrcat(szBuff, TEXT("\r\n")); // Windows改行コードを挟む
+		if(nMode==3 || nMode==4){
+#ifdef UNICODE
+			WideCharToMultiByte(CP_UTF8, 0, szLine, -1, szAnsiTemp, MAX_FITTLE_PATH, NULL, NULL);
+#else
+			MultiByteToWideChar(CP_ACP, 0, szLine, -1, szWideTemp, MAX_FITTLE_PATH);
+			WideCharToMultiByte(CP_UTF8, 0, szWideTemp, -1, szAnsiTemp, MAX_FITTLE_PATH, NULL, NULL);
+#endif
+			WriteFile(hFile, szAnsiTemp, lstrlenA(szAnsiTemp), &dwAccBytes, NULL);
+		}else{
+#ifdef UNICODE
+			WideCharToMultiByte(CP_ACP, 0, szLine, -1, szAnsiTemp, MAX_FITTLE_PATH, NULL, NULL);
+			WriteFile(hFile, szAnsiTemp, lstrlenA(szAnsiTemp), &dwAccBytes, NULL);
+#else
+			WriteFile(hFile, szLine, lstrlenA(szLine), &dwAccBytes, NULL);
+#endif
+		}
+
+		WriteFile(hFile, "\r\n", 2, &dwAccBytes, NULL);
 	}
-	lstrcat(szBuff, TEXT("\0"));
-
-	// ファイルの書き込み
-	hFile = CreateFile(szFile, GENERIC_WRITE,
-		0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-	WriteFile(hFile, szBuff, (DWORD)lstrlen(szBuff) * sizeof(TCHAR), &dwAccBytes, NULL);
 	CloseHandle(hFile);
-
-	// メモリの開放
-	HeapFree(GetProcessHeap(), 0, szBuff);
 	return TRUE;
 }
 

@@ -63,19 +63,44 @@ static BOOL ID3V23_ReadFlame(LPCSTR pszFlame, int nFlameSize, LPTSTR pszTag){
 			lstrcpyn(pszTag, pszFlame + 11, XMIN(nFlameSize,256));
 #endif
 			break;
-		case 1:	// UTF-16
-#ifdef UNICODE
-			lstrcpyn(pszTag, (WCHAR *)(pszFlame + 11 + 2), XMIN((nFlameSize - 2)/2,256));
-#else
-			WideCharToMultiByte(CP_ACP, 0, (WCHAR *)(pszFlame + 11 + 2), (nFlameSize - 2)/2, pszTag, 256, NULL, NULL);
-#endif
+		case 1:	// UTF-16LE
+			{
+				int l = (nFlameSize - 2)/2;
+				LPWSTR pw = (LPWSTR)(pszFlame + 11 + 2);
+				if (pw[0] == 0xfeff){
+					pw++;
+					l--;
+				}
+	#ifdef UNICODE
+				lstrcpyn(pszTag, pw, XMIN(l,256));
+	#else
+				WideCharToMultiByte(CP_ACP, 0, pw, l, pszTag, 256, NULL, NULL);
+	#endif
+			}
 			break;
-		case 2: // UTF-16BE(–¢ŽÀ‘•)
+		case 2: // UTF-16BE
+			{
+				int l = (nFlameSize - 2)/2;
+				LPWSTR pa = (LPWSTR)HeapAlloc(GetProcessHeap(), 0, sizeof(WCHAR) * l);
+				if (pa){
+					int i;
+					LPWSTR pw = pa;
+					for (i = 0; i < l; i++){
+						pw[i * 2 + 1] = *(pszFlame + 11 + 2 + i * 2 + 0);
+						pw[i * 2 + 0] = *(pszFlame + 11 + 2 + i * 2 + 1);
+					}
+					if (pw[0] == 0xfeff){
+						pw++;
+						l--;
+					}
 #ifdef UNICODE
-			lstrcpyn(pszTag, (WCHAR *)(pszFlame + 11 + 2), XMIN((nFlameSize - 2)/2,256));
+					lstrcpyn(pszTag, pw, XMIN(l,256));
 #else
-			lstrcpy(pszTag, TEXT(""));
+					WideCharToMultiByte(CP_ACP, 0, pw, l, pszTag, 256, NULL, NULL);
 #endif
+					HeapFree(GetProcessHeap(), 0, pa);
+				}
+			}
 			break;
 		case 3:	// UTF-8
 #ifdef UNICODE

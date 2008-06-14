@@ -435,7 +435,7 @@ BOOL LoadPlaylists(HWND hTab){
 		OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if(hFile==INVALID_HANDLE_VALUE) return FALSE;
 
-	dwSize = GetFileSize(hFile, NULL)+1;
+	dwSize = GetFileSize(hFile, NULL) + sizeof(TCHAR);
 	szBuff = (LPTSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwSize);
 	if(!szBuff){
 		MessageBox(GetParent(hTab), TEXT("メモリの確保に失敗しました。"), TEXT("Fittle"), MB_OK);
@@ -443,7 +443,7 @@ BOOL LoadPlaylists(HWND hTab){
 	}
 	ReadFile(hFile, szBuff, dwSize, &dwAccBytes, NULL);
 	CloseHandle(hFile);
-	szBuff[dwAccBytes] = TEXT('\0');
+	szBuff[dwAccBytes / sizeof(TCHAR)] = TEXT('\0');
 
 	// 読み込んだバッファを処理
 	for(p=szBuff;*p!=TEXT('\0');p++){

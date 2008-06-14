@@ -7,7 +7,14 @@
 #pragma comment(lib,"kernel32.lib")
 #pragma comment(lib,"user32.lib")
 #pragma comment(lib,"shlwapi.lib")
+#ifdef UNICODE
+#pragma comment(linker, "/EXPORT:GetAPluginInfoW=_GetAPluginInfoW@0")
+#define GetAPluginInfo GetAPluginInfoW
+#define UNICODE_POSTFIX "W"
+#else
 #pragma comment(linker, "/EXPORT:GetAPluginInfo=_GetAPluginInfo@0")
+#define UNICODE_POSTFIX
+#endif
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/MERGE:.rdata=.text")
@@ -15,19 +22,19 @@
 #pragma comment(linker,"/OPT:NOWIN98")
 #endif
 
-typedef HARC (WINAPI *LPUNTAROPENARCHIVE)(const HWND, LPCSTR, const DWORD);
-typedef int (WINAPI *LPUNTARFINDFIRST)(HARC, LPCSTR, LPINDIVIDUALINFO);
-typedef int (WINAPI *LPUNTARFINDNEXT)(HARC, LPINDIVIDUALINFO);
-typedef int (WINAPI *LPUNTARCLOSEARCHIVE)(HARC);
-typedef int (WINAPI *LPUNTAREXTRACTMEM)(const HWND, LPCSTR,	LPBYTE, const DWORD, int *,	LPWORD, LPDWORD);
+typedef HARC (WINAPI *LPUNLHAOPENARCHIVE)(const HWND, LPCSTR, const DWORD);
+typedef int (WINAPI *LPUNLHAFINDFIRST)(HARC, LPCSTR, LPINDIVIDUALINFOA);
+typedef int (WINAPI *LPUNLHAFINDNEXT)(HARC, LPINDIVIDUALINFOA);
+typedef int (WINAPI *LPUNLHACLOSEARCHIVE)(HARC);
+typedef int (WINAPI *LPUNLHAEXTRACTMEM)(const HWND, LPCSTR, LPBYTE, const DWORD, int *, LPWORD, LPDWORD);
 
-static LPUNTAROPENARCHIVE lpTarOpenArchive = NULL;
-static LPUNTARFINDFIRST lpTarFindFirst = NULL;
-static LPUNTARFINDNEXT lpTarFindNext = NULL;
-static LPUNTARCLOSEARCHIVE lpTarCloseArchive = NULL;
-static LPUNTAREXTRACTMEM lpTarExtractMem = NULL;
+static LPUNLHAOPENARCHIVE lpUnLhaOpenArchive = NULL;
+static LPUNLHAFINDFIRST lpUnLhaFindFirst = NULL;
+static LPUNLHAFINDNEXT lpUnLhaFindNext = NULL;
+static LPUNLHACLOSEARCHIVE lpUnLhaCloseArchive = NULL;
+static LPUNLHAEXTRACTMEM lpUnLhaExtractMem = NULL;
 
-static HMODULE hTar32 = 0;
+static HMODULE hUnlha32 = 0;
 static HMODULE hDLL = 0;
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
@@ -41,103 +48,161 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 	return TRUE;
 }
 
-static BOOL CALLBACK IsArchiveExt(char *pszExt){
-	if(lstrcmpi(pszExt, "tar")==0 || lstrcmpi(pszExt, "gz")==0 || lstrcmpi(pszExt, "tgz")==0 || lstrcmpi(pszExt, "bz2")==0 || lstrcmpi(pszExt, "tbz")==0){
-		return TRUE;
-	}
+static BOOL CALLBACK IsArchiveExt(LPTSTR pszExt){
+	if(lstrcmpi(pszExt, TEXT("tar"))==0) return TRUE;
+	if(lstrcmpi(pszExt, TEXT("gz"))==0) return TRUE;
+	if(lstrcmpi(pszExt, TEXT("tgz"))==0) return TRUE;
+	if(lstrcmpi(pszExt, TEXT("bz2"))==0) return TRUE;
+	if(lstrcmpi(pszExt, TEXT("tbz"))==0) return TRUE;
 	return FALSE;
 }
 
-static char * CALLBACK CheckArchivePath(char *pszFilePath)
+static LPTSTR CALLBACK CheckArchivePath(LPTSTR pszFilePath)
 {
-	char *p = StrStrI(pszFilePath, ".tar/");
-	if(!p){
-		p = StrStrI(pszFilePath, ".gz/");
-		if(!p){
-			p = StrStrI(pszFilePath, ".tgz/");
-			if(!p){
-				p = StrStrI(pszFilePath, ".bz2/");
-				if(!p){
-					p = StrStrI(pszFilePath, ".tbz/");
-				}
-			}
-		}
-	}
-	return p;
+	LPTSTR p;
+	p = StrStrI(pszFilePath, TEXT(".tar/"));
+	if (p) return p;
+	p = StrStrI(pszFilePath, TEXT(".gz/"));
+	if (p) return p;
+	p = StrStrI(pszFilePath, TEXT(".tgz/"));
+	if (p) return p;
+	p = StrStrI(pszFilePath, TEXT(".bz2/"));
+	if (p) return p;
+	return StrStrI(pszFilePath, TEXT(".tbz/"));
 }
 
-static BOOL CALLBACK EnumArchive(char *pszFilePath, LPFNARCHIVEENUMPROC lpfnProc, void *pData)
+static BOOL CALLBACK EnumArchive(LPTSTR pszFilePath, LPFNARCHIVEENUMPROC lpfnProc, void *pData)
 {
-	INDIVIDUALINFO iinfo;
+	INDIVIDUALINFOA iinfo;
 	HARC hArc;
 	// アーカイブをオープン
-	hArc = lpTarOpenArchive(NULL, pszFilePath, M_CHECK_FILENAME_ONLY);
+#ifdef UNICODE
+	CHAR nameA[MAX_PATH + 1];
+	WideCharToMultiByte(CP_ACP, 0, pszFilePath, -1, nameA, MAX_PATH + 1, NULL, NULL);
+	hArc = lpUnLhaOpenArchive(NULL, nameA, M_CHECK_FILENAME_ONLY);
+#else
+	hArc = lpUnLhaOpenArchive(NULL, pszFilePath, M_CHECK_FILENAME_ONLY);
+#endif
 	if(!hArc){
 		return FALSE;
 	}
 	// 検索開始
-	if(lpTarFindFirst(hArc, "*.*", &iinfo)!=-1){
+	if(lpUnLhaFindFirst(hArc, "*.*", &iinfo)!=-1){
 		do{
 			FILETIME ft;
 			DosDateTimeToFileTime(iinfo.wDate, iinfo.wTime, &ft);
+#ifdef UNICODE
+			{
+				WCHAR nameW[MAX_PATH + 1];
+				MultiByteToWideChar(CP_ACP, 0, iinfo.szFileName, -1, nameW, MAX_PATH + 1);
+				lpfnProc(nameW, iinfo.dwOriginalSize, ft, pData);
+			}
+#else
 			lpfnProc(iinfo.szFileName, iinfo.dwOriginalSize, ft, pData);
-		}while(lpTarFindNext(hArc, &iinfo)!=-1);
+#endif
+		}while(lpUnLhaFindNext(hArc, &iinfo)!=-1);
 	}
 
-	lpTarCloseArchive(hArc);
+	lpUnLhaCloseArchive(hArc);
 	return TRUE;
 }
 
-static BOOL CALLBACK ExtractArchive(char *pszArchivePath, char *pszFileName, void **ppBuf, DWORD *pSize)
+static BOOL CALLBACK ExtractArchive(LPTSTR pszArchivePath, LPTSTR pszFileName, void **ppBuf, DWORD *pSize)
 {
-	char *p, *q;
+	LPTSTR p, q;
 	int i=0;
-	INDIVIDUALINFO iinfo;
+	INDIVIDUALINFOA iinfo;
 	HARC hArc;
-	char cmd[MAX_PATH*2*2];
-	char szPlayFile[MAX_PATH*2] = {0};
-	int ret;
+	TCHAR szPlayFile[MAX_PATH*2] = {0};
+	DWORD dwOutputSize;
+	DWORD dwBufferSize;
 
 	p = pszFileName;
 
 	// エスケープシーケンスの処理
 	for(i=0;*p;p++){
+#ifdef UNICODE
+#else
 		if(IsDBCSLeadByte(*p)){
 			szPlayFile[i++] = *p++;
 			szPlayFile[i++] = *p;
-		}else{
-//			if(*p=='[' || *p==']' || *p=='!' || *p=='^' || *p=='-' || *p=='\\') szPlayFile[i++] = '\\';
-			szPlayFile[i++] = *p;
+			continue;
 		}
+#endif
+//		if(*p==TEXT('[') || *p==TEXT(']') || *p==TEXT('!') || *p==TEXT('^') || *p==TEXT('-') || *p==TEXT('\\')) szPlayFile[i++] = TEXT('\\');
+		szPlayFile[i++] = *p;
 	}
 
 	// アーカイブをオープン
-	hArc = lpTarOpenArchive(NULL, pszArchivePath, M_CHECK_FILENAME_ONLY);
+#ifdef UNICODE
+	CHAR nameA[MAX_PATH + 1];
+	WideCharToMultiByte(CP_ACP, 0, pszArchivePath, -1, nameA, MAX_PATH + 1, NULL, NULL);
+	hArc = lpUnLhaOpenArchive(NULL, nameA, M_CHECK_FILENAME_ONLY);
+#else
+	hArc = lpUnLhaOpenArchive(NULL, pszArchivePath, M_CHECK_FILENAME_ONLY);
+#endif
 	if(!hArc){
 		return FALSE;
 	}
 	// 検索開始
-	if(lpTarFindFirst(hArc, "*.*", &iinfo)!=-1){
+	if(lpUnLhaFindFirst(hArc, "*.*", &iinfo)!=-1){
 		do{
+#ifdef UNICODE
+			WCHAR nameW[MAX_PATH + 1];
+			MultiByteToWideChar(CP_ACP, 0, iinfo.szFileName, -1, nameW, MAX_PATH + 1);
+			if(!lstrcmpi(nameW, pszFileName)) break;
+#else
 			if(!lstrcmpi(iinfo.szFileName, pszFileName)) break;
-		}while(lpTarFindNext(hArc, &iinfo)!=-1);
+#endif
+		}while(lpUnLhaFindNext(hArc, &iinfo)!=-1);
 	}
-	lpTarCloseArchive(hArc);
+	lpUnLhaCloseArchive(hArc);
 	
 	// 解凍
-	*ppBuf = (LPBYTE)HeapAlloc(GetProcessHeap(), /*HEAP_ZERO_MEMORY*/0, iinfo.dwOriginalSize);
-	if (*ppBuf)
+	if (iinfo.dwOriginalSize != 0){
+		dwBufferSize = iinfo.dwOriginalSize;
+	} else if (iinfo.dwCompressedSize != 0) {
+		/* 圧縮率50%を仮定 */
+		dwBufferSize = iinfo.dwCompressedSize * 2;
+	} else {
+		HANDLE h = CreateFile(pszArchivePath, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (h == INVALID_HANDLE_VALUE) return FALSE;
+		dwBufferSize = GetFileSize(h, NULL) * 2;
+		CloseHandle(h);
+	}
+	if (dwBufferSize == 0) return FALSE;
+	*ppBuf = (LPBYTE)HeapAlloc(GetProcessHeap(), /*HEAP_ZERO_MEMORY*/0, dwBufferSize);
+	while (*ppBuf)
 	{
-		wsprintf(cmd, "--display-dialog=0 \"%s\" \"%s\"", pszArchivePath, szPlayFile);
-		ret = lpTarExtractMem(NULL, cmd, (LPBYTE)*ppBuf, iinfo.dwOriginalSize, NULL, NULL, NULL);
+		CHAR cmd[MAX_PATH*2*2];
+		int ret;
+#ifdef UNICODE
+		wsprintfA(cmd, "--display-dialog=0 \"%S\" \"%S\"", pszArchivePath, szPlayFile);
+#else
+		wsprintfA(cmd, "--display-dialog=0 \"%s\" \"%s\"", pszArchivePath, szPlayFile);
+#endif
+		ret = lpUnLhaExtractMem(NULL, cmd, (LPBYTE)*ppBuf, dwBufferSize, NULL, NULL, &dwOutputSize);
 		if(!ret){
-			*pSize = iinfo.dwOriginalSize;
+			*pSize = dwOutputSize;
 			return TRUE;
 		}
-		char erx[64];
-		wsprintf(erx,"%08x",ret);
-		MessageBox(NULL,erx,pszArchivePath,MB_OK);
+		if (iinfo.dwOriginalSize == 0 && dwBufferSize == dwOutputSize)
+		{
+			/* バッファが足りなそうなら再試行 */
+			HeapFree(GetProcessHeap(), 0, *ppBuf);
+			dwBufferSize += dwBufferSize;
+			*ppBuf = (LPBYTE)HeapAlloc(GetProcessHeap(), /*HEAP_ZERO_MEMORY*/0, dwBufferSize);
+			continue;
+		}
+#ifdef _DEBUG
+		{
+			TCHAR erx[64];
+			wsprintf(erx,TEXT("%08x"),ret);
+			MessageBox(NULL,erx,pszArchivePath,MB_OK);
+		}
+#endif
 		HeapFree(GetProcessHeap(), 0, *ppBuf);
+		return FALSE;
 	}
 	return FALSE;
 
@@ -153,23 +218,26 @@ static ARCHIVE_PLUGIN_INFO apinfo = {
 };
 
 static BOOL InitArchive(){	
-	if (!hTar32) hTar32 = LoadLibrary("TAR32.DLL");
-	if(!hTar32) return FALSE;
-
-	lpTarOpenArchive = (LPUNTAROPENARCHIVE )GetProcAddress(hTar32,"TarOpenArchive");
-	if(!lpTarOpenArchive) return FALSE;
-	lpTarFindFirst = (LPUNTARFINDFIRST )GetProcAddress(hTar32,"TarFindFirst");
-	if(!lpTarFindFirst) return FALSE;
-	lpTarFindNext = (LPUNTARFINDNEXT )GetProcAddress(hTar32,"TarFindNext");
-	if(!lpTarFindNext) return FALSE;
-	lpTarCloseArchive = (LPUNTARCLOSEARCHIVE )GetProcAddress(hTar32,"TarCloseArchive");
-	if(!lpTarCloseArchive) return FALSE;
-	lpTarExtractMem = (LPUNTAREXTRACTMEM )GetProcAddress(hTar32,"TarExtractMem");
-	if(!lpTarExtractMem) return FALSE;
+	if (!hUnlha32) hUnlha32 = LoadLibrary(TEXT("tar32.dll"));
+	if(!hUnlha32) return FALSE;
+#define FUNC_PREFIXA "Tar"
+	lpUnLhaOpenArchive = (LPUNLHAOPENARCHIVE )GetProcAddress(hUnlha32,FUNC_PREFIXA "OpenArchive");
+	if(!lpUnLhaOpenArchive) return FALSE;
+	lpUnLhaFindFirst = (LPUNLHAFINDFIRST )GetProcAddress(hUnlha32,FUNC_PREFIXA "FindFirst");
+	if(!lpUnLhaFindFirst) return FALSE;
+	lpUnLhaFindNext = (LPUNLHAFINDNEXT )GetProcAddress(hUnlha32,FUNC_PREFIXA "FindNext");
+	if(!lpUnLhaFindNext) return FALSE;
+	lpUnLhaExtractMem = (LPUNLHAEXTRACTMEM )GetProcAddress(hUnlha32,FUNC_PREFIXA "ExtractMem");
+	if(!lpUnLhaExtractMem) return FALSE;
+	lpUnLhaCloseArchive = (LPUNLHACLOSEARCHIVE )GetProcAddress(hUnlha32,FUNC_PREFIXA "CloseArchive");
+	if(!lpUnLhaCloseArchive) return FALSE;
 	return TRUE;
 }
 
-extern "C" ARCHIVE_PLUGIN_INFO * CALLBACK GetAPluginInfo(void)
+#ifdef __cplusplus
+extern "C"
+#endif
+ARCHIVE_PLUGIN_INFO * CALLBACK GetAPluginInfo(void)
 {
 	return InitArchive() ? &apinfo : 0;
 }

@@ -76,7 +76,7 @@ BOOL IsPlayList(LPTSTR szFilePath){
 	if(GetFileAttributes(szFilePath) & FILE_ATTRIBUTE_DIRECTORY) return FALSE;
 	if((p = PathFindExtension(szFilePath)) == NULL || !*p) return FALSE;
 	p++;
-	if(lstrcmpi(p, TEXT("M3U"))==0 || lstrcmpi(p, TEXT("PLS"))==0)
+	if(lstrcmpi(p, TEXT("M3U"))==0 || lstrcmpi(p, TEXT("M3U8"))==0 || lstrcmpi(p, TEXT("PLS"))==0)
 		return TRUE;
 	else
 		return FALSE;

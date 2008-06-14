@@ -7,7 +7,14 @@
 #pragma comment(lib,"kernel32.lib")
 #pragma comment(lib,"user32.lib")
 #pragma comment(lib,"shlwapi.lib")
+#ifdef UNICODE
+#pragma comment(linker, "/EXPORT:GetAPluginInfoW=_GetAPluginInfoW@0")
+#define GetAPluginInfo GetAPluginInfoW
+#define UNICODE_POSTFIX "W"
+#else
 #pragma comment(linker, "/EXPORT:GetAPluginInfo=_GetAPluginInfo@0")
+#define UNICODE_POSTFIX
+#endif
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/MERGE:.rdata=.text")
@@ -15,19 +22,19 @@
 #pragma comment(linker,"/OPT:NOWIN98")
 #endif
 
-typedef HARC (WINAPI *LPUNARJOPENARCHIVE)(const HWND, LPCSTR, const DWORD);
-typedef int (WINAPI *LPUNARJFINDFIRST)(HARC, LPCSTR, LPINDIVIDUALINFO);
-typedef int (WINAPI *LPUNARJFINDNEXT)(HARC, LPINDIVIDUALINFO);
-typedef int (WINAPI *LPUNARJCLOSEARCHIVE)(HARC);
-typedef int (WINAPI *LPUNARJEXTRACTMEM)(const HWND, LPCSTR,	LPBYTE, const DWORD, int *,	LPWORD, LPDWORD);
+typedef HARC (WINAPI *LPUNLHAOPENARCHIVE)(const HWND, LPCTSTR, const DWORD);
+typedef int (WINAPI *LPUNLHAFINDFIRST)(HARC, LPCTSTR, LPINDIVIDUALINFO);
+typedef int (WINAPI *LPUNLHAFINDNEXT)(HARC, LPINDIVIDUALINFO);
+typedef int (WINAPI *LPUNLHACLOSEARCHIVE)(HARC);
+typedef int (WINAPI *LPUNLHAEXTRACTMEM)(const HWND, LPCTSTR, LPBYTE, const DWORD, int *, LPWORD, LPDWORD);
 
-static LPUNARJOPENARCHIVE lpUnArjOpenArchive = NULL;
-static LPUNARJFINDFIRST lpUnArjFindFirst = NULL;
-static LPUNARJFINDNEXT lpUnArjFindNext = NULL;
-static LPUNARJCLOSEARCHIVE lpUnArjCloseArchive = NULL;
-static LPUNARJEXTRACTMEM lpUnArjExtractMem = NULL;
+static LPUNLHAOPENARCHIVE lpUnLhaOpenArchive = NULL;
+static LPUNLHAFINDFIRST lpUnLhaFindFirst = NULL;
+static LPUNLHAFINDNEXT lpUnLhaFindNext = NULL;
+static LPUNLHACLOSEARCHIVE lpUnLhaCloseArchive = NULL;
+static LPUNLHAEXTRACTMEM lpUnLhaExtractMem = NULL;
 
-static HMODULE hUnarj32 = 0;
+static HMODULE hUnlha32 = 0;
 static HMODULE hDLL = 0;
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
@@ -41,92 +48,93 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 	return TRUE;
 }
 
-static BOOL CALLBACK IsArchiveExt(char *pszExt){
-	if(lstrcmpi(pszExt, "lzh")==0 || lstrcmpi(pszExt, "arj")==0){
+static BOOL CALLBACK IsArchiveExt(LPTSTR pszExt){
+	if(lstrcmpi(pszExt, TEXT("arj"))==0){
 		return TRUE;
 	}
 	return FALSE;
 }
 
-static char * CALLBACK CheckArchivePath(char *pszFilePath)
+static LPTSTR CALLBACK CheckArchivePath(LPTSTR pszFilePath)
 {
-	char *p = StrStrI(pszFilePath, ".lzh/");
-	if(!p){
-		p = StrStrI(pszFilePath, ".arj/");
-	}
-	return p;
+	return StrStrI(pszFilePath, TEXT(".arj/"));
 }
 
-static BOOL CALLBACK EnumArchive(char *pszFilePath, LPFNARCHIVEENUMPROC lpfnProc, void *pData)
+static BOOL CALLBACK EnumArchive(LPTSTR pszFilePath, LPFNARCHIVEENUMPROC lpfnProc, void *pData)
 {
 	INDIVIDUALINFO iinfo;
 	HARC hArc;
 	// アーカイブをオープン
-	hArc = lpUnArjOpenArchive(NULL, pszFilePath, M_CHECK_FILENAME_ONLY);
+	hArc = lpUnLhaOpenArchive(NULL, pszFilePath, M_CHECK_FILENAME_ONLY);
 	if(!hArc){
 		return FALSE;
 	}
 	// 検索開始
-	if(lpUnArjFindFirst(hArc, "*.*", &iinfo)!=-1){
+	if(lpUnLhaFindFirst(hArc, TEXT("*.*"), &iinfo)!=-1){
 		do{
 			FILETIME ft;
 			DosDateTimeToFileTime(iinfo.wDate, iinfo.wTime, &ft);
 			lpfnProc(iinfo.szFileName, iinfo.dwOriginalSize, ft, pData);
-		}while(lpUnArjFindNext(hArc, &iinfo)!=-1);
+		}while(lpUnLhaFindNext(hArc, &iinfo)!=-1);
 	}
 
-	lpUnArjCloseArchive(hArc);
+	lpUnLhaCloseArchive(hArc);
 	return TRUE;
 }
 
-static BOOL CALLBACK ExtractArchive(char *pszArchivePath, char *pszFileName, void **ppBuf, DWORD *pSize)
+static BOOL CALLBACK ExtractArchive(LPTSTR pszArchivePath, LPTSTR pszFileName, void **ppBuf, DWORD *pSize)
 {
-	char *p, *q;
+	LPTSTR p, q;
 	int i=0;
 	INDIVIDUALINFO iinfo;
 	HARC hArc;
-	char cmd[MAX_PATH*2*2];
-	char szPlayFile[MAX_PATH*2] = {0};
+	TCHAR cmd[MAX_PATH*2*2];
+	TCHAR szPlayFile[MAX_PATH*2] = {0};
 	int ret;
 
 	p = pszFileName;
 
 	// エスケープシーケンスの処理
 	for(i=0;*p;p++){
+#ifdef UNICODE
+#else
 		if(IsDBCSLeadByte(*p)){
 			szPlayFile[i++] = *p++;
 			szPlayFile[i++] = *p;
-		}else{
-//			if(*p=='[' || *p==']' || *p=='!' || *p=='^' || *p=='-' || *p=='\\') szPlayFile[i++] = '\\';
-			szPlayFile[i++] = *p;
+			continue;
 		}
+#endif
+//		if(*p==TEXT('[') || *p==TEXT(']') || *p==TEXT('!') || *p==TEXT('^') || *p==TEXT('-') || *p==TEXT('\\')) szPlayFile[i++] = TEXT('\\');
+		szPlayFile[i++] = *p;
 	}
 
 	// アーカイブをオープン
-	hArc = lpUnArjOpenArchive(NULL, pszArchivePath, M_CHECK_FILENAME_ONLY);
+	hArc = lpUnLhaOpenArchive(NULL, pszArchivePath, M_CHECK_FILENAME_ONLY);
 	if(!hArc){
 		return FALSE;
 	}
 	// 検索開始
-	if(lpUnArjFindFirst(hArc, "*.*", &iinfo)!=-1){
+	if(lpUnLhaFindFirst(hArc, TEXT("*.*"), &iinfo)!=-1){
 		do{
 			if(!lstrcmpi(iinfo.szFileName, pszFileName)) break;
-		}while(lpUnArjFindNext(hArc, &iinfo)!=-1);
+		}while(lpUnLhaFindNext(hArc, &iinfo)!=-1);
 	}
-	lpUnArjCloseArchive(hArc);
-	
+	lpUnLhaCloseArchive(hArc);
+
+	if (iinfo.dwOriginalSize == 0) return FALSE;
+
 	// 解凍
 	*ppBuf = (LPBYTE)HeapAlloc(GetProcessHeap(), /*HEAP_ZERO_MEMORY*/0, iinfo.dwOriginalSize);
 	if (*ppBuf)
 	{
-		wsprintf(cmd, "-n -gm \"%s\" \"%s\"", pszArchivePath, szPlayFile);
-		ret = lpUnArjExtractMem(NULL, cmd, (LPBYTE)*ppBuf, iinfo.dwOriginalSize, NULL, NULL, NULL);
+		wsprintf(cmd, TEXT("-n -gm \"%s\" \"%s\""), pszArchivePath, szPlayFile);
+		ret = lpUnLhaExtractMem(NULL, cmd, (LPBYTE)*ppBuf, iinfo.dwOriginalSize, NULL, NULL, NULL);
 		if(!ret){
 			*pSize = iinfo.dwOriginalSize;
 			return TRUE;
 		}
-		char erx[64];
-		wsprintf(erx,"%08x",ret);
+		TCHAR erx[64];
+		wsprintf(erx,TEXT("%08x"),ret);
 		MessageBox(NULL,erx,pszArchivePath,MB_OK);
 		HeapFree(GetProcessHeap(), 0, *ppBuf);
 	}
@@ -144,23 +152,26 @@ static ARCHIVE_PLUGIN_INFO apinfo = {
 };
 
 static BOOL InitArchive(){	
-	if (!hUnarj32) hUnarj32 = LoadLibrary("UNARJ32J.DLL");
-	if(!hUnarj32) return FALSE;
+	if (!hUnlha32) hUnlha32 = LoadLibrary(TEXT("UNARJ32J.DLL"));
+	if(!hUnlha32) return FALSE;
 
-	lpUnArjOpenArchive = (LPUNARJOPENARCHIVE )GetProcAddress(hUnarj32,"UnarjOpenArchive");
-	if(!lpUnArjOpenArchive) return FALSE;
-	lpUnArjFindFirst = (LPUNARJFINDFIRST )GetProcAddress(hUnarj32,"UnarjFindFirst");
-	if(!lpUnArjFindFirst) return FALSE;
-	lpUnArjFindNext = (LPUNARJFINDNEXT )GetProcAddress(hUnarj32,"UnarjFindNext");
-	if(!lpUnArjFindNext) return FALSE;
-	lpUnArjCloseArchive = (LPUNARJCLOSEARCHIVE )GetProcAddress(hUnarj32,"UnarjCloseArchive");
-	if(!lpUnArjCloseArchive) return FALSE;
-	lpUnArjExtractMem = (LPUNARJEXTRACTMEM )GetProcAddress(hUnarj32,"UnarjExtractMem");
-	if(!lpUnArjExtractMem) return FALSE;
+	lpUnLhaOpenArchive = (LPUNLHAOPENARCHIVE )GetProcAddress(hUnlha32,"UnarjOpenArchive" UNICODE_POSTFIX);
+	if(!lpUnLhaOpenArchive) return FALSE;
+	lpUnLhaFindFirst = (LPUNLHAFINDFIRST )GetProcAddress(hUnlha32,"UnarjFindFirst" UNICODE_POSTFIX);
+	if(!lpUnLhaFindFirst) return FALSE;
+	lpUnLhaFindNext = (LPUNLHAFINDNEXT )GetProcAddress(hUnlha32,"UnarjFindNext" UNICODE_POSTFIX);
+	if(!lpUnLhaFindNext) return FALSE;
+	lpUnLhaExtractMem = (LPUNLHAEXTRACTMEM )GetProcAddress(hUnlha32,"UnarjExtractMem" UNICODE_POSTFIX);
+	if(!lpUnLhaExtractMem) return FALSE;
+	lpUnLhaCloseArchive = (LPUNLHACLOSEARCHIVE )GetProcAddress(hUnlha32,"UnarjCloseArchive");
+	if(!lpUnLhaCloseArchive) return FALSE;
 	return TRUE;
 }
 
-extern "C" ARCHIVE_PLUGIN_INFO * CALLBACK GetAPluginInfo(void)
+#ifdef __cplusplus
+extern "C"
+#endif
+ARCHIVE_PLUGIN_INFO * CALLBACK GetAPluginInfo(void)
 {
 	return InitArchive() ? &apinfo : 0;
 }

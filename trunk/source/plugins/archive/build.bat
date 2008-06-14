@@ -17,13 +17,22 @@ goto exitcmd
 
 :buildall
 
+call %0 arj /MD
 call %0 cab /MD
 call %0 cue /MD
-call %0 lha /MD
-call %0 zip /MD
-call %0 rar /MD
 call %0 gca /GX /link /NODEFAULTLIB:libcmt.lib msvcrt.lib
-call %0 arj /MD
+call %0 lha /MD
+call %0 rar /MD
 call %0 tar /MD
+call %0 zip /MD
+
+call %0 arju /MD
+call %0 cabu /MD
+call %0 cueu /MD
+call %0 lhau /MD
+call %0 gcau /GX /link /NODEFAULTLIB:libcmt.lib msvcrt.lib
+call %0 raru /MD
+call %0 taru /MD
+call %0 zipu /MD
 
 :exitcmd

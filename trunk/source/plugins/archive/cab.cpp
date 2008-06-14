@@ -10,7 +10,12 @@
 #pragma comment(lib,"user32.lib")
 #pragma comment(lib,"shell32.lib")
 #pragma comment(lib,"shlwapi.lib")
+#ifdef UNICODE
+#pragma comment(linker, "/EXPORT:GetAPluginInfoW=_GetAPluginInfoW@0")
+#define GetAPluginInfo GetAPluginInfoW
+#else
 #pragma comment(linker, "/EXPORT:GetAPluginInfo=_GetAPluginInfo@0")
+#endif
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/MERGE:.rdata=.text")
@@ -36,17 +41,16 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 	return TRUE;
 }
 
-static BOOL CALLBACK IsArchiveExt(char *pszExt){
-	if(lstrcmpi(pszExt, "cab")==0){
+static BOOL CALLBACK IsArchiveExt(LPTSTR pszExt){
+	if(lstrcmpi(pszExt, TEXT("cab"))==0){
 		return TRUE;
 	}
 	return FALSE;
 }
 
-static char * CALLBACK CheckArchivePath(char *pszFilePath)
+static LPTSTR CALLBACK CheckArchivePath(LPTSTR pszFilePath)
 {
-	char *p = StrStrI(pszFilePath, ".cab/");
-	return p;
+	return StrStrI(pszFilePath, TEXT(".cab/"));
 }
 
 static FNALLOC(Xmalloc)
@@ -106,7 +110,7 @@ public:
 		m_c = 0;
 		return ret;
 	}
-	bool Open(char *pszFile, int oflag = O_RDONLY, int pmode = S_IREAD)
+	bool Open(LPTSTR pszFile, int oflag = O_RDONLY, int pmode = S_IREAD)
 	{
 		Close();
 		if ((oflag & 15) == O_RDONLY)
@@ -127,7 +131,7 @@ public:
 		if (IsMemory())
 		{
 			if (sz > m_s - m_c) sz = m_s - m_c;
-			CopyMemory(pv, ((char *)m_p) + m_c, sz);
+			CopyMemory(pv, ((LPBYTE)m_p) + m_c, sz);
 			m_c += sz;
 			return sz;
 		}
@@ -145,7 +149,7 @@ public:
 		if (IsMemory())
 		{
 			if (sz > m_s - m_c) sz = m_s - m_c;
-			CopyMemory(((char *)m_p) + m_c, pv, sz);
+			CopyMemory(((LPBYTE)m_p) + m_c, pv, sz);
 			m_c += sz;
 			return sz;
 		}
@@ -198,7 +202,7 @@ public:
 
 	bool GetWORDLE(WORD &ret)
 	{
-		unsigned char buf[2];
+		BYTE buf[2];
 		if (2 != Read(buf, 2)) return false;
 		ret = (buf[1] << (1*8)) | (buf[0] << (0*8));
 		return true;
@@ -206,7 +210,7 @@ public:
 
 	bool GetDWORDLE(DWORD &ret)
 	{
-		unsigned char buf[4];
+		BYTE buf[4];
 		if (4 != Read(buf, 4)) return false;
 		ret = (buf[3] << (3*8)) | (buf[2] << (2*8)) | (buf[1] << (1*8)) | (buf[0] << (0*8));
 		return true;
@@ -226,7 +230,15 @@ private:
 	static FNOPEN(Xopen)
 	{
 		CFdiFile *pThis = new CFdiFile;
-		if (!pThis->Open(pszFile, oflag, pmode))
+		BOOL fOpend = FALSE;
+#ifdef UNICODE
+		WCHAR nameW[MAX_PATH + 1];
+		MultiByteToWideChar(CP_UTF8, 0, pszFile, -1, nameW, MAX_PATH + 1);
+		fOpend = pThis->Open(nameW, oflag, pmode);
+#else
+		fOpend = pThis->Open(pszFile, oflag, pmode);
+#endif
+		if (!fOpend)
 		{
 			delete pThis;
 			return -1;
@@ -280,7 +292,7 @@ private:
 
 	ERF m_erf;
 	HFDI m_hfdi;
-	char *m_pszFileName;
+	LPTSTR m_pszFileName;
 	CFdiFile m_fout;
 	DWORD m_dwSize;
 	void *m_pBuf;
@@ -293,7 +305,7 @@ private:
 			m_hfdidll = 0;
 		}
 	}
-	bool LoadDll(char *pszName)
+	bool LoadDll(LPTSTR pszName)
 	{
 		HMODULE hDll = LoadLibrary(pszName);
 		if (hDll)
@@ -312,7 +324,7 @@ private:
 	}
 	bool LoadDll()
 	{
-		return m_hfdidll || LoadDll("cabinet.dll") || LoadDll("fdi.dll");
+		return m_hfdidll || LoadDll(TEXT("cabinet.dll")) || LoadDll(TEXT("fdi.dll"));
 	}
 	void Close()
 	{
@@ -336,12 +348,30 @@ private:
 		case fdintCABINET_INFO:
 			break;
 		case fdintCOPY_FILE:
-			if (lstrcmpi(m_pszFileName, pfdin->psz1) == 0)
 			{
-				m_dwSize =  pfdin->cb;
-				if (!m_fout.Allocate(m_dwSize))
-					return -1;
-				return (INT_PTR)&m_fout;
+				TCHAR nameT[MAX_PATH + 1];
+#ifdef UNICODE
+				if (pfdin->attribs & _A_NAME_IS_UTF) {
+					MultiByteToWideChar(CP_UTF8, 0, pfdin->psz1, -1, nameT, MAX_PATH + 1);
+				} else {
+					MultiByteToWideChar(CP_ACP, 0, pfdin->psz1, -1, nameT, MAX_PATH + 1);
+				}
+#else
+				if (pfdin->attribs & _A_NAME_IS_UTF) {
+					WCHAR nameW[MAX_PATH + 1];
+					MultiByteToWideChar(CP_UTF8, 0, pfdin->psz1, -1, nameW, MAX_PATH + 1);
+					WideCharToMultiByte(CP_ACP, 0, nameW, -1, nameT, MAX_PATH + 1, NULL, NULL);
+				} else {
+					lstrcpynA(nameT, pfdin->psz1, MAX_PATH + 1);
+				}
+#endif
+				if (lstrcmpi(m_pszFileName, nameT) == 0)
+				{
+					m_dwSize =  pfdin->cb;
+					if (m_dwSize == 0 || !m_fout.Allocate(m_dwSize))
+						return -1;
+					return (INT_PTR)&m_fout;
+				}
 			}
 			break;
 		case fdintCLOSE_FILE_INFO:
@@ -369,12 +399,20 @@ public:
 		Close();
 		FreeDll();
 	}
-	bool Extract(char *pszArchivePath, char *pszFileName, void **ppBuf, DWORD *pSize)
+	bool Extract(LPTSTR pszArchivePath, LPTSTR pszFileName, void **ppBuf, DWORD *pSize)
 	{
 		if (!Init()) return false;
 		m_pszFileName = pszFileName;
 		m_pBuf = 0;
+#ifdef UNICODE
+		{
+			CHAR nameU[MAX_PATH + 1];
+			WideCharToMultiByte(CP_UTF8, 0, pszArchivePath, -1, nameU, MAX_PATH + 1, NULL, NULL);
+			m_lpfncopy(m_hfdi, nameU, "", 0, Xnotify, 0, this);
+		}
+#else
 		m_lpfncopy(m_hfdi, pszArchivePath, "", 0, Xnotify, 0, this);
+#endif
 		if (m_pBuf)
 		{
 			*ppBuf = m_pBuf;
@@ -386,46 +424,62 @@ public:
 	}
 };
 
-static BOOL CALLBACK EnumArchive(char *pszArchivePath, LPFNARCHIVEENUMPROC lpfnProc, void *pData)
+static BOOL CALLBACK EnumArchive(LPTSTR pszArchivePath, LPFNARCHIVEENUMPROC lpfnProc, void *pData)
 {
 	CFdiFile cab;
-	if (!cab.Open(pszArchivePath)) return FALSE;
 	DWORD dwSignature;
 	DWORD dwCoffFiles;
 	WORD wCFiles;
+	DWORD dwFileOfs;
+	if (!cab.Open(pszArchivePath)) return FALSE;
 	if (!cab.GetDWORDLE(dwSignature) || dwSignature != 0x4643534d) return FALSE;
 	if (!cab.SetPos(16) || !cab.GetDWORDLE(dwCoffFiles)) return FALSE;
 	if (!cab.SetPos(24) || !cab.GetWORDLE(wCFiles)) return FALSE;
-	DWORD dwFileOfs = dwCoffFiles;
+	dwFileOfs = dwCoffFiles;
 	for (int i = 0; i < wCFiles; i++)
 	{
-		if (!cab.SetPos(dwFileOfs)) return FALSE;
 		DWORD dwSize;
-		if (!cab.GetDWORDLE(dwSize)) return FALSE;
 		DWORD dwFolder;
-		if (!cab.GetDWORDLE(dwFolder)) return FALSE;
 		WORD wFolder;
-		if (!cab.GetWORDLE(wFolder)) return FALSE;
 		WORD wDate;
-		if (!cab.GetWORDLE(wDate)) return FALSE;
 		WORD wTime;
-		if (!cab.GetWORDLE(wTime)) return FALSE;
 		WORD wAttr;
+		CHAR nameA[MAX_PATH + 1];
+		WCHAR nameW[MAX_PATH + 1];
+		if (!cab.SetPos(dwFileOfs)) return FALSE;
+		if (!cab.GetDWORDLE(dwSize)) return FALSE;
+		if (!cab.GetDWORDLE(dwFolder)) return FALSE;
+		if (!cab.GetWORDLE(wFolder)) return FALSE;
+		if (!cab.GetWORDLE(wDate)) return FALSE;
+		if (!cab.GetWORDLE(wTime)) return FALSE;
 		if (!cab.GetWORDLE(wAttr)) return FALSE;
-		char name[MAX_PATH + 1];
-		size_t l = cab.Read(name, MAX_PATH);
-		if (l < MAX_PATH + 1) name[l] = 0;
+		size_t l = cab.Read(nameA, MAX_PATH);
+		if (l < MAX_PATH + 1) nameA[l] = 0;
+
+		dwFileOfs += 4 + 4 + 2 + 2 + 2 + 2 + lstrlenA(nameA) + 1;
 
 		FILETIME ft;
 		DosDateTimeToFileTime(wDate, wTime, &ft);
-		lpfnProc(name, dwSize, ft, pData);
+#ifdef UNICODE
+		if (wAttr & _A_NAME_IS_UTF) {
+			MultiByteToWideChar(CP_UTF8, 0, nameA, -1, nameW, MAX_PATH + 1);
+		} else {
+			MultiByteToWideChar(CP_ACP, 0, nameA, -1, nameW, MAX_PATH + 1);
+		}
+		lpfnProc(nameW, dwSize, ft, pData);
+#else
+		if (wAttr & _A_NAME_IS_UTF) {
+			MultiByteToWideChar(CP_UTF8, 0, nameA, -1, nameW, MAX_PATH + 1);
+			WideCharToMultiByte(CP_ACP, 0, nameW, -1, nameA, MAX_PATH + 1, NULL, NULL);
+		}
+		lpfnProc(nameA, dwSize, ft, pData);
+#endif
 
-		dwFileOfs += 4 + 4 + 2 + 2 + 2 + 2 + lstrlen(name) + 1;
 	}
 	return TRUE;
 }
 
-static BOOL CALLBACK ExtractArchive(char *pszArchivePath, char *pszFileName, void **ppBuf, DWORD *pSize)
+static BOOL CALLBACK ExtractArchive(LPTSTR pszArchivePath, LPTSTR pszFileName, void **ppBuf, DWORD *pSize)
 {
 	CFdi fdi;
 	if (!fdi.Extract(pszArchivePath, pszFileName, ppBuf, pSize)) return FALSE;
