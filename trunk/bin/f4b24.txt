@@ -32,14 +32,15 @@ All rights reserved.
 	fconfig.exe  設定画面 fcpプラグインが無いと何もできない
 
 追加した専用プラグイン
-	cue.fap      cueシートプラグイン Ansi版専用 要test14以降
-	arj.fap      arj書庫プラグイン Ansi版専用 要統合アーカイバプロジェクト版unarj32j.dll
-	cab.fap      cab書庫プラグイン Ansi版専用 要IE5以降(cabinet.dll又はfdi.dll)
-	gca.fap      gca書庫プラグイン Ansi版専用
-	lha.fap      lzh書庫プラグイン Ansi版専用 要統合アーカイバプロジェクト版unlha32.dll
-	rar.fap      rar書庫プラグイン Ansi版専用 要RARLABオフィシャル版unrar.dll
-	tar.fap      tar書庫プラグイン Ansi版専用 要統合アーカイバプロジェクト版tar32.dll
-	zip.fap      zip書庫プラグイン Ansi版専用 要統合アーカイバプロジェクト版unzip32.dll
+	minipaneu.dll ミニパネル ユニコード対応 要test17以降
+	cue.fap       cueシートプラグイン Ansi版専用 要test14以降
+	arj.fap       arj書庫プラグイン Ansi版専用 要統合アーカイバプロジェクト版unarj32j.dll
+	cab.fap       cab書庫プラグイン Ansi版専用 要IE5以降(cabinet.dll又はfdi.dll)
+	gca.fap       gca書庫プラグイン Ansi版専用
+	lha.fap       lzh書庫プラグイン Ansi版専用 要統合アーカイバプロジェクト版unlha32.dll
+	rar.fap       rar書庫プラグイン Ansi版専用 要RARLABオフィシャル版unrar.dll
+	tar.fap       tar書庫プラグイン Ansi版専用 要統合アーカイバプロジェクト版tar32.dll
+	zip.fap       zip書庫プラグイン Ansi版専用 要統合アーカイバプロジェクト版unzip32.dll
 	cueu.fap      cueシートプラグイン Unicode版専用
 	arju.fap      arj書庫プラグイン Unicode版専用 要統合アーカイバプロジェクト版unarj32j.dll
 	cabu.fap      cab書庫プラグイン Unicode版専用 要IE5以降(cabinet.dll又はfdi.dll)
@@ -48,10 +49,11 @@ All rights reserved.
 	raru.fap      rar書庫プラグイン Unicode版専用 要RARLABオフィシャル版unrar.dll
 	taru.fap      tar書庫プラグイン Unicode版専用 ただしUnicode非対応 要統合アーカイバプロジェクト版tar32.dll
 	zipu.fap      zip書庫プラグイン Unicode版専用 ただしUnicode非対応 要統合アーカイバプロジェクト版unzip32.dll
-	fconfig.dll  設定画面 fcpプラグインが無いと何もできない 要test12以降
-	addurl.dll   URLを追加プラグイン text13以降推奨
-	fittle.fcp   fittle.exe 設定プラグイン 要fconfig.exe又はfconfig.dll
-	minipane.fcp minipane.dll 設定プラグイン 要fconfig.exe又はfconfig.dll
+	fconfig.dll   設定画面 fcpプラグインが無いと何もできない 要test12以降
+	addurl.dll    URLを追加プラグイン text13以降推奨
+	fittle.fcp    fittle.exe 設定プラグイン 要fconfig.exe又はfconfig.dll
+	fittleu.fcp   fittle.exe 設定プラグイン ユニコード対応 INIファイルをユニコードに変換する必要あり 要fconfig.exe又はfconfig.dll
+	minipane.fcp  minipane.dll 設定プラグイン 要fconfig.exe又はfconfig.dll
 
 実験履歴
 	test17/test17u

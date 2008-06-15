@@ -21,5 +21,6 @@ goto exitcmd
 :buildall
 
 call %0 fittle /MD
+call %0 fittleu /MD
 
 :exitcmd
