@@ -86,8 +86,8 @@ static BOOL ID3V23_ReadFlame(LPCSTR pszFlame, int nFlameSize, LPTSTR pszTag){
 					int i;
 					LPWSTR pw = pa;
 					for (i = 0; i < l; i++){
-						pw[i * 2 + 1] = *(pszFlame + 11 + 2 + i * 2 + 0);
-						pw[i * 2 + 0] = *(pszFlame + 11 + 2 + i * 2 + 1);
+						pw[i] = (((WORD)(unsigned char)*(pszFlame + 11 + 2 + i * 2 + 0)) << 8)
+						      | (((WORD)(unsigned char)*(pszFlame + 11 + 2 + i * 2 + 1)) << 0);
 					}
 					if (pw[0] == 0xfeff){
 						pw++;
