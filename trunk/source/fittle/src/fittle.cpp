@@ -135,14 +135,14 @@ static int m_nPlayTab = -1;			// 再生中のタブインデックス
 static int m_nGaplessState = GS_OK;	// ギャップレス再生用のステータス
 static int m_nPlayMode = PM_LIST;	// プレイモード
 static HINSTANCE m_hInst = NULL;	// インスタンス
-static NOTIFYICONDATA m_ni = {0};	// タスクトレイのアイコンのデータ
+static NOTIFYICONDATA m_ni;	// タスクトレイのアイコンのデータ
 static BOOL m_nRepeatFlag = FALSE;	// リピート中かどうか
 static BOOL m_bTrayFlag = FALSE;	// タスクトレイに入ってるかどうか
 static struct FILEINFO *m_pNext = NULL;	// 再生曲
-static TCHAR m_szINIPath[MAX_FITTLE_PATH] = {0};	// INIファイルのパス
-static TCHAR m_szTime[100] = {0};			// 再生時間
-static TCHAR m_szTag[MAX_FITTLE_PATH] = {0};	// タグ
-static TCHAR m_szTreePath[MAX_FITTLE_PATH] = {0};	// ツリーのパス
+static TCHAR m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
+static TCHAR m_szTime[100];			// 再生時間
+static TCHAR m_szTag[MAX_FITTLE_PATH];	// タグ
+static TCHAR m_szTreePath[MAX_FITTLE_PATH];	// ツリーのパス
 static BOOL m_bFLoat = FALSE;
 static TAGINFO m_taginfo = {0};
 #ifdef UNICODE
@@ -152,9 +152,9 @@ typedef struct{
 	CHAR szAlbum[256];
 	CHAR szTrack[10];
 }TAGINFOA;
-static TAGINFOA m_taginfoA = {0};
-static CHAR m_szTreePathA[MAX_FITTLE_PATH] = {0};	// ツリーのパス
-static CHAR m_szFilePathA[MAX_FITTLE_PATH] = {0};	// ツリーのパス
+static TAGINFOA m_taginfoA;
+static CHAR m_szTreePathA[MAX_FITTLE_PATH];	// ツリーのパス
+static CHAR m_szFilePathA[MAX_FITTLE_PATH];	// ツリーのパス
 #endif
 static volatile BOOL m_bCueEnd = FALSE;
 // メンバ変数（ハンドル編）
@@ -184,6 +184,85 @@ BOOL g_bNow = FALSE;				// アクティブなチャンネル0 or 1
 
 static int XARGC = 0;
 static LPTSTR *XARGV = 0;
+
+typedef struct StringList {
+	struct StringList *pNext;
+	TCHAR szString[1];
+} STRING_LIST, *LPSTRING_LIST;
+
+static LPSTRING_LIST lpBookmark = NULL;
+static LPSTRING_LIST lpTypelist = NULL;
+
+static void StringListFree(LPSTRING_LIST *pList){
+	LPSTRING_LIST pCur = *pList;
+	while (pCur){
+		LPSTRING_LIST pNext = pCur->pNext;
+		HeapFree(GetProcessHeap(), 0, pCur);
+		pCur = pNext;
+	}
+	*pList = NULL;
+}
+
+static  LPSTRING_LIST StringListWalk(LPSTRING_LIST *pList, int nIndex){
+	LPSTRING_LIST pCur = *pList;
+	int i = 0;
+	while (pCur){
+		if (i++ == nIndex) return pCur;
+		pCur = pCur->pNext;
+	}
+	return NULL;
+}
+
+static int StringListAdd(LPSTRING_LIST *pList, LPTSTR szValue){
+	int i = 0;
+	LPSTRING_LIST pCur = *pList;
+	LPSTRING_LIST pNew = (LPSTRING_LIST)HeapAlloc(GetProcessHeap(), 0, sizeof(STRING_LIST) + sizeof(TCHAR) * lstrlen(szValue));
+	if (!pNew) return -1;
+	pNew->pNext = NULL;
+	lstrcpy(pNew->szString, szValue);
+	if (pCur){
+		i++;
+		/* 末尾に追加 */
+		while (pCur->pNext){
+			pCur = pCur->pNext;
+			i++;
+		}
+		pCur->pNext = pNew;
+	} else {
+		/* 先頭 */
+		*pList = pNew;
+	}
+	return i;
+}
+
+static void ClearTypelist(){
+	StringListFree(&lpTypelist);
+}
+static int AddTypelist(LPTSTR szExt){
+	if (!szExt || !*szExt) return TRUE;
+	return StringListAdd(&lpTypelist, szExt);
+}
+
+static LPTSTR GetTypelist(int nIndex){
+	static TCHAR szNull[1] = {0};
+	LPSTRING_LIST lpbm = StringListWalk(&lpTypelist, nIndex);
+	return lpbm ? lpbm->szString : szNull;
+}
+
+static void ClearBookmark(void){
+	StringListFree(&lpBookmark);
+}
+
+LPTSTR GetBookmark(int nIndex){
+	static TCHAR szNull[1] = {0};
+	LPSTRING_LIST lpbm = StringListWalk(&lpBookmark, nIndex);
+	return lpbm ? lpbm->szString : szNull;
+}
+
+static int AppendBookmark(LPTSTR szPath){
+	if (!szPath || !*szPath) return TRUE;
+	return StringListAdd(&lpBookmark, szPath);
+}
 
 static void lstrcpyntA(LPSTR lpDst, LPCTSTR lpSrc, int nDstMax){
 #if defined(UNICODE)
@@ -1565,11 +1644,13 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						//プレイリストに送る
 						SendToPlaylist(GetCurListTab(m_hTab), GetListTab(m_hTab, LOWORD(wp) - IDM_SENDPL_FIRST));
 					}else if(IDM_BM_FIRST<=LOWORD(wp) && LOWORD(wp)<IDM_BM_FIRST+MAX_BM_SIZE){
+						TCHAR szBMPath[MAX_FITTLE_PATH];
+						lstrcpyn(szBMPath, GetBookmark(LOWORD(wp)-IDM_BM_FIRST), MAX_FITTLE_PATH);
 						// しおり
 						if(g_cfg.nTreeState==TREE_SHOW){
-							MakeTreeFromPath(m_hTree, m_hCombo, g_cfg.szBMPath[LOWORD(wp)-IDM_BM_FIRST]);
+							MakeTreeFromPath(m_hTree, m_hCombo, szBMPath);
 						}else{
-							lstrcpyn(m_szTreePath, g_cfg.szBMPath[LOWORD(wp)-IDM_BM_FIRST], MAX_FITTLE_PATH);
+							lstrcpyn(m_szTreePath, szBMPath, MAX_FITTLE_PATH);
 							SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_FILEREVIEW, 0), 0);
 						}
 					}else{
@@ -2434,13 +2515,14 @@ static int InitFileTypes(){
 	HANDLE hFind = NULL;
 	WIN32_FIND_DATA wfd;
 
-	ZeroMemory(g_cfg.szTypeList, 5 * MAX_EXT_COUNT*(sizeof(TCHAR)));
-	lstrcpy(g_cfg.szTypeList[i++], TEXT("mp3"));
-	lstrcpy(g_cfg.szTypeList[i++], TEXT("mp2"));
-	lstrcpy(g_cfg.szTypeList[i++], TEXT("mp1"));
-	lstrcpy(g_cfg.szTypeList[i++], TEXT("wav"));
-	lstrcpy(g_cfg.szTypeList[i++], TEXT("ogg"));
-	lstrcpy(g_cfg.szTypeList[i++], TEXT("aif"));
+	ClearTypelist();
+	AddTypelist(TEXT("mp3"));
+	AddTypelist(TEXT("mp2"));
+	AddTypelist(TEXT("mp1"));
+	AddTypelist(TEXT("wav"));
+	AddTypelist(TEXT("ogg"));
+	AddTypelist(TEXT("aif"));
+	AddTypelist(TEXT("aiff"));
 
 	GetModuleFileName(NULL, szPath, MAX_PATH);
 	lstrcpyn(PathFindFileName(szPath), TEXT("bass*.dll"), MAX_PATH);
@@ -2463,10 +2545,10 @@ static int InitFileTypes(){
 						LPTSTR p = StrStr(q, TEXT(";"));
 						if(p){
 							*p = TEXT('\0');
-							lstrcpy(g_cfg.szTypeList[i++], q + 2);
+							AddTypelist(q + 2);
 							q = p + 1;
 						}else{
-							lstrcpy(g_cfg.szTypeList[i++], q + 2);
+							AddTypelist(q + 2);
 							break;
 						}
 					}
@@ -3194,15 +3276,16 @@ static int UnRegHotKey(HWND hWnd){
 BOOL CheckFileType(LPTSTR szFilePath){
 	int i=0;
 	LPTSTR szCheckType;
+	LPTSTR lpExt;
 
 	szCheckType = PathFindExtension(szFilePath);
 	if(!szCheckType || !*szCheckType) return FALSE;
 	szCheckType++;
-	while(g_cfg.szTypeList[i][0] != TEXT('\0') && i<MAX_EXT_COUNT){
-		if(lstrcmpi(g_cfg.szTypeList[i], szCheckType)==0) return TRUE;
-		i++;
-	}
-	return FALSE;
+	do {
+		lpExt = GetTypelist(i++);
+		if (!lpExt[0]) return FALSE;
+	} while(lstrcmpi(lpExt, szCheckType) != 0);
+	return TRUE;
 }
 
 // コマンドラインオプションを考慮したExecute
@@ -3441,16 +3524,23 @@ static void LoadBookMark(HMENU hBMMenu, LPTSTR pszINIPath){
 	TCHAR szSec[10];
 	TCHAR szMenuBuff[MAX_FITTLE_PATH+4];
 
+	ClearBookmark();
 	for(i=0;i<MAX_BM_SIZE;i++){
+		int j;
 		wsprintf(szSec, TEXT("Path%d"), i);
-		GetPrivateProfileString(TEXT("BookMark"), szSec, TEXT(""), g_cfg.szBMPath[i], MAX_FITTLE_PATH, pszINIPath);
-		if(g_cfg.szBMPath[i][0]){
+		szMenuBuff[0] = 0;
+		GetPrivateProfileString(TEXT("BookMark"), szSec, TEXT(""), szMenuBuff, MAX_FITTLE_PATH, pszINIPath);
+		if(!szMenuBuff[0]) break;
+		j =  AppendBookmark(szMenuBuff);
+		if (j >= 0){
+			TCHAR szBMPath[MAX_FITTLE_PATH];
+			lstrcpyn(szBMPath, GetBookmark(j), MAX_FITTLE_PATH);
 			if(g_cfg.nBMFullPath){
-				wsprintf(szMenuBuff, TEXT("&%d: %s"), i, g_cfg.szBMPath[i]);
+				wsprintf(szMenuBuff, TEXT("&%d: %s"), j, szBMPath);
 			}else{
-				wsprintf(szMenuBuff, TEXT("&%d: %s"), i, PathFindFileName(g_cfg.szBMPath[i]));
+				wsprintf(szMenuBuff, TEXT("&%d: %s"), j, PathFindFileName(szBMPath));
 			}
-			AppendMenu(hBMMenu, MF_STRING | MF_ENABLED, IDM_BM_FIRST+i, szMenuBuff);
+			AppendMenu(hBMMenu, MF_STRING | MF_ENABLED, IDM_BM_FIRST+j, szMenuBuff);
 		}
 	}
 	return;
@@ -3462,15 +3552,17 @@ static void SaveBookMark(LPTSTR pszINIPath){
 	TCHAR szSec[10];
 
 	for(i=0;i<MAX_BM_SIZE;i++){
+		TCHAR szBMPath[MAX_FITTLE_PATH];
+		lstrcpyn(szBMPath, GetBookmark(i), MAX_FITTLE_PATH);
 		wsprintf(szSec, TEXT("Path%d"), i);
-		WritePrivateProfileString(TEXT("BookMark"), szSec, (g_cfg.szBMPath[i][0]?g_cfg.szBMPath[i]:NULL), pszINIPath);
+		WritePrivateProfileString(TEXT("BookMark"), szSec, szBMPath[0] ? szBMPath : NULL, pszINIPath);
+		if (!szBMPath[0]) break;
 	}
 	return;
 }
 
 // しおりに追加（あとで修正）
 static int AddBookMark(HMENU hBMMenu, HWND hWnd){
-	int i;
 	//HTREEITEM hNode;
 	TCHAR szMenuBuff[MAX_FITTLE_PATH+4];
 	
@@ -3480,22 +3572,22 @@ static int AddBookMark(HMENU hBMMenu, HWND hWnd){
 	GetPathFromNode(m_hTree, hNode, szMenuBuff);
 	*/
 
-	lstrcpyn(szMenuBuff, m_szTreePath, MAX_FITTLE_PATH+4);
-
-	for(i=0;i<MAX_BM_SIZE;i++){
-		if(!g_cfg.szBMPath[i][0]){
-			lstrcpyn(g_cfg.szBMPath[i], szMenuBuff, MAX_FITTLE_PATH);
-			if(g_cfg.nBMFullPath){
-				wsprintf(szMenuBuff, TEXT("&%d: %s"), i, g_cfg.szBMPath[i]);
-			}else{
-				wsprintf(szMenuBuff, TEXT("&%d: %s"), i, PathFindFileName(g_cfg.szBMPath[i]));
-			}
-			AppendMenu(hBMMenu, MF_STRING | MF_ENABLED, IDM_BM_FIRST+i, szMenuBuff);
-			return i;
-		}
+	if (*GetBookmark(MAX_BM_SIZE-1)){
+		MessageBox(hWnd, TEXT("しおりの個数制限を越えました。"), TEXT("Fittle"), MB_OK | MB_ICONEXCLAMATION);
+		return -1;
 	}
-	MessageBox(hWnd, TEXT("しおりの個数制限を越えました。"), TEXT("Fittle"), MB_OK | MB_ICONEXCLAMATION);
-	return -1;
+	int i = AppendBookmark(m_szTreePath);
+	if (i < 0){
+		return -1;
+	}
+	
+	if(g_cfg.nBMFullPath){
+		wsprintf(szMenuBuff, TEXT("&%d: %s"), i, m_szTreePath);
+	}else{
+		wsprintf(szMenuBuff, TEXT("&%d: %s"), i, PathFindFileName(m_szTreePath));
+	}
+	AppendMenu(hBMMenu, MF_STRING | MF_ENABLED, IDM_BM_FIRST+i, szMenuBuff);
+	return i;
 }
 
 // しおりをメニューに描画
@@ -3507,16 +3599,18 @@ static void DrawBookMark(HMENU hBMMenu){
 	for(i=0;i<MAX_BM_SIZE;i++){
 		if(!DeleteMenu(hBMMenu, IDM_BM_FIRST+i, MF_BYCOMMAND)) break;
 	}
+
 	// 新しくメニューを追加
 	for(i=0;i<MAX_BM_SIZE;i++){
+		TCHAR szBMPath[MAX_FITTLE_PATH];
+		lstrcpyn(szBMPath, GetBookmark(i), MAX_FITTLE_PATH);
 		if(g_cfg.nBMFullPath){
-			wsprintf(szMenuBuff, TEXT("&%d: %s"), i, g_cfg.szBMPath[i]);
+			wsprintf(szMenuBuff, TEXT("&%d: %s"), i, szBMPath);
 		}else{
-			wsprintf(szMenuBuff, TEXT("&%d: %s"), i, PathFindFileName(g_cfg.szBMPath[i]));
+			wsprintf(szMenuBuff, TEXT("&%d: %s"), i, PathFindFileName(szBMPath));
 		}
-		if(g_cfg.szBMPath[i][0]){
-			AppendMenu(hBMMenu, MF_STRING | MF_ENABLED, IDM_BM_FIRST+i, szMenuBuff);
-		}
+		if(!szBMPath[0]) break;
+		AppendMenu(hBMMenu, MF_STRING | MF_ENABLED, IDM_BM_FIRST+i, szMenuBuff);
 	}
 	return;
 }
@@ -4410,8 +4504,10 @@ static BOOL CALLBACK BookMarkDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM /*lp
 			nMax = 300;
 
 			for(i=0;i<MAX_BM_SIZE;i++){
-				if(!g_cfg.szBMPath[i][0]) break;
-				item.pszText = g_cfg.szBMPath[i];
+				TCHAR szBMPath[MAX_FITTLE_PATH];
+				lstrcpyn(szBMPath, GetBookmark(i), MAX_FITTLE_PATH);
+				if(!szBMPath[0]) break;
+				item.pszText = szBMPath;
 				nMax = ListView_GetStringWidth(hList, item.pszText)+10>nMax?ListView_GetStringWidth(hList, item.pszText)+10:nMax;
 				item.iItem = i;
 				ListView_InsertItem(hList, &item);
@@ -4428,12 +4524,12 @@ static BOOL CALLBACK BookMarkDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM /*lp
 				case IDOK:
 					int nCount;
 
+					ClearBookmark();
 					nCount = ListView_GetItemCount(hList);
 					for(i=0;i<nCount;i++){
-						ListView_GetItemText(hList, i, 0, g_cfg.szBMPath[i], MAX_FITTLE_PATH);
-					}
-					for(i=nCount;i<MAX_BM_SIZE;i++){
-						lstrcpy(g_cfg.szBMPath[i], TEXT(""));
+						TCHAR szBuf[MAX_FITTLE_PATH];
+						ListView_GetItemText(hList, i, 0, szBuf, MAX_FITTLE_PATH);
+						AppendBookmark(szBuf);
 					}
 					g_cfg.nBMRoot = SendDlgItemMessage(hDlg, IDC_CHECK1, BM_GETCHECK, 0, 0);
 					g_cfg.nBMFullPath = SendDlgItemMessage(hDlg, IDC_CHECK6, BM_GETCHECK, 0, 0);
@@ -4583,15 +4679,16 @@ static void ShowSettingDialog(HWND hWnd, int nPage){
 
 // 対応拡張子リストを取得する
 static void SendSupportList(HWND hWnd){
+	LPTSTR lpExt;
 	TCHAR szList[MAX_FITTLE_PATH];
 	int i;
 	int p=0;
-	for(i = 0; g_cfg.szTypeList[i][0] != TEXT('\0') && i<MAX_EXT_COUNT; i++){
-		int l = lstrlen(g_cfg.szTypeList[i]);
+	for(i = 0; lpExt = GetTypelist(i), (lpExt[0] != TEXT('\0')); i++){
+		int l = lstrlen(lpExt);
 		if (l > 0 && p + (p != 0) + l + 1 < MAX_FITTLE_PATH)
 		{
 			if (p != 0) szList[p++] = TEXT(' ');
-			lstrcpy(szList + p, g_cfg.szTypeList[i]);
+			lstrcpy(szList + p, lpExt);
 			p += l;
 		}
 	}

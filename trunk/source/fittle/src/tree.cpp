@@ -58,16 +58,18 @@ int SetDrivesToCombo(HWND hCB){
 	// しおりフォルダ列挙
 	i /= 4;
 	for(j=0;j<MAX_BM_SIZE;j++){
-		if((g_cfg.szBMPath[j][0]==TEXT('\\') && g_cfg.szBMPath[j][1]==TEXT('\\')) || PathIsDirectory(g_cfg.szBMPath[j])){
-			lstrcpyn(szDrawBuff, g_cfg.szBMPath[j], MAX_FITTLE_PATH);
+		TCHAR szBMPath[MAX_FITTLE_PATH];
+		lstrcpyn(szBMPath, GetBookmark(j), MAX_FITTLE_PATH);
+		if((szBMPath[0]==TEXT('\\') && szBMPath[1]==TEXT('\\')) || PathIsDirectory(szBMPath)){
+			lstrcpyn(szDrawBuff, szBMPath, MAX_FITTLE_PATH);
 			PathAddBackslash(szDrawBuff);
 			citem.pszText = szDrawBuff;
 			citem.iItem = i;
 			citem.lParam = citem.iImage = citem.iSelectedImage = m_iFolderIcon;
 			SendMessage(hCB, CBEM_INSERTITEM, 0, (LPARAM)&citem);
 			i++;
-		}else if(IsPlayList(g_cfg.szBMPath[j]) || IsArchive(g_cfg.szBMPath[j])){
-			wsprintf(szDrawBuff, TEXT("%s"), g_cfg.szBMPath[j]);
+		}else if(IsPlayList(szBMPath) || IsArchive(szBMPath)){
+			wsprintf(szDrawBuff, TEXT("%s"), szBMPath);
 			citem.pszText = szDrawBuff;
 			citem.iItem = i;
 			citem.lParam = citem.iImage = citem.iSelectedImage = m_iFolderIcon;
@@ -271,13 +273,15 @@ HTREEITEM MakeTreeFromPath(HWND hTV, HWND hCB, LPTSTR szSetPath){
 	// ドライブボックスの変更
 	if(g_cfg.nBMRoot){
 		for(i=0;i<MAX_BM_SIZE;i++){
+			TCHAR szBMPath[MAX_FITTLE_PATH];
+			lstrcpyn(szBMPath, GetBookmark(i), MAX_FITTLE_PATH);
 			// しおり終了で抜ける
-			if(!g_cfg.szBMPath[i][0]) break;
+			if(!szBMPath[0]) break;
 
-			if(StrStrI(szSetPath, g_cfg.szBMPath[i])){
-				len = lstrlen(g_cfg.szBMPath[i]);
+			if(StrStrI(szSetPath, szBMPath)){
+				len = lstrlen(szBMPath);
 				if(len>lstrlen(szTempRoot) && (szSetPath[len]==TEXT('\0') || szSetPath[len]==TEXT('\\'))){
-					lstrcpyn(szTempRoot, g_cfg.szBMPath[i], MAX_FITTLE_PATH);
+					lstrcpyn(szTempRoot, szBMPath, MAX_FITTLE_PATH);
 				}
 			}
 		}
