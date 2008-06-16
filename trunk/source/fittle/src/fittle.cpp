@@ -75,7 +75,6 @@ static LRESULT CALLBACK NewSliderProc(HWND, UINT, WPARAM, LPARAM);
 static LRESULT CALLBACK NewTabProc(HWND, UINT, WPARAM, LPARAM);
 static LRESULT CALLBACK NewTreeProc(HWND, UINT, WPARAM, LPARAM);
 static LRESULT CALLBACK NewSplitBarProc(HWND, UINT, WPARAM, LPARAM);
-static BOOL CALLBACK BookMarkDlgProc(HWND, UINT, WPARAM, LPARAM);
 static DWORD CALLBACK MainStreamProc(HSTREAM, void *, DWORD, void *);
 static void CALLBACK EventSync(HSYNC, DWORD, DWORD, void *);
 // 設定関係
@@ -93,8 +92,6 @@ static void ToggleWindowView(HWND);
 static HWND CreateToolBar(HWND);
 static void LoadBookMark(HMENU , LPTSTR);
 static void SaveBookMark(LPTSTR);
-static int AddBookMark(HMENU, HWND);
-static void DrawBookMark(HMENU);
 static int ShowToolTip(HWND, HWND, LPTSTR);
 static int ControlPlayMode(HMENU, int);
 static BOOL ToggleRepeatMode(HMENU);
@@ -1343,16 +1340,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					SendMessage(hWnd, WM_F4B24_IPC, WM_F4B24_IPC_SETTING, WM_F4B24_IPC_SETTING_LP_GENERAL);
 					break;
 
-				case IDM_BM_ADD: //しおりに追加
-					if(AddBookMark(GetSubMenu(m_hMainMenu, GetMenuPosFromString(m_hMainMenu, TEXT("しおり(&B)"))), hWnd)!=-1){
-						SetDrivesToCombo(m_hCombo);
-					}
-					break;
-
-				case IDM_BM_ORG:
-					DialogBox(m_hInst, TEXT("BOOKMARK_DIALOG"), hWnd, (DLGPROC)BookMarkDlgProc);
-					DrawBookMark(GetSubMenu(m_hMainMenu, GetMenuPosFromString(m_hMainMenu, TEXT("しおり(&B)"))));
-					break;
 
 				case IDM_BM_PLAYING:
 					LPTSTR p;
@@ -3561,60 +3548,6 @@ static void SaveBookMark(LPTSTR pszINIPath){
 	return;
 }
 
-// しおりに追加（あとで修正）
-static int AddBookMark(HMENU hBMMenu, HWND hWnd){
-	//HTREEITEM hNode;
-	TCHAR szMenuBuff[MAX_FITTLE_PATH+4];
-	
-	/*
-	hNode = TreeView_GetSelection(m_hTree);
-	if(hNode==NULL || hNode==TVI_ROOT) return -1;
-	GetPathFromNode(m_hTree, hNode, szMenuBuff);
-	*/
-
-	if (*GetBookmark(MAX_BM_SIZE-1)){
-		MessageBox(hWnd, TEXT("しおりの個数制限を越えました。"), TEXT("Fittle"), MB_OK | MB_ICONEXCLAMATION);
-		return -1;
-	}
-	int i = AppendBookmark(m_szTreePath);
-	if (i < 0){
-		return -1;
-	}
-	
-	if(g_cfg.nBMFullPath){
-		wsprintf(szMenuBuff, TEXT("&%d: %s"), i, m_szTreePath);
-	}else{
-		wsprintf(szMenuBuff, TEXT("&%d: %s"), i, PathFindFileName(m_szTreePath));
-	}
-	AppendMenu(hBMMenu, MF_STRING | MF_ENABLED, IDM_BM_FIRST+i, szMenuBuff);
-	return i;
-}
-
-// しおりをメニューに描画
-static void DrawBookMark(HMENU hBMMenu){
-	int i;
-	TCHAR szMenuBuff[MAX_FITTLE_PATH+4];
-
-	// 今あるメニューを削除
-	for(i=0;i<MAX_BM_SIZE;i++){
-		if(!DeleteMenu(hBMMenu, IDM_BM_FIRST+i, MF_BYCOMMAND)) break;
-	}
-
-	// 新しくメニューを追加
-	for(i=0;i<MAX_BM_SIZE;i++){
-		TCHAR szBMPath[MAX_FITTLE_PATH];
-		lstrcpyn(szBMPath, GetBookmark(i), MAX_FITTLE_PATH);
-		if(g_cfg.nBMFullPath){
-			wsprintf(szMenuBuff, TEXT("&%d: %s"), i, szBMPath);
-		}else{
-			wsprintf(szMenuBuff, TEXT("&%d: %s"), i, PathFindFileName(szBMPath));
-		}
-		if(!szBMPath[0]) break;
-		AppendMenu(hBMMenu, MF_STRING | MF_ENABLED, IDM_BM_FIRST+i, szMenuBuff);
-	}
-	return;
-}
-
 static LRESULT CALLBACK MyHookProc(int nCode, WPARAM wp, LPARAM lp){
 	MSG *msg;
 	msg = (MSG *)lp;
@@ -4481,106 +4414,6 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 
 
 
-static BOOL CALLBACK BookMarkDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM /*lp*/){
-	static HWND hList = NULL;
-	int i;
-	LVITEM item;
-
-	switch (msg)
-	{
-		case WM_INITDIALOG:	// 初期化
-			hList = GetDlgItem(hDlg, IDC_LIST1);
-
-			LVCOLUMN lvcol;
-			ZeroMemory(&lvcol, sizeof(LVCOLUMN));
-			lvcol.mask = LVCF_FMT;
-			lvcol.fmt = LVCFMT_LEFT;
-			ListView_InsertColumn(hList, 0, &lvcol);
-
-			ZeroMemory(&item, sizeof(LVITEM));
-			item.mask = LVIF_TEXT;
-			item.iSubItem = 0;
-			int nMax;
-			nMax = 300;
-
-			for(i=0;i<MAX_BM_SIZE;i++){
-				TCHAR szBMPath[MAX_FITTLE_PATH];
-				lstrcpyn(szBMPath, GetBookmark(i), MAX_FITTLE_PATH);
-				if(!szBMPath[0]) break;
-				item.pszText = szBMPath;
-				nMax = ListView_GetStringWidth(hList, item.pszText)+10>nMax?ListView_GetStringWidth(hList, item.pszText)+10:nMax;
-				item.iItem = i;
-				ListView_InsertItem(hList, &item);
-			}
-			ListView_SetColumnWidth(hList, 0, nMax);
-			ListView_SetItemState(hList, 0, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED));
-			SendDlgItemMessage(hDlg, IDC_CHECK1, BM_SETCHECK, (WPARAM)(g_cfg.nBMRoot?BST_CHECKED:BST_UNCHECKED), 0);
-			SendDlgItemMessage(hDlg, IDC_CHECK6, BM_SETCHECK, (WPARAM)(g_cfg.nBMFullPath?BST_CHECKED:BST_UNCHECKED), 0);
-			return FALSE;
-
-		case WM_COMMAND:
-			switch(LOWORD(wp))
-			{
-				case IDOK:
-					int nCount;
-
-					ClearBookmark();
-					nCount = ListView_GetItemCount(hList);
-					for(i=0;i<nCount;i++){
-						TCHAR szBuf[MAX_FITTLE_PATH];
-						ListView_GetItemText(hList, i, 0, szBuf, MAX_FITTLE_PATH);
-						AppendBookmark(szBuf);
-					}
-					g_cfg.nBMRoot = SendDlgItemMessage(hDlg, IDC_CHECK1, BM_GETCHECK, 0, 0);
-					g_cfg.nBMFullPath = SendDlgItemMessage(hDlg, IDC_CHECK6, BM_GETCHECK, 0, 0);
-					EndDialog(hDlg, 1);
-					return TRUE;
-
-				case IDCANCEL:
-					EndDialog(hDlg, -1);
-					return TRUE;
-
-				case IDC_BUTTON1:	// 上へ
-					int nSel;
-					TCHAR szPath[MAX_FITTLE_PATH], szSub[MAX_FITTLE_PATH];
-
-					nSel = ListView_GetNextItem(hList, -1, LVNI_FOCUSED);
-					if(nSel<=0) return FALSE;
-					ListView_GetItemText(hList, nSel-1, 0, szSub, MAX_FITTLE_PATH);
-					ListView_GetItemText(hList, nSel, 0, szPath, MAX_FITTLE_PATH);
-					ListView_SetItemText(hList, nSel-1, 0, szPath);
-					ListView_SetItemText(hList, nSel, 0, szSub);
-					ListView_SetItemState(hList, nSel-1, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED));
-					return TRUE;
-
-				case IDC_BUTTON2:	// 下へ
-					nSel = ListView_GetNextItem(hList, -1, LVNI_FOCUSED);
-					if(nSel+1==ListView_GetItemCount(hList)) return FALSE;
-					ListView_GetItemText(hList, nSel+1, 0, szSub, MAX_FITTLE_PATH);
-					ListView_GetItemText(hList, nSel, 0, szPath, MAX_FITTLE_PATH);
-					ListView_SetItemText(hList, nSel+1, 0, szPath);
-					ListView_SetItemText(hList, nSel, 0, szSub);
-					ListView_SetItemState(hList, nSel+1, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED));
-					return TRUE;
-
-				case IDC_BUTTON3:
-					nSel = ListView_GetNextItem(hList, -1, LVNI_FOCUSED);
-					if(nSel<0) return FALSE;
-					ListView_DeleteItem(hList, nSel);
-					return TRUE;
-
-			}
-			return FALSE;
-
-		
-		case WM_CLOSE:	//終了
-			EndDialog(hDlg, -1);
-			return TRUE;
-
-		default:
-			return FALSE;
-	}
-}
 
 
 
