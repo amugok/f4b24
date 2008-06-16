@@ -27,12 +27,12 @@
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test17u")
+#define F4B24_VERSION_STRING TEXT("test18u")
 #else
-#define F4B24_VERSION_STRING TEXT("test17")
+#define F4B24_VERSION_STRING TEXT("test18")
 #endif
-#define F4B24_VERSION 17
-#define F4B24_IF_VERSION 17
+#define F4B24_VERSION 18
+#define F4B24_IF_VERSION 18
 #ifndef _DEBUG
 #define FITTLE_TITLE FITTLE_VERSION TEXT(" for BASS 2.4 ") F4B24_VERSION_STRING
 #else

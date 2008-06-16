@@ -20,8 +20,6 @@ goto exitcmd
 
 :buildall
 
-call %0 fittle /MD
-rem "•´‚ç‚í‚µ‚¢‚Ì‚Å“¯‚¶ƒtƒ@ƒCƒ‹–¼‚É‚·‚é(buildu.bat)"
-rem call %0 fittleu /MD
+call %0 fittle /MD /D UNICODE /D _UNICODE
 
 :exitcmd
