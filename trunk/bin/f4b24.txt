@@ -1,7 +1,7 @@
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test17
+              for BASS 2.4 test18
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
@@ -56,6 +56,9 @@ All rights reserved.
 	minipane.fcp  minipane.dll 設定プラグイン 要fconfig.exe又はfconfig.dll
 
 実験履歴
+	test18/test18u
+		終端文字の無いID3V2.2で末尾にゴミが付く問題対策
+
 	test17/test17u
 		TAR32.DLLがGetPluginInfoをエクスポートしている問題に対処
 		Unicode版のプラグインインタフェースの互換性向上
