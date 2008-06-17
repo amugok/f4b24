@@ -15,6 +15,7 @@
 #include "bass_tag.h"
 #include "archive.h"
 #include <assert.h>
+#include "f4b24.h"
 
 // ローカル関数
 static BOOL CheckHaveChild(LPTSTR);
@@ -32,8 +33,7 @@ int SetDrivesToCombo(HWND hCB){
 	DWORD dwSize;
 	LPTSTR szBuff;
 	COMBOBOXEXITEM citem = {0};
-	int i,j;
-	TCHAR szDrawBuff[MAX_FITTLE_PATH];
+	int i;
 
 	citem.mask = CBEIF_TEXT | CBEIF_LPARAM | CBEIF_IMAGE | CBEIF_SELECTEDIMAGE;
 	citem.cchTextMax = MAX_FITTLE_PATH;
@@ -55,28 +55,8 @@ int SetDrivesToCombo(HWND hCB){
 	}
 	HeapFree(GetProcessHeap(), 0, szBuff);
 
-	// しおりフォルダ列挙
-	i /= 4;
-	for(j=0;j<MAX_BM_SIZE;j++){
-		TCHAR szBMPath[MAX_FITTLE_PATH];
-		lstrcpyn(szBMPath, GetBookmark(j), MAX_FITTLE_PATH);
-		if((szBMPath[0]==TEXT('\\') && szBMPath[1]==TEXT('\\')) || PathIsDirectory(szBMPath)){
-			lstrcpyn(szDrawBuff, szBMPath, MAX_FITTLE_PATH);
-			PathAddBackslash(szDrawBuff);
-			citem.pszText = szDrawBuff;
-			citem.iItem = i;
-			citem.lParam = citem.iImage = citem.iSelectedImage = m_iFolderIcon;
-			SendMessage(hCB, CBEM_INSERTITEM, 0, (LPARAM)&citem);
-			i++;
-		}else if(IsPlayList(szBMPath) || IsArchive(szBMPath)){
-			wsprintf(szDrawBuff, TEXT("%s"), szBMPath);
-			citem.pszText = szDrawBuff;
-			citem.iItem = i;
-			citem.lParam = citem.iImage = citem.iSelectedImage = m_iFolderIcon;
-			SendMessage(hCB, CBEM_INSERTITEM, 0, (LPARAM)&citem);
-			i++;
-		}
-	}
+	SendMessage(GetParent(hCB), WM_F4B24_IPC, (WPARAM)WM_F4B24_HOOK_UPDATE_DRIVELISTE, (LPARAM)hCB);
+
 	SendMessage(hCB, CB_SETCURSEL, 
 		(WPARAM)SendMessage(hCB, CB_FINDSTRINGEXACT, (WPARAM)-1, (LPARAM)(LPTSTR)TEXT("C:\\")), 0);
 	// アイコン取得
@@ -99,12 +79,18 @@ void RefreshComboIcon(HWND hCB){
 	for(i=0;i<nCnt;i++){
 		cbi.iItem = i;
 		SendMessage(hCB, CBEM_GETITEM, (WPARAM)0, (LPARAM)&cbi);
-		if(cbi.pszText[3]) break;	// フォルダになったら出る
-		SHGetFileInfo(cbi.pszText, 0, &shfi, sizeof(shfi), 
-			SHGFI_SMALLICON | SHGFI_SYSICONINDEX);
-		DestroyIcon(shfi.hIcon);
-		cbi.lParam = cbi.iImage = cbi.iSelectedImage = shfi.iIcon;
-		SendMessage(hCB, CBEM_SETITEM, (WPARAM)0, (LPARAM)&cbi);
+		if(cbi.pszText[3]) {
+			if (IsArchive(cbi.pszText)) {
+				cbi.lParam = cbi.iImage = cbi.iSelectedImage = GetArchiveIconIndex(cbi.pszText);
+				SendMessage(hCB, CBEM_SETITEM, (WPARAM)0, (LPARAM)&cbi);
+			}
+		} else {
+			SHGetFileInfo(cbi.pszText, 0, &shfi, sizeof(shfi), 
+				SHGFI_SMALLICON | SHGFI_SYSICONINDEX);
+			DestroyIcon(shfi.hIcon);
+			cbi.lParam = cbi.iImage = cbi.iSelectedImage = shfi.iIcon;
+			SendMessage(hCB, CBEM_SETITEM, (WPARAM)0, (LPARAM)&cbi);
+		}
 	}
 	return;
 }
@@ -247,13 +233,13 @@ BOOL CheckHaveChild(LPTSTR szTargetPath){
 HTREEITEM MakeTreeFromPath(HWND hTV, HWND hCB, LPTSTR szSetPath){
 	int nDriveIndex;
 	TCHAR szDriveName[MAX_FITTLE_PATH];
-	TCHAR szTempRoot[MAX_FITTLE_PATH] = {0};
 	TCHAR szCompPath[MAX_FITTLE_PATH];
 	TCHAR szLabel[MAX_FITTLE_PATH];
 	TCHAR szErrorMsg[300];
 	HTREEITEM hDriveNode, hCompNode, hFoundNode;
 	TVITEM ti;
-	int i, j, len;
+	int i, j;
+	HWND hwndWork;
 
 #ifdef _DEBUG
 	DWORD dTime;
@@ -270,31 +256,18 @@ HTREEITEM MakeTreeFromPath(HWND hTV, HWND hCB, LPTSTR szSetPath){
 		return NULL;
 	}
 
-	// ドライブボックスの変更
-	if(g_cfg.nBMRoot){
-		for(i=0;i<MAX_BM_SIZE;i++){
-			TCHAR szBMPath[MAX_FITTLE_PATH];
-			lstrcpyn(szBMPath, GetBookmark(i), MAX_FITTLE_PATH);
-			// しおり終了で抜ける
-			if(!szBMPath[0]) break;
-
-			if(StrStrI(szSetPath, szBMPath)){
-				len = lstrlen(szBMPath);
-				if(len>lstrlen(szTempRoot) && (szSetPath[len]==TEXT('\0') || szSetPath[len]==TEXT('\\'))){
-					lstrcpyn(szTempRoot, szBMPath, MAX_FITTLE_PATH);
-				}
-			}
+	lstrcpyn(szDriveName, szSetPath, MAX_FITTLE_PATH);
+	PathStripToRoot(szDriveName);
+	hwndWork = CreateWindow(TEXT("STATIC"),TEXT(""),0,0,0,0,0,NULL,NULL,GetModuleHandle(NULL),NULL);
+	if (hwndWork){
+		SendMessage(hwndWork, WM_SETTEXT, (WPARAM)0, (LPARAM)szSetPath);
+		if (SendMessage(GetParent(hTV), WM_F4B24_IPC, (WPARAM)WM_F4B24_HOOK_GET_TREE_ROOT, (LPARAM)hwndWork)){
+			// ルートになるしおりが存在する
+			SendMessage(hwndWork, WM_GETTEXT, (WPARAM)MAX_FITTLE_PATH, (LPARAM)szDriveName);
 		}
+		DestroyWindow(hwndWork);
 	}
 
-	// ルートになるしおりが存在する
-	if(szTempRoot[0]){
-		lstrcpyn(szDriveName, szTempRoot, MAX_FITTLE_PATH);
-	}else{
-		lstrcpyn(szDriveName, szSetPath, MAX_FITTLE_PATH);
-		PathStripToRoot(szDriveName);
-		//lstrcpyn(szDriveName, szSetPath, 4);
-	}
 
 	// 描画高速化のため再描画を阻止
 	LockWindowUpdate(GetParent(hTV));

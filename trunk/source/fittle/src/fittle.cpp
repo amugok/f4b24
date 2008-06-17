@@ -90,8 +90,7 @@ static void PopupTrayMenu(HWND);
 static void PopupPlayModeMenu(HWND, NMTOOLBAR *);
 static void ToggleWindowView(HWND);
 static HWND CreateToolBar(HWND);
-static void LoadBookMark(HMENU , LPTSTR);
-static void SaveBookMark(LPTSTR);
+
 static int ShowToolTip(HWND, HWND, LPTSTR);
 static int ControlPlayMode(HMENU, int);
 static BOOL ToggleRepeatMode(HMENU);
@@ -123,6 +122,8 @@ static int FilePause();
 static int StopOutputStream(HWND);
 static struct FILEINFO *SelectNextFile(BOOL);
 static void FreeChannelInfo(BOOL bFlag);
+
+static void RemoveFiles(HWND hWnd);
 
 // メンバ変数
 static CRITICAL_SECTION m_cs;
@@ -179,6 +180,7 @@ struct CONFIG g_cfg = {0};			// 設定構造体
 CHANNELINFO g_cInfo[2] = {0};		// チャンネル情報
 BOOL g_bNow = FALSE;				// アクティブなチャンネル0 or 1
 
+static HMODULE XARGD = 0;
 static int XARGC = 0;
 static LPTSTR *XARGV = 0;
 
@@ -187,7 +189,6 @@ typedef struct StringList {
 	TCHAR szString[1];
 } STRING_LIST, *LPSTRING_LIST;
 
-static LPSTRING_LIST lpBookmark = NULL;
 static LPSTRING_LIST lpTypelist = NULL;
 
 static void StringListFree(LPSTRING_LIST *pList){
@@ -244,21 +245,6 @@ static LPTSTR GetTypelist(int nIndex){
 	static TCHAR szNull[1] = {0};
 	LPSTRING_LIST lpbm = StringListWalk(&lpTypelist, nIndex);
 	return lpbm ? lpbm->szString : szNull;
-}
-
-static void ClearBookmark(void){
-	StringListFree(&lpBookmark);
-}
-
-LPTSTR GetBookmark(int nIndex){
-	static TCHAR szNull[1] = {0};
-	LPSTRING_LIST lpbm = StringListWalk(&lpBookmark, nIndex);
-	return lpbm ? lpbm->szString : szNull;
-}
-
-static int AppendBookmark(LPTSTR szPath){
-	if (!szPath || !*szPath) return TRUE;
-	return StringListAdd(&lpBookmark, szPath);
 }
 
 static void lstrcpyntA(LPSTR lpDst, LPCTSTR lpSrc, int nDstMax){
@@ -336,12 +322,31 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 
 	DWORD dTime;
 	dTime = GetTickCount();
-	
+
 #ifdef UNICODE
+	XARGC = 1;
 	XARGV = CommandLineToArgvW(GetCommandLine(), &XARGC);
-#else
+#elif defined(_MSC_VER)
 	XARGC = __argc;
 	XARGV = __argv;
+#else
+	{
+		/* Visual C++以外の場合MSVCRT.DLLに引数を解析させる */
+		typedef struct { int newmode; } GMASTARTUPINFO;
+		typedef void (__cdecl *LPFNGETMAINARGS) (int *pargc, char ***pargv, char ***penvp, int dowildcard, GMASTARTUPINFO * startinfo);
+		XARGC = 1;
+		XARGD = LoadLibrary("MSVCRT.DLL");
+		if (XARGD) {
+			LPFNGETMAINARGS pfngma = (LPFNGETMAINARGS)GetProcAddress(XARGD, "__getmainargs");
+			int xargc;
+			char **xargv;
+			char **xenvp;
+			GMASTARTUPINFO si = {0};
+			pfngma(&xargc, &xargv, &xenvp, 1, &si);
+			XARGC = xargc;
+			XARGV = xargv;
+		}
+	}
 #endif
 
 #ifndef _DEBUG	// 多重起動の防止
@@ -482,6 +487,14 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 			}
 		}
 	}
+
+#ifdef UNICODE
+	if (XARGV) GlobalFree(XARGV);
+#elif defined(_MSC_VER)
+#else
+	if (XARGD) FeeLibrary(XARGD);
+#endif
+
 	return (int)msg.wParam;
 }
 
@@ -783,15 +796,13 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			// ユーザインターフェイス
 			SetUIFont();
 
-			// しおりの読み込み
-			LoadBookMark(GetSubMenu(GetMenu(hWnd), GetMenuPosFromString(GetMenu(hWnd), TEXT("しおり(&B)"))), m_szINIPath);
-
 			// メニューの非表示
 			if(!GetPrivateProfileInt(TEXT("Main"), TEXT("MainMenu"), 1, m_szINIPath))
 				PostMessage(hWnd, WM_COMMAND, IDM_TOGGLEMENU, 0);
 
 			// コンボボックスの初期化
-			SetDrivesToCombo(m_hCombo);
+			SendMessage(hWnd, WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_UPDATE_DRIVELIST, (LPARAM)0);
+			//SetDrivesToCombo(m_hCombo);
 
 			// コマンドラインの処理
 			BOOL bCmd;
@@ -1342,13 +1353,11 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 
 				case IDM_BM_PLAYING:
-					LPTSTR p;
-
 					if(FILE_EXIST(g_cInfo[g_bNow].szFilePath)){
 						GetParentDir(g_cInfo[g_bNow].szFilePath, szNowDir);
 						MakeTreeFromPath(m_hTree, m_hCombo, szNowDir);
 					}else if(IsArchivePath(g_cInfo[g_bNow].szFilePath)){
-						p = StrStr(g_cInfo[g_bNow].szFilePath, TEXT("/"));
+						LPTSTR p = StrStr(g_cInfo[g_bNow].szFilePath, TEXT("/"));
 						*p = TEXT('\0');
 						lstrcpyn(szNowDir, g_cInfo[g_bNow].szFilePath, MAX_FITTLE_PATH);
 						*p = TEXT('/');
@@ -1396,56 +1405,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case IDM_LIST_DELFILE:
-					// 初期化
-					SHFILEOPSTRUCT fops;
-					TCHAR szMsg[MAX_FITTLE_PATH];
-					int j;
-					int q;
-					LPTSTR pszTarget;
-					BOOL bPlaying;
-					bPlaying = FALSE;
-					j = 0;
-					q = 0;
-					p = (LPTSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(TCHAR) * 2);
-
-					// パスを連結など
-					i = ListView_GetNextItem(GetCurListTab(m_hTab)->hList, -1, LVNI_SELECTED);
-					while(i!=-1){
-						pszTarget = GetPtrFromIndex(GetCurListTab(m_hTab)->pRoot, i)->szFilePath;
-						if(i==GetCurListTab(m_hTab)->nPlaying) bPlaying = TRUE;	// 削除ファイルが演奏中
-						if(!IsURLPath(pszTarget) && !IsArchivePath(pszTarget)){	// 削除できないファイルでなければ
-							j++;
-							p = (LPTSTR)HeapReAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, p,
-								HeapSize(GetProcessHeap(), 0, p) + (lstrlen(pszTarget) + 2) * sizeof(TCHAR));
-							lstrcpy(p+q, pszTarget);
-							q += lstrlen(pszTarget) + 1;
-							*(p+q) = TEXT('\0');
-						}
-						i = ListView_GetNextItem(GetCurListTab(m_hTab)->hList, i, LVNI_SELECTED);
-					}
-					if(j==1){
-						// ファイル一個選択
-						wsprintf(szMsg, TEXT("%'%s%' をごみ箱に移しますか？"), p);
-					}else if(j>1){
-						// 複数ファイル選択
-						wsprintf(szMsg, TEXT("これらの %d 個の項目をごみ箱に移しますか？"), j);
-					}
-					if(j>0 && MessageBox(hWnd, szMsg, TEXT("ファイルの削除の確認"), MB_YESNO | MB_ICONQUESTION)==IDYES){
-						// 実際に削除
-						fops.hwnd = hWnd;
-						fops.wFunc = FO_DELETE;
-						fops.pFrom = p;
-						fops.pTo = NULL;
-						fops.fFlags = FOF_FILESONLY | FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_MULTIDESTFILES;
-						if(bPlaying) SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_STOP, 0), 0);
-						if(SHFileOperation(&fops)==0){
-							if(bPlaying) PopPrevious(GetCurListTab(m_hTab));	// 履歴からとりあえず最後だけ削除
-							DeleteFiles(GetCurListTab(m_hTab));
-						}
-						if(bPlaying) SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_NEXT, 0), 0);
-					}
-					HeapFree(GetProcessHeap(), 0, p);
-					break;
+					RemoveFiles(hWnd);
 
 				case IDM_LIST_TOOL:
 					if((nLBIndex = ListView_GetNextItem(GetCurListTab(m_hTab)->hList, -1, LVNI_SELECTED))!=-1){
@@ -1630,16 +1590,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					if(IDM_SENDPL_FIRST<=LOWORD(wp) && LOWORD(wp)<IDM_BM_FIRST){
 						//プレイリストに送る
 						SendToPlaylist(GetCurListTab(m_hTab), GetListTab(m_hTab, LOWORD(wp) - IDM_SENDPL_FIRST));
-					}else if(IDM_BM_FIRST<=LOWORD(wp) && LOWORD(wp)<IDM_BM_FIRST+MAX_BM_SIZE){
-						TCHAR szBMPath[MAX_FITTLE_PATH];
-						lstrcpyn(szBMPath, GetBookmark(LOWORD(wp)-IDM_BM_FIRST), MAX_FITTLE_PATH);
-						// しおり
-						if(g_cfg.nTreeState==TREE_SHOW){
-							MakeTreeFromPath(m_hTree, m_hCombo, szBMPath);
-						}else{
-							lstrcpyn(m_szTreePath, szBMPath, MAX_FITTLE_PATH);
-							SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_FILEREVIEW, 0), 0);
-						}
 					}else{
 						return DefWindowProc(hWnd, msg, wp, lp);
 					}
@@ -2166,6 +2116,9 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			case WM_F4B24_IPC_APPLY_CONFIG:
 				ApplyConfig(hWnd);
 				break;
+			case WM_F4B24_IPC_UPDATE_DRIVELIST:
+				SetDrivesToCombo(m_hCombo);
+				break;
 
 			case WM_F4B24_IPC_GET_VERSION_STRING:
 				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)FITTLE_VERSION);
@@ -2198,6 +2151,19 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					return IsSupportFloatOutput() ? WM_F4B24_IPC_GET_CAPABLE_RET_SUPPORTED : WM_F4B24_IPC_GET_CAPABLE_RET_NOT_SUPPORTED;
 				}
 				break;
+			
+			case WM_F4B24_IPC_GET_CURPATH:
+				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)m_szTreePath);
+				break;
+			case WM_F4B24_IPC_SET_CURPATH:
+				if(g_cfg.nTreeState == TREE_SHOW){
+					TCHAR szWorkPath[MAX_FITTLE_PATH];
+					SendMessage((HWND)lp, WM_GETTEXT, (WPARAM)MAX_FITTLE_PATH, (LPARAM)szWorkPath);
+					MakeTreeFromPath(m_hTree, m_hCombo, szWorkPath);
+				}else{
+					SendMessage((HWND)lp, WM_GETTEXT, (WPARAM)MAX_FITTLE_PATH, (LPARAM)m_szTreePath);
+					SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_FILEREVIEW, 0), 0);
+				}
 			}
 			break;
 
@@ -2206,7 +2172,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			{
 				case 0x8000://DBT_DEVICEARRIVAL:
 				case 0x8004://DBT_DEVICEREMOVECOMPLETE:
-					SetDrivesToCombo(m_hCombo);
+					SendMessage(hWnd, WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_UPDATE_DRIVELIST, (LPARAM)0);
+					//SetDrivesToCombo(m_hCombo);
 					break;
 			}
 			break;
@@ -2403,11 +2370,6 @@ static void LoadState(){
 	// 最後に再生していたファイル
 	GetPrivateProfileString(TEXT("Main"), TEXT("LastFile"), TEXT(""), g_cfg.szLastFile, MAX_FITTLE_PATH, m_szINIPath);
 
-	// しおりをルートとして扱う
-	g_cfg.nBMRoot = GetPrivateProfileInt(TEXT("BookMark"), TEXT("BMRoot"), 1, m_szINIPath);
-	// しおりをフルパスで表示
-	g_cfg.nBMFullPath = GetPrivateProfileInt(TEXT("BookMark"), TEXT("BMFullPath"), 1, m_szINIPath);
-
 	m_hFont = NULL;
 	m_bFLoat = (BOOL)g_cfg.nOut32bit;
 }
@@ -2453,10 +2415,6 @@ static void SaveState(HWND hWnd){
 	WritePrivateProfileInt(TEXT("Column"), TEXT("Width2"), ListView_GetColumnWidth(GetCurListTab(m_hTab)->hList, 2), m_szINIPath);
 	WritePrivateProfileInt(TEXT("Column"), TEXT("Width3"), ListView_GetColumnWidth(GetCurListTab(m_hTab)->hList, 3), m_szINIPath);
 	WritePrivateProfileInt(TEXT("Column"), TEXT("Sort"), GetCurListTab(m_hTab)->nSortState, m_szINIPath);
-
-	WritePrivateProfileInt(TEXT("BookMark"), TEXT("BMRoot"), g_cfg.nBMRoot, m_szINIPath);
-	WritePrivateProfileInt(TEXT("BookMark"), TEXT("BMFullPath"), g_cfg.nBMFullPath, m_szINIPath);
-	SaveBookMark(m_szINIPath);	// しおりの保存
 
 	//　レバーの状態を保存
 	rbbi.cbSize = sizeof(REBARBANDINFO);
@@ -3505,64 +3463,6 @@ static BOOL SetUIColor(void){
 	return TRUE;
 }
 
-// しおりを読み込む
-static void LoadBookMark(HMENU hBMMenu, LPTSTR pszINIPath){
-	int i;
-	TCHAR szSec[10];
-	TCHAR szMenuBuff[MAX_FITTLE_PATH+4];
-
-	ClearBookmark();
-	for(i=0;i<MAX_BM_SIZE;i++){
-		int j;
-		wsprintf(szSec, TEXT("Path%d"), i);
-		szMenuBuff[0] = 0;
-		GetPrivateProfileString(TEXT("BookMark"), szSec, TEXT(""), szMenuBuff, MAX_FITTLE_PATH, pszINIPath);
-		if(!szMenuBuff[0]) break;
-		j =  AppendBookmark(szMenuBuff);
-		if (j >= 0){
-			TCHAR szBMPath[MAX_FITTLE_PATH];
-			lstrcpyn(szBMPath, GetBookmark(j), MAX_FITTLE_PATH);
-			if(g_cfg.nBMFullPath){
-				wsprintf(szMenuBuff, TEXT("&%d: %s"), j, szBMPath);
-			}else{
-				wsprintf(szMenuBuff, TEXT("&%d: %s"), j, PathFindFileName(szBMPath));
-			}
-			AppendMenu(hBMMenu, MF_STRING | MF_ENABLED, IDM_BM_FIRST+j, szMenuBuff);
-		}
-	}
-	return;
-}
-
-// しおりを保存
-static void SaveBookMark(LPTSTR pszINIPath){
-	int i;
-	TCHAR szSec[10];
-
-	for(i=0;i<MAX_BM_SIZE;i++){
-		TCHAR szBMPath[MAX_FITTLE_PATH];
-		lstrcpyn(szBMPath, GetBookmark(i), MAX_FITTLE_PATH);
-		wsprintf(szSec, TEXT("Path%d"), i);
-		WritePrivateProfileString(TEXT("BookMark"), szSec, szBMPath[0] ? szBMPath : NULL, pszINIPath);
-		if (!szBMPath[0]) break;
-	}
-	return;
-}
-
-static LRESULT CALLBACK MyHookProc(int nCode, WPARAM wp, LPARAM lp){
-	MSG *msg;
-	msg = (MSG *)lp;
-
-	if(nCode<0)
-		return CallNextHookEx(m_hHook, nCode, wp, lp);
-	
-	if(msg->message==WM_MOUSEWHEEL){
-		SendMessage(WindowFromPoint(msg->pt), WM_MOUSEWHEEL, msg->wParam, msg->lParam);
-		msg->message = WM_NULL;
-	}
-
-	return CallNextHookEx(m_hHook, nCode, wp, lp);
-}
-
 // スライダバーの新しいプロシージャ
 static LRESULT CALLBACK NewSliderProc(HWND hSB, UINT msg, WPARAM wp, LPARAM lp){
 	int nXPos;
@@ -4551,3 +4451,73 @@ static int GetMenuPosFromString(HMENU hMenu, LPTSTR lpszText){
 	}
 	return 0;
 }
+
+static LRESULT CALLBACK MyHookProc(int nCode, WPARAM wp, LPARAM lp){
+	MSG *msg;
+	msg = (MSG *)lp;
+
+	if(nCode<0)
+		return CallNextHookEx(m_hHook, nCode, wp, lp);
+	
+	if(msg->message==WM_MOUSEWHEEL){
+		SendMessage(WindowFromPoint(msg->pt), WM_MOUSEWHEEL, msg->wParam, msg->lParam);
+		msg->message = WM_NULL;
+	}
+
+	return CallNextHookEx(m_hHook, nCode, wp, lp);
+}
+
+// 選択したファイルを実際に削除する
+static void RemoveFiles(HWND hWnd){
+	// 初期化
+	SHFILEOPSTRUCT fops;
+	TCHAR szMsg[MAX_FITTLE_PATH];
+	int i, j, q;
+	LPTSTR pszTarget;
+	BOOL bPlaying;
+	LPTSTR p;
+
+	bPlaying = FALSE;
+	j = 0;
+	q = 0;
+	p = (LPTSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(TCHAR) * 2);
+
+	// パスを連結など
+	i = ListView_GetNextItem(GetCurListTab(m_hTab)->hList, -1, LVNI_SELECTED);
+	while(i!=-1){
+		pszTarget = GetPtrFromIndex(GetCurListTab(m_hTab)->pRoot, i)->szFilePath;
+		if(i==GetCurListTab(m_hTab)->nPlaying) bPlaying = TRUE;	// 削除ファイルが演奏中
+		if(!IsURLPath(pszTarget) && !IsArchivePath(pszTarget)){	// 削除できないファイルでなければ
+			j++;
+			p = (LPTSTR)HeapReAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, p,
+				HeapSize(GetProcessHeap(), 0, p) + (lstrlen(pszTarget) + 2) * sizeof(TCHAR));
+			lstrcpy(p+q, pszTarget);
+			q += lstrlen(pszTarget) + 1;
+			*(p+q) = TEXT('\0');
+		}
+		i = ListView_GetNextItem(GetCurListTab(m_hTab)->hList, i, LVNI_SELECTED);
+	}
+	if(j==1){
+		// ファイル一個選択
+		wsprintf(szMsg, TEXT("%'%s%' をごみ箱に移しますか？"), p);
+	}else if(j>1){
+		// 複数ファイル選択
+		wsprintf(szMsg, TEXT("これらの %d 個の項目をごみ箱に移しますか？"), j);
+	}
+	if(j>0 && MessageBox(hWnd, szMsg, TEXT("ファイルの削除の確認"), MB_YESNO | MB_ICONQUESTION)==IDYES){
+		// 実際に削除
+		fops.hwnd = hWnd;
+		fops.wFunc = FO_DELETE;
+		fops.pFrom = p;
+		fops.pTo = NULL;
+		fops.fFlags = FOF_FILESONLY | FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_MULTIDESTFILES;
+		if(bPlaying) SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_STOP, 0), 0);
+		if(SHFileOperation(&fops)==0){
+			if(bPlaying) PopPrevious(GetCurListTab(m_hTab));	// 履歴からとりあえず最後だけ削除
+			DeleteFiles(GetCurListTab(m_hTab));
+		}
+		if(bPlaying) SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_NEXT, 0), 0);
+	}
+	HeapFree(GetProcessHeap(), 0, p);
+}
+

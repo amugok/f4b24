@@ -66,8 +66,6 @@ typedef long LONG_PTR;
 #define IDM_BM_FIRST 60000		// しおり動的メニュー
 #define FITTLE_WIDTH 435		// ウィンドウ幅
 #define FITTLE_HEIGHT 356		// ウィンドウ高さ
-#define MAX_EXT_COUNT 30		// 検索拡張子の数
-#define MAX_BM_SIZE 100			// しおりの数
 #define BAND_COUNT 3			// リバーのバンドの数
 
 struct FILEINFO{
@@ -132,8 +130,6 @@ struct CONFIG{
 
 	/* 状態 */
 
-	int nBMRoot;				// しおりをルートとして扱うか
-	int nBMFullPath;			// しおりをフルパスで表示
 	int nTreeWidth;				// ツリーの幅
 	int nCompact;				// コンパクトモード
 	int nResPos;
@@ -152,6 +148,5 @@ extern BOOL g_bNow;
 
 LRESULT CALLBACK NewListProc(HWND, UINT, WPARAM, LPARAM); //リストビュー用のプロシージャ
 BOOL CheckFileType(LPTSTR);
-LPTSTR GetBookmark(int nIndex);
 
 #endif

@@ -129,8 +129,8 @@ BEGIN
     END
     POPUP "ÇµÇ®ÇË(&B)"
     BEGIN
-        MENUITEM "ÇµÇ®ÇËÇ…í«â¡(&A)",            IDM_BM_ADD
-        MENUITEM "ÇµÇ®ÇËÇÃêÆóù(&O)...",         IDM_BM_ORG
+        MENUITEM "ÇµÇ®ÇËÇ…í«â¡(&A)",            IDM_BM_ADD, GRAYED
+        MENUITEM "ÇµÇ®ÇËÇÃêÆóù(&O)...",         IDM_BM_ORG, GRAYED
         MENUITEM SEPARATOR
         MENUITEM "çƒê∂íÜÇÃÉtÉHÉãÉ_(&P)\tCtrl+P", IDM_BM_PLAYING
         MENUITEM SEPARATOR
