@@ -633,6 +633,8 @@ static BOOL HookTreeRoot(HWND hwndWork){
 			}
 		}
 	}
-	SendMessage(hwndWork, WM_SETTEXT, (WPARAM)0, (LPARAM)szTempRoot);
-	return szTempRoot[0] ? TRUE : FALSE;
+	if (!szTempRoot[0]) return FALSE;
+
+	SendMessage(hwndWork, WM_SETTEXT, (WPARAM)0, (LPARAM)szTempRoot);	
+	return TRUE;
 }

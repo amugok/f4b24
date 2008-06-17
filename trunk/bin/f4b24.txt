@@ -22,6 +22,7 @@ All rights reserved.
 	ミニパネルを削除
 	設定を削除
 	CUEシート読み込み機能を削除
+	しおりを削除
 
 追加したプラグイン(公式でも利用可能)
 	minipane.dll ミニパネル
@@ -32,6 +33,8 @@ All rights reserved.
 	fconfig.exe  設定画面 fcpプラグインが無いと何もできない
 
 追加した専用プラグイン
+	bookmark.dll  しおり 要test18以降
+	bookmarku.dll しおり ユニコード対応 要test18以降
 	minipaneu.dll ミニパネル ユニコード対応 要test17以降
 	cue.fap       cueシートプラグイン Ansi版専用 要test14以降
 	arj.fap       arj書庫プラグイン Ansi版専用 要統合アーカイバプロジェクト版unarj32j.dll
@@ -52,12 +55,12 @@ All rights reserved.
 	fconfig.dll   設定画面 fcpプラグインが無いと何もできない 要test12以降
 	addurl.dll    URLを追加プラグイン text13以降推奨
 	fittle.fcp    fittle.exe 設定プラグイン 要fconfig.exe又はfconfig.dll
-	fittleu.fcp   fittle.exe 設定プラグイン ユニコード対応 INIファイルをユニコードに変換する必要あり 要fconfig.exe又はfconfig.dll
 	minipane.fcp  minipane.dll 設定プラグイン 要fconfig.exe又はfconfig.dll
 
 実験履歴
 	test18/test18u
 		終端文字の無いID3V2.2で末尾にゴミが付く問題対策
+		しおり機能を削除してみた
 
 	test17/test17u
 		TAR32.DLLがGetPluginInfoをエクスポートしている問題に対処
