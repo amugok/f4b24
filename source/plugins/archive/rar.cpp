@@ -7,7 +7,12 @@
 #pragma comment(lib,"user32.lib")
 #pragma comment(lib,"shlwapi.lib")
 #pragma comment(lib,"../../../extra/unrar/unrar.lib")
+#ifdef UNICODE
+#pragma comment(linker, "/EXPORT:GetAPluginInfoW=_GetAPluginInfoW@0")
+#define GetAPluginInfo GetAPluginInfoW
+#else
 #pragma comment(linker, "/EXPORT:GetAPluginInfo=_GetAPluginInfo@0")
+#endif
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/MERGE:.rdata=.text")
@@ -43,16 +48,16 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 	return TRUE;
 }
 
-static BOOL CALLBACK IsArchiveExt(char *pszExt){
-	if(lstrcmpi(pszExt, "rar")==0){
+static BOOL CALLBACK IsArchiveExt(LPTSTR pszExt){
+	if(lstrcmpi(pszExt, TEXT("rar"))==0){
 		return TRUE;
 	}
 	return FALSE;
 }
 
-static char * CALLBACK CheckArchivePath(char *pszFilePath)
+static LPTSTR CALLBACK CheckArchivePath(LPTSTR pszFilePath)
 {
-	char *p = StrStrI(pszFilePath, ".rar/");
+	LPTSTR p = StrStrI(pszFilePath, TEXT(".rar/"));
 	return p;
 }
 
@@ -70,20 +75,33 @@ static int CALLBACK CallbackProcEN(UINT msg,LPARAM UserData,LPARAM P1,LPARAM P2)
 	return(0);
 }
 
-static BOOL CALLBACK EnumArchive(char *pszFilePath, LPFNARCHIVEENUMPROC lpfnProc, void *pData)
+static BOOL CALLBACK EnumArchive(LPTSTR pszFilePath, LPFNARCHIVEENUMPROC lpfnProc, void *pData)
 {
 	HANDLE hArcData;
 	int RHCode,PFCode;
 	char CmtBuf[16384];
+#ifdef UNICODE
 	struct RARHeaderDataEx HeaderData;
 	struct RAROpenArchiveDataEx OpenArchiveData;
+#else
+	struct RARHeaderData HeaderData;
+	struct RAROpenArchiveData OpenArchiveData;
+#endif
 
 	ZeroMemory(&OpenArchiveData, sizeof(OpenArchiveData));
+#ifdef UNICODE
+	OpenArchiveData.ArcNameW=pszFilePath;
+#else
 	OpenArchiveData.ArcName=pszFilePath;
+#endif
 	OpenArchiveData.CmtBuf=CmtBuf;
 	OpenArchiveData.CmtBufSize=sizeof(CmtBuf);
 	OpenArchiveData.OpenMode=RAR_OM_LIST;
+#ifdef UNICODE
 	hArcData=RAROpenArchiveEx(&OpenArchiveData);
+#else
+	hArcData=RAROpenArchive(&OpenArchiveData);
+#endif
 
 	if (OpenArchiveData.OpenResult!=0) return FALSE;
 
@@ -92,13 +110,21 @@ static BOOL CALLBACK EnumArchive(char *pszFilePath, LPFNARCHIVEENUMPROC lpfnProc
 	HeaderData.CmtBuf=CmtBuf;
 	HeaderData.CmtBufSize=sizeof(CmtBuf);
 
-	while ((RHCode=RARReadHeaderEx(hArcData,&HeaderData))==0) {
-		__int64 UnpSize=HeaderData.UnpSize+(((__int64)HeaderData.UnpSizeHigh)<<32);
+#ifdef UNICODE
+	while ((RHCode=RARReadHeaderEx(hArcData,&HeaderData))==0)
+#else
+	while ((RHCode=RARReadHeader(hArcData,&HeaderData))==0)
+#endif
+	{
 		FILETIME ft;
 		LONGLONG ll = Int32x32To64(HeaderData.FileTime, 10000000) + 116444736000000000;
 		ft.dwLowDateTime = (DWORD)ll;
 		ft.dwHighDateTime = ll >> 32;
+#ifdef UNICODE
+		lpfnProc(HeaderData.FileNameW, HeaderData.UnpSize, ft, pData);
+#else
 		lpfnProc(HeaderData.FileName, HeaderData.UnpSize, ft, pData);
+#endif
 		if ((PFCode=RARProcessFile(hArcData,RAR_SKIP,NULL,NULL))!=0) break;
 	}
 
@@ -135,24 +161,37 @@ static int CALLBACK CallbackProcEX(UINT msg,LPARAM UserData,LPARAM P1,LPARAM P2)
 	return(0);
 }
 
-static BOOL CALLBACK ExtractArchive(char *pszArchivePath, char *pszFileName, void **ppBuf, DWORD *pSize)
+static BOOL CALLBACK ExtractArchive(LPTSTR pszArchivePath, LPTSTR pszFileName, void **ppBuf, DWORD *pSize)
 {
 	WORK work;
 	HANDLE hArcData;
 	int RHCode,PFCode;
 	char CmtBuf[16384];
-	struct RARHeaderData HeaderData;
+#ifdef UNICODE
+	struct RARHeaderDataEx HeaderData;
 	struct RAROpenArchiveDataEx OpenArchiveData;
+#else
+	struct RARHeaderData HeaderData;
+	struct RAROpenArchiveData OpenArchiveData;
+#endif
 
 	work.dwSize = 0;
 	work.pBuf = 0;
 
 	ZeroMemory(&OpenArchiveData, sizeof(OpenArchiveData));
+#ifdef UNICODE
+	OpenArchiveData.ArcNameW=pszArchivePath;
+#else
 	OpenArchiveData.ArcName=pszArchivePath;
+#endif
 	OpenArchiveData.CmtBuf=CmtBuf;
 	OpenArchiveData.CmtBufSize=sizeof(CmtBuf);
 	OpenArchiveData.OpenMode=RAR_OM_EXTRACT;
+#ifdef UNICODE
 	hArcData=RAROpenArchiveEx(&OpenArchiveData);
+#else
+	hArcData=RAROpenArchive(&OpenArchiveData);
+#endif
 
 	if (OpenArchiveData.OpenResult!=0) return FALSE;
 
@@ -160,11 +199,23 @@ static BOOL CALLBACK ExtractArchive(char *pszArchivePath, char *pszFileName, voi
 
 	HeaderData.CmtBuf=NULL;
 
+#ifdef UNICODE
+	while ((RHCode=RARReadHeaderEx(hArcData,&HeaderData)) == 0)
+#else
 	while ((RHCode=RARReadHeader(hArcData,&HeaderData)) == 0)
+#endif
 	{
+#ifdef UNICODE
+		if (lstrcmpi(HeaderData.FileNameW, pszFileName) == 0)
+#else
 		if (lstrcmpi(HeaderData.FileName, pszFileName) == 0)
+#endif
 		{
 			work.dwSize = HeaderData.UnpSize;
+			if (work.dwSize == 0){
+				RARCloseArchive(hArcData);
+				return FALSE;
+			}
 			work.pBuf = work.dwSize ? (LPBYTE)HeapAlloc(GetProcessHeap(), 0, work.dwSize) : 0;
 			work.pCur = work.pBuf;
 			if (work.pBuf)

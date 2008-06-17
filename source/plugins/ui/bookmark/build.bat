@@ -20,7 +20,7 @@ goto exitcmd
 
 :buildall
 
-call %0 addurl /MD
-call %0 addurlu /MD
+call %0 bookmark /MD
+call %0 bookmarku /MD
 
 :exitcmd

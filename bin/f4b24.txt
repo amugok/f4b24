@@ -1,7 +1,7 @@
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test15
+              for BASS 2.4 test18
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
@@ -22,6 +22,7 @@ All rights reserved.
 	ミニパネルを削除
 	設定を削除
 	CUEシート読み込み機能を削除
+	しおりを削除
 
 追加したプラグイン(公式でも利用可能)
 	minipane.dll ミニパネル
@@ -32,20 +33,43 @@ All rights reserved.
 	fconfig.exe  設定画面 fcpプラグインが無いと何もできない
 
 追加した専用プラグイン
-	cue.fap      cueシートプラグイン 要test14以降
-	arj.fap      arj書庫プラグイン 要統合アーカイバプロジェクト版unarj32j.dll
-	cab.fap      cab書庫プラグイン 要IE5以降(cabinet.dll又はfdi.dll)
-	gca.fap      gca書庫プラグイン
-	lha.fap      lzh書庫プラグイン 要統合アーカイバプロジェクト版unlha32.dll
-	rar.fap      rar書庫プラグイン 要RARLABオフィシャル版unrar.dll
-	tar.fap      tar書庫プラグイン 要統合アーカイバプロジェクト版tar32.dll
-	zip.fap      zip書庫プラグイン 要統合アーカイバプロジェクト版unzip32.dll
-	fconfig.dll  設定画面 fcpプラグインが無いと何もできない 要test12以降
-	addurl.dll   URLを追加プラグイン text13以降推奨
-	fittle.fcp   fittle.exe 設定プラグイン 要fconfig.exe又はfconfig.dll
-	minipane.fcp minipane.dll 設定プラグイン 要fconfig.exe又はfconfig.dll
+	bookmark.dll  しおり 要test18以降
+	bookmarku.dll しおり ユニコード対応 要test18以降
+	minipaneu.dll ミニパネル ユニコード対応 要test17以降
+	cue.fap       cueシートプラグイン Ansi版専用 要test14以降
+	arj.fap       arj書庫プラグイン Ansi版専用 要統合アーカイバプロジェクト版unarj32j.dll
+	cab.fap       cab書庫プラグイン Ansi版専用 要IE5以降(cabinet.dll又はfdi.dll)
+	gca.fap       gca書庫プラグイン Ansi版専用
+	lha.fap       lzh書庫プラグイン Ansi版専用 要統合アーカイバプロジェクト版unlha32.dll
+	rar.fap       rar書庫プラグイン Ansi版専用 要RARLABオフィシャル版unrar.dll
+	tar.fap       tar書庫プラグイン Ansi版専用 要統合アーカイバプロジェクト版tar32.dll
+	zip.fap       zip書庫プラグイン Ansi版専用 要統合アーカイバプロジェクト版unzip32.dll
+	cueu.fap      cueシートプラグイン Unicode版専用
+	arju.fap      arj書庫プラグイン Unicode版専用 要統合アーカイバプロジェクト版unarj32j.dll
+	cabu.fap      cab書庫プラグイン Unicode版専用 要IE5以降(cabinet.dll又はfdi.dll)
+	gcau.fap      gca書庫プラグイン Unicode版専用 ただしUnicode非対応
+	lhau.fap      lzh書庫プラグイン Unicode版専用 要統合アーカイバプロジェクト版unlha32.dll
+	raru.fap      rar書庫プラグイン Unicode版専用 要RARLABオフィシャル版unrar.dll
+	taru.fap      tar書庫プラグイン Unicode版専用 ただしUnicode非対応 要統合アーカイバプロジェクト版tar32.dll
+	zipu.fap      zip書庫プラグイン Unicode版専用 ただしUnicode非対応 要統合アーカイバプロジェクト版unzip32.dll
+	fconfig.dll   設定画面 fcpプラグインが無いと何もできない 要test12以降
+	addurl.dll    URLを追加プラグイン text13以降推奨
+	fittle.fcp    fittle.exe 設定プラグイン 要fconfig.exe又はfconfig.dll
+	minipane.fcp  minipane.dll 設定プラグイン 要fconfig.exe又はfconfig.dll
 
 実験履歴
+	test18/test18u
+		終端文字の無いID3V2.2で末尾にゴミが付く問題対策
+		しおり機能を削除してみた
+
+	test17/test17u
+		TAR32.DLLがGetPluginInfoをエクスポートしている問題に対処
+		Unicode版のプラグインインタフェースの互換性向上
+
+	test16/test16u
+		Unicode版
+		m3u8対応
+
 	test15
 		メニュー項目を削除したのが原因でtest13からプレイリストへ送るが正常動作しなかった問題の修正
 

@@ -20,7 +20,7 @@
 	GetListTab(hTab, TabCtrl_GetCurSel(hTab))
 
 struct LISTTAB{
-	char	szTitle[MAX_FITTLE_PATH];	// タブのタイトル
+	TCHAR	szTitle[MAX_FITTLE_PATH];	// タブのタイトル
 	HWND	hList;						// リストのハンドル
 	struct FILEINFO *pRoot;				// リスト構造のルート
 	int		nPlaying;					// 再生中のインデックス
@@ -30,7 +30,7 @@ struct LISTTAB{
 	int		nSortState;					// ソート状態
 };
 
-struct LISTTAB *MakeNewTab(HWND, char *, int);
+struct LISTTAB *MakeNewTab(HWND, LPTSTR, int);
 struct LISTTAB *GetListTab(HWND, int);
 int TraverseList(struct LISTTAB *);
 int ChangeOrder(struct LISTTAB *, int);
@@ -43,7 +43,7 @@ int PushPlaying(struct LISTTAB *, struct FILEINFO *);
 int GetStackPtr(struct LISTTAB *);
 BOOL SavePlaylists(HWND);
 BOOL LoadPlaylists(HWND);
-int RenameListTab(HWND, int, char *);
+int RenameListTab(HWND, int, LPTSTR);
 int RemoveListTab(HWND, int);
 int InsertList(struct LISTTAB *, int, struct FILEINFO *);
 BOOL CALLBACK TabNameDlgProc(HWND, UINT, WPARAM, LPARAM);

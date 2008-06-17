@@ -25,16 +25,20 @@
 #pragma comment(lib, "../../extra/bass24/bass.lib")
 
 // ソフト名（バージョンアップ時に忘れずに更新）
-#ifndef _DEBUG
-#define FITTLE_TITLE "Fittle Ver.2.2.2 Preview 3 for BASS 2.4 test15"
+#define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
+#ifdef UNICODE
+#define F4B24_VERSION_STRING TEXT("test18u")
 #else
-#define FITTLE_TITLE "Fittle Ver.2.2.2 Preview 3 for BASS 2.4 test15 <Debug>"
+#define F4B24_VERSION_STRING TEXT("test18")
+#endif
+#define F4B24_VERSION 18
+#define F4B24_IF_VERSION 18
+#ifndef _DEBUG
+#define FITTLE_TITLE FITTLE_VERSION TEXT(" for BASS 2.4 ") F4B24_VERSION_STRING
+#else
+#define FITTLE_TITLE FITTLE_VERSION TEXT(" for BASS 2.4 ") F4B24_VERSION_STRING TEXT(" <Debug>")
 #endif
 
-#define FITTLE_VERSION "Fittle Ver.2.2.2 Preview 3"
-#define F4B24_VERSION_STRING "f4b24 - test15"
-#define F4B24_VERSION 15
-#define F4B24_IF_VERSION 13
 
 //--マクロ--
 // 全ての選択状態を解除後、指定インデックスのアイテムを選択、表示
@@ -52,7 +56,7 @@
 	GetListTab(hTab, (m_nPlayTab!=-1 ? m_nPlayTab : TabCtrl_GetCurSel(hTab)))
 
 #define ODS(X) \
-	OutputDebugString(X); OutputDebugString("\n");
+	OutputDebugString(X); OutputDebugString(TEXT("\n"));
 
 enum {
 	WM_F4B24_INTERNAL_SETUP_NEXT = 1,
@@ -71,7 +75,6 @@ static LRESULT CALLBACK NewSliderProc(HWND, UINT, WPARAM, LPARAM);
 static LRESULT CALLBACK NewTabProc(HWND, UINT, WPARAM, LPARAM);
 static LRESULT CALLBACK NewTreeProc(HWND, UINT, WPARAM, LPARAM);
 static LRESULT CALLBACK NewSplitBarProc(HWND, UINT, WPARAM, LPARAM);
-static BOOL CALLBACK BookMarkDlgProc(HWND, UINT, WPARAM, LPARAM);
 static DWORD CALLBACK MainStreamProc(HSTREAM, void *, DWORD, void *);
 static void CALLBACK EventSync(HSYNC, DWORD, DWORD, void *);
 // 設定関係
@@ -87,11 +90,8 @@ static void PopupTrayMenu(HWND);
 static void PopupPlayModeMenu(HWND, NMTOOLBAR *);
 static void ToggleWindowView(HWND);
 static HWND CreateToolBar(HWND);
-static void LoadBookMark(HMENU , char *);
-static void SaveBookMark(char *);
-static int AddBookMark(HMENU, HWND);
-static void DrawBookMark(HMENU);
-static int ShowToolTip(HWND, HWND, char *);
+
+static int ShowToolTip(HWND, HWND, LPTSTR);
 static int ControlPlayMode(HMENU, int);
 static BOOL ToggleRepeatMode(HMENU);
 static int SetTaskTray(HWND);
@@ -104,12 +104,12 @@ static void DrawTabFocus(HWND, int, BOOL);
 static BOOL SetUIFont(void);
 static void UpdateWindowSize(HWND);
 static BOOL SetUIColor(void);
-static void SetStatusbarIcon(LPSTR, BOOL);
+static void SetStatusbarIcon(LPTSTR, BOOL);
 static void ShowSettingDialog(HWND, int);
-static LPSTR MallocAndConcatPath(LISTTAB *);
-static void MyShellExecute(HWND, LPSTR, LPSTR, BOOL);
+static LPTSTR MallocAndConcatPath(LISTTAB *);
+static void MyShellExecute(HWND, LPTSTR, LPTSTR, BOOL);
 static int InitFileTypes();
-static int SaveFileDialog(char *, char *);
+static int SaveFileDialog(LPTSTR, LPTSTR);
 static LONG GetToolbarTrueWidth(HWND);
 static int GetMenuPosFromString(HMENU hMenu, LPTSTR lpszText);
 // 演奏制御関係
@@ -123,21 +123,37 @@ static int StopOutputStream(HWND);
 static struct FILEINFO *SelectNextFile(BOOL);
 static void FreeChannelInfo(BOOL bFlag);
 
+static void RemoveFiles(HWND hWnd);
+
+// メンバ変数
+static CRITICAL_SECTION m_cs;
+
 // メンバ変数（状態編）
-static HINSTANCE m_hInst = NULL;	// インスタンス
-static NOTIFYICONDATA m_ni;			// タスクトレイのアイコンのデータ
+static int m_nPlayTab = -1;			// 再生中のタブインデックス
+static int m_nGaplessState = GS_OK;	// ギャップレス再生用のステータス
 static int m_nPlayMode = PM_LIST;	// プレイモード
+static HINSTANCE m_hInst = NULL;	// インスタンス
+static NOTIFYICONDATA m_ni;	// タスクトレイのアイコンのデータ
 static BOOL m_nRepeatFlag = FALSE;	// リピート中かどうか
 static BOOL m_bTrayFlag = FALSE;	// タスクトレイに入ってるかどうか
-static int m_nPlayTab = -1;			// 再生中のタブインデックス
 static struct FILEINFO *m_pNext = NULL;	// 再生曲
-static int m_nGaplessState = GS_OK;	// ギャップレス再生用のステータス
-static char m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
-static char m_szTime[100];			// 再生時間
-static char m_szTag[MAX_FITTLE_PATH];	// タグ
-static char m_szTreePath[MAX_FITTLE_PATH];	// ツリーのパス
+static TCHAR m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
+static TCHAR m_szTime[100];			// 再生時間
+static TCHAR m_szTag[MAX_FITTLE_PATH];	// タグ
+static TCHAR m_szTreePath[MAX_FITTLE_PATH];	// ツリーのパス
 static BOOL m_bFLoat = FALSE;
 static TAGINFO m_taginfo = {0};
+#ifdef UNICODE
+typedef struct{
+	CHAR szTitle[256];
+	CHAR szArtist[256];
+	CHAR szAlbum[256];
+	CHAR szTrack[10];
+}TAGINFOA;
+static TAGINFOA m_taginfoA;
+static CHAR m_szTreePathA[MAX_FITTLE_PATH];	// ツリーのパス
+static CHAR m_szFilePathA[MAX_FITTLE_PATH];	// ツリーのパス
+#endif
 static volatile BOOL m_bCueEnd = FALSE;
 // メンバ変数（ハンドル編）
 static HWND m_hCombo = NULL;		// コンボボックスハンドル
@@ -157,13 +173,144 @@ static HFONT m_hFont = NULL;		// フォントハンドル
 static HSTREAM m_hChanOut = NULL;	// ストリームハンドル
 static HTREEITEM m_hHitTree = NULL;	// ツリーのヒットアイテム
 static HMENU m_hMainMenu = NULL;	// メインメニューハンドル
-static CRITICAL_SECTION m_cs;
 
 
 // グローバル変数
-struct CONFIG g_cfg;				// 設定構造体
+struct CONFIG g_cfg = {0};			// 設定構造体
 CHANNELINFO g_cInfo[2] = {0};		// チャンネル情報
 BOOL g_bNow = FALSE;				// アクティブなチャンネル0 or 1
+
+static HMODULE XARGD = 0;
+static int XARGC = 0;
+static LPTSTR *XARGV = 0;
+
+typedef struct StringList {
+	struct StringList *pNext;
+	TCHAR szString[1];
+} STRING_LIST, *LPSTRING_LIST;
+
+static LPSTRING_LIST lpTypelist = NULL;
+
+static void StringListFree(LPSTRING_LIST *pList){
+	LPSTRING_LIST pCur = *pList;
+	while (pCur){
+		LPSTRING_LIST pNext = pCur->pNext;
+		HeapFree(GetProcessHeap(), 0, pCur);
+		pCur = pNext;
+	}
+	*pList = NULL;
+}
+
+static  LPSTRING_LIST StringListWalk(LPSTRING_LIST *pList, int nIndex){
+	LPSTRING_LIST pCur = *pList;
+	int i = 0;
+	while (pCur){
+		if (i++ == nIndex) return pCur;
+		pCur = pCur->pNext;
+	}
+	return NULL;
+}
+
+static int StringListAdd(LPSTRING_LIST *pList, LPTSTR szValue){
+	int i = 0;
+	LPSTRING_LIST pCur = *pList;
+	LPSTRING_LIST pNew = (LPSTRING_LIST)HeapAlloc(GetProcessHeap(), 0, sizeof(STRING_LIST) + sizeof(TCHAR) * lstrlen(szValue));
+	if (!pNew) return -1;
+	pNew->pNext = NULL;
+	lstrcpy(pNew->szString, szValue);
+	if (pCur){
+		i++;
+		/* 末尾に追加 */
+		while (pCur->pNext){
+			pCur = pCur->pNext;
+			i++;
+		}
+		pCur->pNext = pNew;
+	} else {
+		/* 先頭 */
+		*pList = pNew;
+	}
+	return i;
+}
+
+static void ClearTypelist(){
+	StringListFree(&lpTypelist);
+}
+static int AddTypelist(LPTSTR szExt){
+	if (!szExt || !*szExt) return TRUE;
+	return StringListAdd(&lpTypelist, szExt);
+}
+
+static LPTSTR GetTypelist(int nIndex){
+	static TCHAR szNull[1] = {0};
+	LPSTRING_LIST lpbm = StringListWalk(&lpTypelist, nIndex);
+	return lpbm ? lpbm->szString : szNull;
+}
+
+static void lstrcpyntA(LPSTR lpDst, LPCTSTR lpSrc, int nDstMax){
+#if defined(UNICODE)
+	WideCharToMultiByte(CP_ACP, 0, lpSrc, -1, lpDst, nDstMax, NULL, NULL);
+#else
+	lstrcpyn(lpDst, lpSrc, nDstMax);
+#endif
+}
+
+static void lstrcpyntW(LPWSTR lpDst, LPCTSTR lpSrc, int nDstMax){
+#if defined(UNICODE)
+	lstrcpyn(lpDst, lpSrc, nDstMax);
+#else
+	MultiByteToWideChar(CP_ACP, 0, lpSrc, -1, lpDst, nDstMax); //S-JIS->Unicode
+#endif
+}
+
+static void lstrcpynAt(LPTSTR lpDst, LPCSTR lpSrc, int nDstMax){
+#if defined(UNICODE)
+	MultiByteToWideChar(CP_ACP, 0, lpSrc, -1, lpDst, nDstMax); //S-JIS->Unicode
+#else
+	lstrcpyn(lpDst, lpSrc, nDstMax);
+#endif
+}
+
+static void lstrcpynWt(LPTSTR lpDst, LPCWSTR lpSrc, int nDstMax){
+#if defined(UNICODE)
+	lstrcpyn(lpDst, lpSrc, nDstMax);
+#else
+	WideCharToMultiByte(CP_ACP, 0, lpSrc, -1, lpDst, nDstMax, NULL, NULL);
+#endif
+}
+
+#ifndef _DEBUG
+/*  既に実行中のFittleにパラメータを送信する */
+static void SendCopyData(HWND hFittle, int iType, LPTSTR lpszString){
+#ifdef UNICODE
+	CHAR nameA[MAX_FITTLE_PATH];
+	LPBYTE lpWork;
+	COPYDATASTRUCT cds;
+	DWORD la, lw, cbData;
+	WideCharToMultiByte(CP_ACP, 0, lpszString, -1, nameA, MAX_FITTLE_PATH, NULL, NULL);
+	la = lstrlenA(nameA) + 1;
+	if (la & 1) la++; /* WORD align */
+	lw = lstrlenW(lpszString) + 1;
+	cbData = la * sizeof(CHAR) + lw * sizeof(WCHAR);
+	lpWork = (LPBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, cbData);
+	if (!lpWork) return;
+	lstrcpyA((LPSTR)(lpWork), nameA);
+	lstrcpyW((LPWSTR)(lpWork + la), lpszString);
+	cds.dwData = iType;
+	cds.lpData = (LPVOID)lpWork;
+	cds.cbData = cbData;
+	SendMessage(hFittle, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
+	HeapFree(GetProcessHeap(), 0, lpWork);
+#else
+	COPYDATASTRUCT cds;
+	cds.dwData = iType;
+	cds.lpData = (LPVOID)lpszString;
+	cds.cbData = (lstrlenA(lpszString) + 1) * sizeof(CHAR);
+	// 文字列送信
+	SendMessage(hFittle, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
+#endif
+}
+#endif
 
 int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLine*/, int nCmdShow){
 	WNDCLASSEX wc;
@@ -171,61 +318,75 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 	HACCEL hAccel;
 	MSG msg;
 	WINDOWPLACEMENT wpl = {0};
-	char szClassName[] = "Fittle";	// ウィンドウクラス
+	TCHAR szClassName[] = TEXT("Fittle");	// ウィンドウクラス
 
 	DWORD dTime;
 	dTime = GetTickCount();
 
+#ifdef UNICODE
+	XARGC = 1;
+	XARGV = CommandLineToArgvW(GetCommandLine(), &XARGC);
+#elif defined(_MSC_VER)
+	XARGC = __argc;
+	XARGV = __argv;
+#else
+	{
+		/* Visual C++以外の場合MSVCRT.DLLに引数を解析させる */
+		typedef struct { int newmode; } GMASTARTUPINFO;
+		typedef void (__cdecl *LPFNGETMAINARGS) (int *pargc, char ***pargv, char ***penvp, int dowildcard, GMASTARTUPINFO * startinfo);
+		XARGC = 1;
+		XARGD = LoadLibrary("MSVCRT.DLL");
+		if (XARGD) {
+			LPFNGETMAINARGS pfngma = (LPFNGETMAINARGS)GetProcAddress(XARGD, "__getmainargs");
+			int xargc;
+			char **xargv;
+			char **xenvp;
+			GMASTARTUPINFO si = {0};
+			pfngma(&xargc, &xargv, &xenvp, 1, &si);
+			XARGC = xargc;
+			XARGV = xargv;
+		}
+	}
+#endif
+
 #ifndef _DEBUG	// 多重起動の防止
 	HANDLE hMutex;
 	HWND hFittle;
-	COPYDATASTRUCT cds;
 	int i;
-	hMutex = CreateMutex(NULL, TRUE, "Mutex of Fittle");
+	hMutex = CreateMutex(NULL, TRUE, TEXT("Mutex of Fittle"));
 
 	if(GetLastError()==ERROR_ALREADY_EXISTS){
-		hFittle = FindWindow("Fittle", NULL);
+		hFittle = FindWindow(TEXT("Fittle"), NULL);
 		// コマンドラインがあれば本体に送信
-		if(__argc>1){
+		if(XARGC>1){
 			// コマンドラインオプション
-			if(__argv[1][0] == '/'){
-				if(!lstrcmpi(__argv[1], "/play")){
+			if(XARGV[1][0] == '/'){
+				if(!lstrcmpi(XARGV[1], TEXT("/play"))){
 					return SendMessage(hFittle, WM_COMMAND, MAKEWPARAM(IDM_PLAY, 0), 0);
-				}else if(!lstrcmpi(__argv[1], "/pause")){
+				}else if(!lstrcmpi(XARGV[1], TEXT("/pause"))){
 					return SendMessage(hFittle, WM_COMMAND, MAKEWPARAM(IDM_PAUSE, 0), 0);
-				}else if(!lstrcmpi(__argv[1], "/stop")){
+				}else if(!lstrcmpi(XARGV[1], TEXT("/stop"))){
 					return SendMessage(hFittle, WM_COMMAND, MAKEWPARAM(IDM_STOP, 0), 0);
-				}else if(!lstrcmpi(__argv[1], "/prev")){
+				}else if(!lstrcmpi(XARGV[1], TEXT("/prev"))){
 					return SendMessage(hFittle, WM_COMMAND, MAKEWPARAM(IDM_PREV, 0), 0);
-				}else if(!lstrcmpi(__argv[1], "/next")){
+				}else if(!lstrcmpi(XARGV[1], TEXT("/next"))){
 					return SendMessage(hFittle, WM_COMMAND, MAKEWPARAM(IDM_NEXT, 0), 0);
-				}else if(!lstrcmpi(__argv[1], "/exit")){
+				}else if(!lstrcmpi(XARGV[1], TEXT("/exit"))){
 					return SendMessage(hFittle, WM_COMMAND, MAKEWPARAM(IDM_END, 0), 0);
-				}else if(!lstrcmpi(__argv[1], "/add")){
-					cds.dwData = 1;
-					for(i=2;i<__argc;i++){
-						cds.lpData = (void *)__argv[i];
-						cds.cbData = lstrlen(__argv[i]) + 1;
-						SendMessage(hFittle, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
+				}else if(!lstrcmpi(XARGV[1], TEXT("/add"))){
+					for(i=2;i<XARGC;i++){
+						SendCopyData(hFittle, 1, XARGV[i]);
 					}
-					if(__argc>2) return 0;
-				}else if(!lstrcmpi(__argv[1], "/addplay")){
-					cds.dwData = 1;
-					for(i=2;i<__argc;i++){
-						cds.lpData = (void *)__argv[i];
-						cds.cbData = lstrlen(__argv[i]) + 1;
-						SendMessage(hFittle, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
+					if(XARGC>2) return 0;
+				}else if(!lstrcmpi(XARGV[1], TEXT("/addplay"))){
+					for(i=2;i<XARGC;i++){
+						SendCopyData(hFittle, 1, XARGV[i]);
 					}
 					SendMessage(hFittle, WM_COMMAND, MAKEWPARAM(IDM_PLAY, 0), 0);
 					return 0;
 				}
 			}else{
-				// ファイルを投げる
-				cds.dwData = 0;
-				cds.lpData = (void *)__argv[1];
-				cds.cbData = lstrlen(__argv[1]) + 1;
-				// 文字列送信
-				SendMessage(hFittle, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
+				SendCopyData(hFittle, 0, XARGV[1]);
 				return 0;
 			}
 		}
@@ -242,13 +403,13 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 
 	// BASSのバージョン確認
 	if(HIWORD(BASS_GetVersion())!=BASSVERSION){
-		MessageBox(NULL, "bass.dllのバージョンを確認してください。", "Fittle", MB_OK);
+		MessageBox(NULL, TEXT("bass.dllのバージョンを確認してください。"), TEXT("Fittle"), MB_OK);
 		return 0;
 	}
 
 	// INIファイルの位置を取得
 	GetModuleParentDir(m_szINIPath);
-	lstrcat(m_szINIPath, "Fittle.ini");
+	lstrcat(m_szINIPath, TEXT("Fittle.ini"));
 
 	// ウィンドウ・クラスの登録
 	wc.cbSize = sizeof(WNDCLASSEX);
@@ -257,12 +418,12 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 	wc.cbClsExtra = 0;
 	wc.cbWndExtra = 0;
 	wc.hInstance = m_hInst = hCurInst; //インスタンス
-	wc.hIcon = (HICON)LoadImage(hCurInst, "MYICON", IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_SHARED);
-	wc.hIconSm = (HICON)LoadImage(hCurInst, "MYICON", IMAGE_ICON, 16, 16, LR_SHARED);
+	wc.hIcon = (HICON)LoadImage(hCurInst, TEXT("MYICON"), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_SHARED);
+	wc.hIconSm = (HICON)LoadImage(hCurInst, TEXT("MYICON"), IMAGE_ICON, 16, 16, LR_SHARED);
 	wc.hCursor = (HCURSOR)LoadImage(NULL, MAKEINTRESOURCE(IDC_ARROW), IMAGE_CURSOR,	0, 0, LR_DEFAULTSIZE | LR_SHARED);
 	wc.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);
-	wc.lpszMenuName = "MAINMENU";	//メニュー名
-	wc.lpszClassName = (LPCSTR)szClassName;
+	wc.lpszMenuName = TEXT("MAINMENU");	//メニュー名
+	wc.lpszClassName = (LPCTSTR)szClassName;
 	if(!RegisterClassEx(&wc)) return 0;
 
 	LoadState();
@@ -283,7 +444,7 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 	if(!hWnd) return 0;
 
 	// 最大化を再現
-	if(nCmdShow==SW_SHOWNORMAL && GetPrivateProfileInt("Main", "Maximized", 0, m_szINIPath)){
+	if(nCmdShow==SW_SHOWNORMAL && GetPrivateProfileInt(TEXT("Main"), TEXT("Maximized"), 0, m_szINIPath)){
 		nCmdShow = SW_SHOWMAXIMIZED;			// 最大化状態
 		//wpl.flags = WPF_RESTORETOMAXIMIZED;		// 最小化された最大化状態
 	}
@@ -292,10 +453,10 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 	UpdateWindow(hWnd);
 	wpl.length = sizeof(WINDOWPLACEMENT);
 	wpl.showCmd = SW_HIDE;
-	wpl.rcNormalPosition.left = (int)GetPrivateProfileInt("Main", "Left", (GetSystemMetrics(SM_CXSCREEN)-FITTLE_WIDTH)/2, m_szINIPath);
-	wpl.rcNormalPosition.top = (int)GetPrivateProfileInt("Main", "Top", (GetSystemMetrics(SM_CYSCREEN)-FITTLE_HEIGHT)/2, m_szINIPath);
-	wpl.rcNormalPosition.right = wpl.rcNormalPosition.left + (int)GetPrivateProfileInt("Main", "Width", FITTLE_WIDTH, m_szINIPath);
-	wpl.rcNormalPosition.bottom = wpl.rcNormalPosition.top + (int)GetPrivateProfileInt("Main", "Height", FITTLE_HEIGHT, m_szINIPath);
+	wpl.rcNormalPosition.left = (int)GetPrivateProfileInt(TEXT("Main"), TEXT("Left"), (GetSystemMetrics(SM_CXSCREEN)-FITTLE_WIDTH)/2, m_szINIPath);
+	wpl.rcNormalPosition.top = (int)GetPrivateProfileInt(TEXT("Main"), TEXT("Top"), (GetSystemMetrics(SM_CYSCREEN)-FITTLE_HEIGHT)/2, m_szINIPath);
+	wpl.rcNormalPosition.right = wpl.rcNormalPosition.left + (int)GetPrivateProfileInt(TEXT("Main"), TEXT("Width"), FITTLE_WIDTH, m_szINIPath);
+	wpl.rcNormalPosition.bottom = wpl.rcNormalPosition.top + (int)GetPrivateProfileInt(TEXT("Main"), TEXT("Height"), FITTLE_HEIGHT, m_szINIPath);
 	SetWindowPlacement(hWnd, &wpl);
 
 	// ミニパネルの復元
@@ -307,12 +468,12 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 	}
 
 	// アクセラレーターキーを取得
-	hAccel = LoadAccelerators(hCurInst, "MYACCEL");
+	hAccel = LoadAccelerators(hCurInst, TEXT("MYACCEL"));
 
-	char szBuff[100];
+	TCHAR szBuff[100];
 	GetWindowText(m_hStatus, szBuff, 100);
 	if(lstrlen(szBuff)==0){
-		wsprintf(szBuff, "Startup time: %d ms\n", GetTickCount() - dTime);
+		wsprintf(szBuff, TEXT("Startup time: %d ms\n"), GetTickCount() - dTime);
 		SetWindowText(m_hStatus, szBuff);
 	}
 
@@ -326,6 +487,14 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 			}
 		}
 	}
+
+#ifdef UNICODE
+	if (XARGV) GlobalFree(XARGV);
+#elif defined(_MSC_VER)
+#else
+	if (XARGD) FeeLibrary(XARGD);
+#endif
+
 	return (int)msg.wParam;
 }
 
@@ -340,9 +509,9 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 	int i;
 	int nFileIndex;
-	char szLastPath[MAX_FITTLE_PATH] = {0};
-	char szCmdParPath[MAX_FITTLE_PATH] = {0};
-	char szSec[10] = "";
+	TCHAR szLastPath[MAX_FITTLE_PATH] = {0};
+	TCHAR szCmdParPath[MAX_FITTLE_PATH] = {0};
+	TCHAR szSec[10] = TEXT("");
 	MENUITEMINFO mii;
 
 	switch(msg)
@@ -357,7 +526,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 		case WM_CREATE:
 			// BASS初期化
 			if(!BASS_Init(1, 44100, 0, hWnd, NULL)){
-				MessageBox(hWnd, "BASSの初期化に失敗しました。", "Fittle", MB_OK);
+				MessageBox(hWnd, TEXT("BASSの初期化に失敗しました。"), TEXT("Fittle"), MB_OK);
 				BASS_Free();
 				ExitProcess(1);
 			}
@@ -375,7 +544,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			InitFileTypes();
 
 			// タスクトレイ再描画のメッセージを保存
-			s_uTaskbarRestart = RegisterWindowMessage("TaskbarCreated");
+			s_uTaskbarRestart = RegisterWindowMessage(TEXT("TaskbarCreated"));
 
 			// 現在のプロセスIDで乱数ジェネレータを初期化
 			init_genrand((unsigned int)(GetTickCount()+GetCurrentProcessId()));
@@ -392,7 +561,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			InitCommonControlsEx(&ic);
 
 			// ステータスバー作成
-			m_hStatus = CreateStatusWindow(WS_CHILD | /*WS_VISIBLE |*/ SBARS_SIZEGRIP | CCS_BOTTOM | SBT_TOOLTIPS, "", hWnd, ID_STATUS);
+			m_hStatus = CreateStatusWindow(WS_CHILD | /*WS_VISIBLE |*/ SBARS_SIZEGRIP | CCS_BOTTOM | SBT_TOOLTIPS, TEXT(""), hWnd, ID_STATUS);
 			if(g_cfg.nShowStatus){
 				g_cfg.nShowStatus = 0;
 				PostMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_SHOWSTATUS, 0), 0);
@@ -436,13 +605,13 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			SendMessage(m_hTab, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), 0);
 			DragAcceptFiles(m_hTab, TRUE);
 
-			MakeNewTab(m_hTab, "フォルダ", 0);
+			MakeNewTab(m_hTab, TEXT("フォルダ"), 0);
 
 			// プレイリストリスト読み込み
 			LoadPlaylists(m_hTab);
 
 			//スプリットウィンドウを作成
-			s_hSplitter = CreateWindow("static",
+			s_hSplitter = CreateWindow(TEXT("static"),
 				NULL,
 				SS_NOTIFY | WS_CHILD | WS_VISIBLE,
 				0, 0, 0, 0,
@@ -521,12 +690,12 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			rbbi.cyMinChild = 22;
 			rbbi.fStyle = RBBS_CHILDEDGE | RBBS_GRIPPERALWAYS;
 			for(i=0;i<BAND_COUNT;i++){
-				wsprintf(szSec, "cx%d", i);
-				rbbi.cx = GetPrivateProfileInt("Rebar2", szSec, 0, m_szINIPath);
-				wsprintf(szSec, "wID%d", i);
-				rbbi.wID = GetPrivateProfileInt("Rebar2", szSec, i, m_szINIPath);
-				wsprintf(szSec, "fStyle%d", i);
-				rbbi.fStyle = GetPrivateProfileInt("Rebar2", szSec, (RBBS_CHILDEDGE | RBBS_GRIPPERALWAYS), m_szINIPath); //RBBS_BREAK
+				wsprintf(szSec, TEXT("cx%d"), i);
+				rbbi.cx = GetPrivateProfileInt(TEXT("Rebar2"), szSec, 0, m_szINIPath);
+				wsprintf(szSec, TEXT("wID%d"), i);
+				rbbi.wID = GetPrivateProfileInt(TEXT("Rebar2"), szSec, i, m_szINIPath);
+				wsprintf(szSec, TEXT("fStyle%d"), i);
+				rbbi.fStyle = GetPrivateProfileInt(TEXT("Rebar2"), szSec, (RBBS_CHILDEDGE | RBBS_GRIPPERALWAYS), m_szINIPath); //RBBS_BREAK
 				
 				switch(rbbi.wID){
 					case 0:	// ツールバー
@@ -576,8 +745,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			InitTreeIconIndex(m_hCombo, m_hTree, (BOOL)g_cfg.nTreeIcon);
 			
 			// システムメニューの変更
-			m_hTrayMenu = GetSubMenu(LoadMenu(m_hInst, "TRAYMENU"), 0);
-			FillMemory(&mii, sizeof(mii), '\0');
+			m_hTrayMenu = GetSubMenu(LoadMenu(m_hInst, TEXT("TRAYMENU")), 0);
+			ZeroMemory(&mii, sizeof(mii));
 			mii.fMask = MIIM_TYPE;
 			mii.cbSize = sizeof(mii);
 			mii.fType = MFT_SEPARATOR;
@@ -585,21 +754,21 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 			mii.fMask = MIIM_TYPE | MIIM_ID;
 			mii.fType = MFT_STRING;
-			mii.dwTypeData = "メニューの表示(&V)\tCtrl+M";
+			mii.dwTypeData = TEXT("メニューの表示(&V)\tCtrl+M");
 			mii.wID = IDM_TOGGLEMENU;
 			InsertMenuItem(GetSystemMenu(hWnd, FALSE), 8, FALSE, &mii);
 
 			mii.fMask = MIIM_TYPE | MIIM_SUBMENU;
 			mii.fType = MFT_STRING;
-			mii.dwTypeData = "&Fittle";
+			mii.dwTypeData = TEXT("&Fittle");
 			mii.hSubMenu = m_hTrayMenu;
 			InsertMenuItem(GetSystemMenu(hWnd, FALSE), 9, FALSE, &mii);
 
 			DrawMenuBar(hWnd);
 
 			// プレイモードを設定する
-			ControlPlayMode(GetMenu(hWnd), (int)GetPrivateProfileInt("Main", "Mode", PM_LIST, m_szINIPath));
-			m_nRepeatFlag = GetPrivateProfileInt("Main", "Repeat", TRUE, m_szINIPath);
+			ControlPlayMode(GetMenu(hWnd), (int)GetPrivateProfileInt(TEXT("Main"), TEXT("Mode"), PM_LIST, m_szINIPath));
+			m_nRepeatFlag = GetPrivateProfileInt(TEXT("Main"), TEXT("Repeat"), TRUE, m_szINIPath);
 			if(m_nRepeatFlag){
 				m_nRepeatFlag = FALSE;
 				ToggleRepeatMode(GetMenu(hWnd));
@@ -613,7 +782,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			if(g_cfg.nTrayOpt==2) SetTaskTray(hWnd);
 
 			// ボリュームの設定
-			PostMessage(m_hVolume, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)GetPrivateProfileInt("Main", "Volumes", SLIDER_DIVIDED, m_szINIPath));
+			PostMessage(m_hVolume, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)GetPrivateProfileInt(TEXT("Main"), TEXT("Volumes"), SLIDER_DIVIDED, m_szINIPath));
 
 			// グローバルホットキー
 			RegHotKey(hWnd);
@@ -627,22 +796,20 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			// ユーザインターフェイス
 			SetUIFont();
 
-			// しおりの読み込み
-			LoadBookMark(GetSubMenu(GetMenu(hWnd), GetMenuPosFromString(GetMenu(hWnd), TEXT("しおり(&B)"))), m_szINIPath);
-
 			// メニューの非表示
-			if(!GetPrivateProfileInt("Main", "MainMenu", 1, m_szINIPath))
+			if(!GetPrivateProfileInt(TEXT("Main"), TEXT("MainMenu"), 1, m_szINIPath))
 				PostMessage(hWnd, WM_COMMAND, IDM_TOGGLEMENU, 0);
 
 			// コンボボックスの初期化
-			SetDrivesToCombo(m_hCombo);
+			SendMessage(hWnd, WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_UPDATE_DRIVELIST, (LPARAM)0);
+			//SetDrivesToCombo(m_hCombo);
 
 			// コマンドラインの処理
 			BOOL bCmd;
 			bCmd = FALSE;
-			for(i=1;i<__argc;i++){
+			for(i=1;i<XARGC;i++){
 				if(bCmd) break;
-				switch(GetParentDir(__argv[i], szCmdParPath)){
+				switch(GetParentDir(XARGV[i], szCmdParPath)){
 					case FOLDERS: // フォルダ
 					case LISTS:   // リスト
 					case ARCHIVES:// アーカイブ
@@ -662,7 +829,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 							lstrcpyn(m_szTreePath, szCmdParPath, MAX_FITTLE_PATH);
 							SendMessage(hWnd, WM_COMMAND, IDM_FILEREVIEW, 0);
 						}
-						GetLongPathName(__argv[i], szCmdParPath, MAX_FITTLE_PATH); // 98以降
+						GetLongPathName(XARGV[i], szCmdParPath, MAX_FITTLE_PATH); // 98以降
 						nFileIndex = GetIndexFromPath(GetListTab(m_hTab, 0)->pRoot, szCmdParPath);
 						ListView_SingleSelect(GetListTab(m_hTab, 0)->hList, nFileIndex);
 						bCmd = TRUE;
@@ -680,7 +847,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				// コマンドラインなし
 				// 長さ０or存在しないなら最後のパスにする
 				if(lstrlen(g_cfg.szStartPath)==0 || !FILE_EXIST(g_cfg.szStartPath)){
-					GetPrivateProfileString("Main", "LastPath", "", szLastPath, MAX_FITTLE_PATH, m_szINIPath);
+					GetPrivateProfileString(TEXT("Main"), TEXT("LastPath"), TEXT(""), szLastPath, MAX_FITTLE_PATH, m_szINIPath);
 				}else{
 					lstrcpyn(szLastPath, g_cfg.szStartPath, MAX_FITTLE_PATH);
 				}
@@ -695,7 +862,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					TreeView_Select(m_hTree, MakeDriveNode(m_hCombo, m_hTree), TVGN_CARET);
 				}
 				// タブの復元
-				TabCtrl_SetCurFocus(m_hTab, m_nPlayTab = GetPrivateProfileInt("Main", "TabIndex", 0, m_szINIPath));
+				TabCtrl_SetCurFocus(m_hTab, m_nPlayTab = GetPrivateProfileInt(TEXT("Main"), TEXT("TabIndex"), 0, m_szINIPath));
 
 				// 最後に再生していたファイルを再生
 				if(g_cfg.nResume){
@@ -856,46 +1023,62 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			break;
 
 		case WM_COPYDATA: // 文字列受信
-			COPYDATASTRUCT *pcds;
-			char szParPath[MAX_FITTLE_PATH];
-
-			pcds= (COPYDATASTRUCT *)lp;
-			if(pcds->dwData==0){
-				switch(GetParentDir((char *)(pcds->lpData), szParPath)){
-					case FOLDERS:
-					case LISTS:
-					case ARCHIVES:
-						MakeTreeFromPath(m_hTree, m_hCombo, szParPath);
-						m_nPlayTab = 0;
-						SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_NEXT, 0), 0);
-						return TRUE;
-
-					case FILES:
-						MakeTreeFromPath(m_hTree, m_hCombo, (char *)szParPath);
-						GetLongPathName((char *)(pcds->lpData), szParPath, MAX_FITTLE_PATH); // 98以降
-						nFileIndex = GetIndexFromPath(GetListTab(m_hTab, 0)->pRoot, szParPath);
-						ListView_SingleSelect(GetCurListTab(m_hTab)->hList, nFileIndex);
-						SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_PLAY, 0), 0);
-						return TRUE;
+			{
+				COPYDATASTRUCT *pcds= (COPYDATASTRUCT *)lp;
+	#ifdef UNICODE
+				WCHAR wszRecievedPath[MAX_FITTLE_PATH];
+				LPTSTR pRecieved;
+				size_t la = lstrlenA((LPSTR)pcds->lpData) + 1;
+				MultiByteToWideChar(CP_ACP, 0, (LPSTR)pcds->lpData, -1, wszRecievedPath, MAX_FITTLE_PATH);
+				pRecieved = wszRecievedPath;
+				if (la & 1) la++; /* WORD align */
+				if (la < pcds->cbData){
+					LPWSTR pw = (LPWSTR)(((LPBYTE)pcds->lpData) + la);
+					size_t lw = lstrlenW(pw) + 1;
+					//if (la * sizeof(CHAR) + lw * sizeof(WCHAR)==pcds->cbData)
+					lstrcpynW(wszRecievedPath, pw, (lw > MAX_FITTLE_PATH) ? MAX_FITTLE_PATH : lw);
 				}
-			}else{
-				struct FILEINFO *pSub = NULL;
-				char szTest[MAX_FITTLE_PATH];
-				if (IsURLPath((LPCSTR)pcds->lpData))
-					lstrcpyn(szTest, (char*)pcds->lpData, MAX_FITTLE_PATH);
-				else
-					GetLongPathName((LPSTR)pcds->lpData, szTest, MAX_FITTLE_PATH);
-				SearchFiles(&pSub, szTest, TRUE);
-				ListView_SetItemState(GetCurListTab(m_hTab)->hList, -1, 0, LVIS_FOCUSED | LVIS_SELECTED);
-				InsertList(GetCurListTab(m_hTab), -1, pSub);
-				ListView_EnsureVisible(GetCurListTab(m_hTab)->hList, ListView_GetItemCount(GetCurListTab(m_hTab)->hList)-1, TRUE);
-				return TRUE;
+	#else
+				LPTSTR pRecieved = (LPTSTR)pcds->lpData;
+	#endif
+				if(pcds->dwData==0){
+					TCHAR szParPath[MAX_FITTLE_PATH];
+					switch(GetParentDir(pRecieved, szParPath)){
+						case FOLDERS:
+						case LISTS:
+						case ARCHIVES:
+							MakeTreeFromPath(m_hTree, m_hCombo, szParPath);
+							m_nPlayTab = 0;
+							SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_NEXT, 0), 0);
+							return TRUE;
+
+						case FILES:
+							MakeTreeFromPath(m_hTree, m_hCombo, (LPTSTR)szParPath);
+							GetLongPathName(pRecieved, szParPath, MAX_FITTLE_PATH); // 98以降
+							nFileIndex = GetIndexFromPath(GetListTab(m_hTab, 0)->pRoot, szParPath);
+							ListView_SingleSelect(GetCurListTab(m_hTab)->hList, nFileIndex);
+							SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_PLAY, 0), 0);
+							return TRUE;
+					}
+				}else{
+					struct FILEINFO *pSub = NULL;
+					TCHAR szTest[MAX_FITTLE_PATH];
+					if (IsURLPath(pRecieved))
+						lstrcpyn(szTest, pRecieved, MAX_FITTLE_PATH);
+					else
+						GetLongPathName(pRecieved, szTest, MAX_FITTLE_PATH);
+					SearchFiles(&pSub, szTest, TRUE);
+					ListView_SetItemState(GetCurListTab(m_hTab)->hList, -1, 0, LVIS_FOCUSED | LVIS_SELECTED);
+					InsertList(GetCurListTab(m_hTab), -1, pSub);
+					ListView_EnsureVisible(GetCurListTab(m_hTab)->hList, ListView_GetItemCount(GetCurListTab(m_hTab)->hList)-1, TRUE);
+					return TRUE;
+				}
 			}
 
 			break;
 
 		case WM_COMMAND:
-			char szNowDir[MAX_FITTLE_PATH];
+			TCHAR szNowDir[MAX_FITTLE_PATH];
 			switch(LOWORD(wp))
 			{
 				case IDM_REVIEW: //最新の情報に更新
@@ -921,7 +1104,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				case IDM_TAB_SAVE:
 					lstrcpyn(szNowDir, m_szTreePath, MAX_FITTLE_PATH);
 					if(IsPlayList(szNowDir) || IsArchive(szNowDir)){
-						*PathFindFileName(szNowDir) = '\0';
+						*PathFindFileName(szNowDir) = TEXT('\0');
 					}else{
 						MyPathAddBackslash(szNowDir);
 					}
@@ -1070,7 +1253,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case IDM_FIND:
-					nFileIndex = (int)DialogBoxParam(m_hInst, "FIND_DIALOG", hWnd, FindDlgProc, (LPARAM)GetCurListTab(m_hTab)->pRoot);
+					nFileIndex = (int)DialogBoxParam(m_hInst, TEXT("FIND_DIALOG"), hWnd, FindDlgProc, (LPARAM)GetCurListTab(m_hTab)->pRoot);
 					if(nFileIndex!=-1){
 						ListView_SingleSelect(GetCurListTab(m_hTab)->hList, nFileIndex);
 						SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_PLAY, 0), 0);
@@ -1168,35 +1351,23 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					SendMessage(hWnd, WM_F4B24_IPC, WM_F4B24_IPC_SETTING, WM_F4B24_IPC_SETTING_LP_GENERAL);
 					break;
 
-				case IDM_BM_ADD: //しおりに追加
-					if(AddBookMark(GetSubMenu(m_hMainMenu, GetMenuPosFromString(m_hMainMenu, TEXT("しおり(&B)"))), hWnd)!=-1){
-						SetDrivesToCombo(m_hCombo);
-					}
-					break;
-
-				case IDM_BM_ORG:
-					DialogBox(m_hInst, "BOOKMARK_DIALOG", hWnd, (DLGPROC)BookMarkDlgProc);
-					DrawBookMark(GetSubMenu(m_hMainMenu, GetMenuPosFromString(m_hMainMenu, TEXT("しおり(&B)"))));
-					break;
 
 				case IDM_BM_PLAYING:
-					char *p;
-
 					if(FILE_EXIST(g_cInfo[g_bNow].szFilePath)){
 						GetParentDir(g_cInfo[g_bNow].szFilePath, szNowDir);
 						MakeTreeFromPath(m_hTree, m_hCombo, szNowDir);
 					}else if(IsArchivePath(g_cInfo[g_bNow].szFilePath)){
-						p = StrStr(g_cInfo[g_bNow].szFilePath, "/");
-						*p = '\0';
+						LPTSTR p = StrStr(g_cInfo[g_bNow].szFilePath, TEXT("/"));
+						*p = TEXT('\0');
 						lstrcpyn(szNowDir, g_cInfo[g_bNow].szFilePath, MAX_FITTLE_PATH);
-						*p = '/';
+						*p = TEXT('/');
 						MakeTreeFromPath(m_hTree, m_hCombo, szNowDir);
 					}
 					break;
 
 				case IDM_README:	// Readme.txtを表示
 					GetModuleParentDir(szNowDir);
-					lstrcat(szNowDir, "Readme.txt");
+					lstrcat(szNowDir, TEXT("Readme.txt"));
 					ShellExecute(hWnd, NULL, szNowDir, NULL, NULL, SW_SHOWNORMAL);
 					break;
 
@@ -1216,9 +1387,9 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case IDM_LIST_NEW:	// 新規プレイリスト
-					char szLabel[MAX_FITTLE_PATH];
-					lstrcpy(szLabel, "Default");
-					if(DialogBoxParam(m_hInst, "TAB_NAME_DIALOG", hWnd, TabNameDlgProc, (LPARAM)szLabel)){
+					TCHAR szLabel[MAX_FITTLE_PATH];
+					lstrcpy(szLabel, TEXT("Default"));
+					if(DialogBoxParam(m_hInst, TEXT("TAB_NAME_DIALOG"), hWnd, TabNameDlgProc, (LPARAM)szLabel)){
 						MakeNewTab(m_hTab, szLabel, -1);
 						SendToPlaylist(GetCurListTab(m_hTab), GetListTab(m_hTab, TabCtrl_GetItemCount(m_hTab)-1));
 						TabCtrl_SetCurFocus(m_hTab, TabCtrl_GetItemCount(m_hTab)-1);
@@ -1234,61 +1405,12 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case IDM_LIST_DELFILE:
-					// 初期化
-					SHFILEOPSTRUCT fops;
-					char szMsg[MAX_FITTLE_PATH];
-					int j;
-					int q;
-					char *pszTarget;
-					BOOL bPlaying;
-					bPlaying = FALSE;
-					j = 0;
-					q = 0;
-					p = (char *)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(char)*2);
-
-					// パスを連結など
-					i = ListView_GetNextItem(GetCurListTab(m_hTab)->hList, -1, LVNI_SELECTED);
-					while(i!=-1){
-						pszTarget = GetPtrFromIndex(GetCurListTab(m_hTab)->pRoot, i)->szFilePath;
-						if(i==GetCurListTab(m_hTab)->nPlaying) bPlaying = TRUE;	// 削除ファイルが演奏中
-						if(!IsURLPath(pszTarget) && !IsArchivePath(pszTarget)){	// 削除できないファイルでなければ
-							j++;
-							p = (char *)HeapReAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, p,
-								HeapSize(GetProcessHeap(), 0, p) + (lstrlen(pszTarget) + 2) * sizeof(char));
-							lstrcpy(p+q, pszTarget);
-							q += lstrlen(pszTarget) + 1;
-							*(p+q) = '\0';
-						}
-						i = ListView_GetNextItem(GetCurListTab(m_hTab)->hList, i, LVNI_SELECTED);
-					}
-					if(j==1){
-						// ファイル一個選択
-						wsprintf(szMsg, "%'%s%' をごみ箱に移しますか？", p);
-					}else if(j>1){
-						// 複数ファイル選択
-						wsprintf(szMsg, "これらの %d 個の項目をごみ箱に移しますか？", j);
-					}
-					if(j>0 && MessageBox(hWnd, szMsg, "ファイルの削除の確認", MB_YESNO | MB_ICONQUESTION)==IDYES){
-						// 実際に削除
-						fops.hwnd = hWnd;
-						fops.wFunc = FO_DELETE;
-						fops.pFrom = p;
-						fops.pTo = NULL;
-						fops.fFlags = FOF_FILESONLY | FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_MULTIDESTFILES;
-						if(bPlaying) SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_STOP, 0), 0);
-						if(SHFileOperation(&fops)==0){
-							if(bPlaying) PopPrevious(GetCurListTab(m_hTab));	// 履歴からとりあえず最後だけ削除
-							DeleteFiles(GetCurListTab(m_hTab));
-						}
-						if(bPlaying) SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_NEXT, 0), 0);
-					}
-					HeapFree(GetProcessHeap(), 0, p);
-					break;
+					RemoveFiles(hWnd);
 
 				case IDM_LIST_TOOL:
 					if((nLBIndex = ListView_GetNextItem(GetCurListTab(m_hTab)->hList, -1, LVNI_SELECTED))!=-1){
 						if(lstrlen(g_cfg.szToolPath)!=0){
-							LPSTR pszFiles;
+							LPTSTR pszFiles;
 							pszFiles = MallocAndConcatPath(GetCurListTab(m_hTab));
 							MyShellExecute(hWnd, g_cfg.szToolPath, pszFiles, TRUE);
 							HeapFree(GetProcessHeap(), 0, pszFiles);
@@ -1306,7 +1428,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						sei.cbSize = sizeof(SHELLEXECUTEINFO);
 						sei.fMask = SEE_MASK_INVOKEIDLIST | SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI;
 						sei.lpFile = GetPtrFromIndex(GetCurListTab(m_hTab)->pRoot, nLBIndex)->szFilePath;
-						sei.lpVerb = "properties";
+						sei.lpVerb = TEXT("properties");
 						sei.hwnd = NULL;
 						ShellExecuteEx(&sei);
 					}
@@ -1317,7 +1439,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 					if(g_cfg.nTreeState==TREE_UNSHOWN){
 						if(!PathIsRoot(m_szTreePath)){
-							*PathFindFileName(m_szTreePath) = '\0';
+							*PathFindFileName(m_szTreePath) = TEXT('\0');
 							MakeTreeFromPath(m_hTree, m_hCombo, m_szTreePath);
 						}
 					}else{
@@ -1365,7 +1487,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						// ".m3u"を削除
 						PathRemoveExtension(szLabel);
 					}
-					if(DialogBoxParam(m_hInst, "TAB_NAME_DIALOG", hWnd, TabNameDlgProc, (LPARAM)szLabel)){
+					if(DialogBoxParam(m_hInst, TEXT("TAB_NAME_DIALOG"), hWnd, TabNameDlgProc, (LPARAM)szLabel)){
 						pNew = MakeNewTab(m_hTab, szLabel, -1);
 						SearchFiles(&(pNew->pRoot), szNowDir, TRUE);
 						TraverseList(pNew);
@@ -1385,18 +1507,18 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					}
 					// 前処理
 					if(IsPlayList(szNowDir) || IsArchive(szNowDir)){
-						*PathFindFileName(szNowDir) = '\0';
+						*PathFindFileName(szNowDir) = TEXT('\0');
 					}else{
 						MyPathAddBackslash(szNowDir);
 					}
 					// エクスプローラに投げる処理
-					MyShellExecute(hWnd, (g_cfg.szFilerPath[0]?g_cfg.szFilerPath:"explorer.exe"), szNowDir, FALSE);
+					MyShellExecute(hWnd, (g_cfg.szFilerPath[0]?g_cfg.szFilerPath:TEXT("explorer.exe")), szNowDir, FALSE);
 					m_hHitTree = NULL;
 					break;
 
 				case IDM_TAB_NEW:
-					lstrcpy(szLabel, "Default");
-					if(DialogBoxParam(m_hInst, "TAB_NAME_DIALOG", hWnd, TabNameDlgProc, (LPARAM)szLabel)){
+					lstrcpy(szLabel, TEXT("Default"));
+					if(DialogBoxParam(m_hInst, TEXT("TAB_NAME_DIALOG"), hWnd, TabNameDlgProc, (LPARAM)szLabel)){
 						MakeNewTab(m_hTab, szLabel, -1);
 						TabCtrl_SetCurFocus(m_hTab, TabCtrl_GetItemCount(m_hTab)-1);
 					}
@@ -1404,7 +1526,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 				case IDM_TAB_RENAME:
 					lstrcpyn(szLabel, GetListTab(m_hTab, s_nHitTab)->szTitle, MAX_FITTLE_PATH);
-					if(DialogBoxParam(m_hInst, "TAB_NAME_DIALOG", hWnd, TabNameDlgProc, (LPARAM)szLabel)){
+					if(DialogBoxParam(m_hInst, TEXT("TAB_NAME_DIALOG"), hWnd, TabNameDlgProc, (LPARAM)szLabel)){
 						RenameListTab(m_hTab, s_nHitTab, szLabel);
 						InvalidateRect(m_hTab, NULL, FALSE);
 					}
@@ -1468,14 +1590,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					if(IDM_SENDPL_FIRST<=LOWORD(wp) && LOWORD(wp)<IDM_BM_FIRST){
 						//プレイリストに送る
 						SendToPlaylist(GetCurListTab(m_hTab), GetListTab(m_hTab, LOWORD(wp) - IDM_SENDPL_FIRST));
-					}else if(IDM_BM_FIRST<=LOWORD(wp) && LOWORD(wp)<IDM_BM_FIRST+MAX_BM_SIZE){
-						// しおり
-						if(g_cfg.nTreeState==TREE_SHOW){
-							MakeTreeFromPath(m_hTree, m_hCombo, g_cfg.szBMPath[LOWORD(wp)-IDM_BM_FIRST]);
-						}else{
-							lstrcpyn(m_szTreePath, g_cfg.szBMPath[LOWORD(wp)-IDM_BM_FIRST], MAX_FITTLE_PATH);
-							SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_FILEREVIEW, 0), 0);
-						}
 					}else{
 						return DefWindowProc(hWnd, msg, wp, lp);
 					}
@@ -1538,7 +1652,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 							m_hHitTree = tvhti.hItem;
 						}
 						TreeView_SelectDropTarget(m_hTree, m_hHitTree);
-						hPopMenu = GetSubMenu(LoadMenu(m_hInst, "TREEMENU"), 0);
+						hPopMenu = GetSubMenu(LoadMenu(m_hInst, TEXT("TREEMENU")), 0);
 						TrackPopupMenu(hPopMenu, TPM_LEFTALIGN | TPM_TOPALIGN, (short)LOWORD(lp), (short)HIWORD(lp), 0, hWnd, NULL);
 						DestroyMenu(hPopMenu);
 						TreeView_SelectDropTarget(m_hTree, NULL);
@@ -1559,7 +1673,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 							ScreenToClient(m_hTab, &tchti.pt);
 							s_nHitTab = TabCtrl_HitTest(m_hTab, &tchti);
 						}
-						hPopMenu = GetSubMenu(LoadMenu(m_hInst, "TABMENU"), 0);
+						hPopMenu = GetSubMenu(LoadMenu(m_hInst, TEXT("TABMENU")), 0);
 						// グレー表示の処理
 						if(s_nHitTab<=0){
 							EnableMenuItem(hPopMenu, IDM_TAB_DEL, MF_GRAYED | MF_DISABLED);
@@ -1675,7 +1789,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					qLen = g_cInfo[g_bNow].qDuration;
 					nPos = (int)BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, qPos);
 					nLen = (int)BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, qLen);
-					wsprintf(m_szTime, "\t%02d:%02d / %02d:%02d", nPos/60, nPos%60, nLen/60, nLen%60);
+					wsprintf(m_szTime, TEXT("\t%02d:%02d / %02d:%02d"), nPos/60, nPos%60, nLen/60, nLen%60);
 					PostMessage(m_hStatus, SB_SETTEXT, (WPARAM)2|0, (LPARAM)m_szTime);
 					//シーク中でなければ現在の再生位置をスライダバーに表示する
 					if(!(GetCapture()==m_hSeek || qLen==0))
@@ -1805,36 +1919,36 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						lptip = (LPTOOLTIPTEXT)lp; 
 						switch (lptip->hdr.idFrom){ 
 							case IDM_PLAY: 
-								lptip->lpszText = "再生 (Z)"; 
+								lptip->lpszText = TEXT("再生 (Z)"); 
 								break; 
 							case IDM_PAUSE: 
-								lptip->lpszText = "一時停止 (X)"; 
+								lptip->lpszText = TEXT("一時停止 (X)"); 
 								break; 
 							case IDM_STOP: 
-								lptip->lpszText = "停止 (C)"; 
+								lptip->lpszText = TEXT("停止 (C)"); 
 								break; 
 							case IDM_PREV: 
-								lptip->lpszText = "前の曲 (V)"; 
+								lptip->lpszText = TEXT("前の曲 (V)"); 
 								break; 
 							case IDM_NEXT: 
-								lptip->lpszText = "次の曲 (B)"; 
+								lptip->lpszText = TEXT("次の曲 (B)"); 
 								break; 
 							case IDM_PM_TOGGLE:
 								switch (m_nPlayMode)
 								{
 									case PM_LIST:
-										lptip->lpszText = "リスト"; 
+										lptip->lpszText = TEXT("リスト"); 
 										break;
 									case PM_RANDOM:
-										lptip->lpszText = "ランダム"; 
+										lptip->lpszText = TEXT("ランダム"); 
 										break;
 									case PM_SINGLE:
-										lptip->lpszText = "シングル"; 
+										lptip->lpszText = TEXT("シングル"); 
 										break;
 								}
 								break; 
 							case IDM_PM_REPEAT: 
-								lptip->lpszText = "リピート (Ctrl+R)"; 
+								lptip->lpszText = TEXT("リピート (Ctrl+R)"); 
 								break;
 						}
 					}else if(pnmhdr->code==TBN_DROPDOWN){
@@ -1877,13 +1991,26 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 		case WM_FITTLE:	// プラグインインターフェイス
 			switch(wp){
 				case GET_TITLE:
+#ifdef UNICODE
+					return (LRESULT)&m_taginfoA;
+#else
 					return (LRESULT)&m_taginfo;
+#endif
 
 				case GET_ARTIST:
+#ifdef UNICODE
+					return (LRESULT)m_taginfoA.szArtist;
+#else
 					return (LRESULT)m_taginfo.szArtist;
+#endif
 
 				case GET_PLAYING_PATH:
+#ifdef UNICODE
+					lstrcpyntA(m_szFilePathA, g_cInfo[g_bNow].szFilePath, MAX_FITTLE_PATH);
+					return (LRESULT)m_szFilePathA;
+#else
 					return (LRESULT)g_cInfo[g_bNow].szFilePath;
+#endif
 
 				case GET_PLAYING_INDEX:
 					return (LRESULT)GetCurListTab(m_hTab)->nPlaying;
@@ -1928,7 +2055,12 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case GET_CURPATH:
-					return (LRESULT)(const char *)m_szTreePath;
+#ifdef UNICODE
+					lstrcpyntA(m_szTreePathA, m_szTreePath, MAX_FITTLE_PATH);
+					return (LRESULT)m_szTreePathA;
+#else
+					return (LRESULT)m_szTreePath;
+#endif
 
 				case GET_MENU:
 					return (HRESULT)m_hMainMenu;
@@ -1984,15 +2116,30 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			case WM_F4B24_IPC_APPLY_CONFIG:
 				ApplyConfig(hWnd);
 				break;
+			case WM_F4B24_IPC_UPDATE_DRIVELIST:
+				SetDrivesToCombo(m_hCombo);
+				break;
 
 			case WM_F4B24_IPC_GET_VERSION_STRING:
 				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)FITTLE_VERSION);
 				break;
 			case WM_F4B24_IPC_GET_VERSION_STRING2:
-				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)F4B24_VERSION_STRING);
+				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)TEXT("f4b24 - ") F4B24_VERSION_STRING);
 				break;
 			case WM_F4B24_IPC_GET_SUPPORT_LIST:
 				SendSupportList((HWND)lp);
+				break;
+			case WM_F4B24_IPC_GET_PLAYING_PATH:
+				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)g_cInfo[g_bNow].szFilePath);
+				break;
+			case WM_F4B24_IPC_GET_PLAYING_TITLE:
+				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)m_taginfo.szTitle);
+				break;
+			case WM_F4B24_IPC_GET_PLAYING_ARTIST:
+				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)m_taginfo.szArtist);
+				break;
+			case WM_F4B24_IPC_GET_PLAYING_ALBUM:
+				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)m_taginfo.szAlbum);
 				break;
 
 			case WM_F4B24_IPC_SETTING:
@@ -2004,6 +2151,19 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					return IsSupportFloatOutput() ? WM_F4B24_IPC_GET_CAPABLE_RET_SUPPORTED : WM_F4B24_IPC_GET_CAPABLE_RET_NOT_SUPPORTED;
 				}
 				break;
+			
+			case WM_F4B24_IPC_GET_CURPATH:
+				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)m_szTreePath);
+				break;
+			case WM_F4B24_IPC_SET_CURPATH:
+				if(g_cfg.nTreeState == TREE_SHOW){
+					TCHAR szWorkPath[MAX_FITTLE_PATH];
+					SendMessage((HWND)lp, WM_GETTEXT, (WPARAM)MAX_FITTLE_PATH, (LPARAM)szWorkPath);
+					MakeTreeFromPath(m_hTree, m_hCombo, szWorkPath);
+				}else{
+					SendMessage((HWND)lp, WM_GETTEXT, (WPARAM)MAX_FITTLE_PATH, (LPARAM)m_szTreePath);
+					SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_FILEREVIEW, 0), 0);
+				}
 			}
 			break;
 
@@ -2012,7 +2172,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			{
 				case 0x8000://DBT_DEVICEARRIVAL:
 				case 0x8004://DBT_DEVICEREMOVECOMPLETE:
-					SetDrivesToCombo(m_hCombo);
+					SendMessage(hWnd, WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_UPDATE_DRIVELIST, (LPARAM)0);
+					//SetDrivesToCombo(m_hCombo);
 					break;
 			}
 			break;
@@ -2085,17 +2246,17 @@ static void PopupPlayModeMenu(HWND hWnd, NMTOOLBAR *lpnmtb){
 	mii.fMask = MIIM_TYPE | MIIM_ID | MIIM_STATE;
 	mii.fState = MFS_UNCHECKED;
 	mii.fType = MFT_STRING;
-	mii.dwTypeData = "リスト(&L)";
+	mii.dwTypeData = TEXT("リスト(&L)");
 	mii.wID = IDM_PM_LIST;
 	if(m_nPlayMode==PM_LIST) mii.fState = MFS_CHECKED;
 	InsertMenuItem(hPopMenu, 0, FALSE, &mii);
 	mii.fState = MFS_UNCHECKED;
-	mii.dwTypeData = "ランダム(&R)";
+	mii.dwTypeData = TEXT("ランダム(&R)");
 	mii.wID = IDM_PM_RANDOM;
 	if(m_nPlayMode==PM_RANDOM) mii.fState = MFS_CHECKED;
 	InsertMenuItem(hPopMenu, IDM_PM_LIST, TRUE, &mii);
 	mii.fState = MFS_UNCHECKED;
-	mii.dwTypeData = "シングル(&S)";
+	mii.dwTypeData = TEXT("シングル(&S)");
 	mii.wID = IDM_PM_SINGLE;
 	if(m_nPlayMode==PM_SINGLE) mii.fState = MFS_CHECKED;
 	InsertMenuItem(hPopMenu, IDM_PM_RANDOM, TRUE, &mii);
@@ -2108,111 +2269,106 @@ static void PopupPlayModeMenu(HWND hWnd, NMTOOLBAR *lpnmtb){
 // グローバルな設定を読み込む
 static void LoadConfig(){
 	int i;
-	char szSec[10];
+	TCHAR szSec[10];
 
 	// コントロールカラー
-	g_cfg.nBkColor = (int)GetPrivateProfileInt("Color", "BkColor", (int)GetSysColor(COLOR_WINDOW), m_szINIPath);
-	g_cfg.nTextColor = (int)GetPrivateProfileInt("Color", "TextColor", (int)GetSysColor(COLOR_WINDOWTEXT), m_szINIPath);
-	g_cfg.nPlayTxtCol = (int)GetPrivateProfileInt("Color", "PlayTxtCol", (int)RGB(0xFF, 0, 0), m_szINIPath);
-	g_cfg.nPlayBkCol = (int)GetPrivateProfileInt("Color", "PlayBkCol", (int)RGB(230, 234, 238), m_szINIPath);
+	g_cfg.nBkColor = (int)GetPrivateProfileInt(TEXT("Color"), TEXT("BkColor"), (int)GetSysColor(COLOR_WINDOW), m_szINIPath);
+	g_cfg.nTextColor = (int)GetPrivateProfileInt(TEXT("Color"), TEXT("TextColor"), (int)GetSysColor(COLOR_WINDOWTEXT), m_szINIPath);
+	g_cfg.nPlayTxtCol = (int)GetPrivateProfileInt(TEXT("Color"), TEXT("PlayTxtCol"), (int)RGB(0xFF, 0, 0), m_szINIPath);
+	g_cfg.nPlayBkCol = (int)GetPrivateProfileInt(TEXT("Color"), TEXT("PlayBkCol"), (int)RGB(230, 234, 238), m_szINIPath);
 	// 表示方法
-	g_cfg.nPlayView = GetPrivateProfileInt("Color", "PlayView", 1, m_szINIPath);
+	g_cfg.nPlayView = GetPrivateProfileInt(TEXT("Color"), TEXT("PlayView"), 1, m_szINIPath);
 
 	// システムの優先度の設定
-	g_cfg.nHighTask = GetPrivateProfileInt("Main", "Priority", 0, m_szINIPath);
+	g_cfg.nHighTask = GetPrivateProfileInt(TEXT("Main"), TEXT("Priority"), 0, m_szINIPath);
 	// グリッドライン
-	g_cfg.nGridLine = GetPrivateProfileInt("Main", "GridLine", 1, m_szINIPath);
-	g_cfg.nSingleExpand = GetPrivateProfileInt("Main", "SingleExp", 0, m_szINIPath);
+	g_cfg.nGridLine = GetPrivateProfileInt(TEXT("Main"), TEXT("GridLine"), 1, m_szINIPath);
+	g_cfg.nSingleExpand = GetPrivateProfileInt(TEXT("Main"), TEXT("SingleExp"), 0, m_szINIPath);
 	// 存在確認
-	g_cfg.nExistCheck = GetPrivateProfileInt("Main", "ExistCheck", 0, m_szINIPath);
+	g_cfg.nExistCheck = GetPrivateProfileInt(TEXT("Main"), TEXT("ExistCheck"), 0, m_szINIPath);
 	// プレイリストで更新日時を取得する
-	g_cfg.nTimeInList = GetPrivateProfileInt("Main", "TimeInList", 0, m_szINIPath);
+	g_cfg.nTimeInList = GetPrivateProfileInt(TEXT("Main"), TEXT("TimeInList"), 0, m_szINIPath);
 	// システムイメージリストを結合
-	g_cfg.nTreeIcon = GetPrivateProfileInt("Main", "TreeIcon", TRUE, m_szINIPath);
+	g_cfg.nTreeIcon = GetPrivateProfileInt(TEXT("Main"), TEXT("TreeIcon"), TRUE, m_szINIPath);
 	// タスクトレイに収納のチェック
-	g_cfg.nTrayOpt = GetPrivateProfileInt("Main", "Tray", 1, m_szINIPath);
+	g_cfg.nTrayOpt = GetPrivateProfileInt(TEXT("Main"), TEXT("Tray"), 1, m_szINIPath);
 	// ツリー表示設定
-	g_cfg.nHideShow = GetPrivateProfileInt("Main", "HideShow", 0, m_szINIPath);
+	g_cfg.nHideShow = GetPrivateProfileInt(TEXT("Main"), TEXT("HideShow"), 0, m_szINIPath);
 	// タブを下に表示する
-	g_cfg.nTabBottom = GetPrivateProfileInt("Main", "TabBottom", 0, m_szINIPath);
+	g_cfg.nTabBottom = GetPrivateProfileInt(TEXT("Main"), TEXT("TabBottom"), 0, m_szINIPath);
 	// 多段で表示する
-	g_cfg.nTabMulti = GetPrivateProfileInt("Main", "TabMulti", 1, m_szINIPath);
+	g_cfg.nTabMulti = GetPrivateProfileInt(TEXT("Main"), TEXT("TabMulti"), 1, m_szINIPath);
 	// すべてのフォルダが～
-	g_cfg.nAllSub = GetPrivateProfileInt("Main", "AllSub", 0, m_szINIPath);
+	g_cfg.nAllSub = GetPrivateProfileInt(TEXT("Main"), TEXT("AllSub"), 0, m_szINIPath);
 	// ツールチップでフルパスを表示
-	g_cfg.nPathTip = GetPrivateProfileInt("Main", "PathTip", 1, m_szINIPath);
+	g_cfg.nPathTip = GetPrivateProfileInt(TEXT("Main"), TEXT("PathTip"), 1, m_szINIPath);
 	// 曲名お知らせ機能
-	g_cfg.nInfoTip = GetPrivateProfileInt("Main", "Info", 1, m_szINIPath);
+	g_cfg.nInfoTip = GetPrivateProfileInt(TEXT("Main"), TEXT("Info"), 1, m_szINIPath);
 	// タグを反転
-	g_cfg.nTagReverse = GetPrivateProfileInt("Main", "TagReverse", 0, m_szINIPath);
+	g_cfg.nTagReverse = GetPrivateProfileInt(TEXT("Main"), TEXT("TagReverse"), 0, m_szINIPath);
 	// ヘッダコントロールを表示する
-	g_cfg.nShowHeader = GetPrivateProfileInt("Main", "ShowHeader", 1, m_szINIPath);
+	g_cfg.nShowHeader = GetPrivateProfileInt(TEXT("Main"), TEXT("ShowHeader"), 1, m_szINIPath);
 	// シーク量
-	g_cfg.nSeekAmount = GetPrivateProfileInt("Main", "SeekAmount", 5, m_szINIPath);
+	g_cfg.nSeekAmount = GetPrivateProfileInt(TEXT("Main"), TEXT("SeekAmount"), 5, m_szINIPath);
 	// 音量変化量(隠し設定)
-	g_cfg.nVolAmount = GetPrivateProfileInt("Main", "VolAmount", 5, m_szINIPath);
+	g_cfg.nVolAmount = GetPrivateProfileInt(TEXT("Main"), TEXT("VolAmount"), 5, m_szINIPath);
 	// 終了時に再生していた曲を起動時にも再生する
-	g_cfg.nResume = GetPrivateProfileInt("Main", "Resume", 0, m_szINIPath);
+	g_cfg.nResume = GetPrivateProfileInt(TEXT("Main"), TEXT("Resume"), 0, m_szINIPath);
 	// 終了時の再生位置も記録復元する
-	g_cfg.nResPosFlag = GetPrivateProfileInt("Main", "ResPosFlag", 0, m_szINIPath);
+	g_cfg.nResPosFlag = GetPrivateProfileInt(TEXT("Main"), TEXT("ResPosFlag"), 0, m_szINIPath);
 	// 閉じるボタンで最小化する
-	g_cfg.nCloseMin = GetPrivateProfileInt("Main", "CloseMin", 0, m_szINIPath);
+	g_cfg.nCloseMin = GetPrivateProfileInt(TEXT("Main"), TEXT("CloseMin"), 0, m_szINIPath);
 	// サブフォルダを検索で圧縮ファイルも検索する
-	g_cfg.nZipSearch = GetPrivateProfileInt("Main", "ZipSearch", 0, m_szINIPath);
+	g_cfg.nZipSearch = GetPrivateProfileInt(TEXT("Main"), TEXT("ZipSearch"), 0, m_szINIPath);
 	// タブが一つの時はタブを隠す
-	g_cfg.nTabHide = GetPrivateProfileInt("Main", "TabHide", 0, m_szINIPath);
+	g_cfg.nTabHide = GetPrivateProfileInt(TEXT("Main"), TEXT("TabHide"), 0, m_szINIPath);
 	// 32bit(float)で出力する
-	g_cfg.nOut32bit = GetPrivateProfileInt("Main", "Out32bit", 0, m_szINIPath);
+	g_cfg.nOut32bit = GetPrivateProfileInt(TEXT("Main"), TEXT("Out32bit"), 0, m_szINIPath);
 	// 停止時にフェードアウトする
-	g_cfg.nFadeOut = GetPrivateProfileInt("Main", "FadeOut", 1, m_szINIPath);
+	g_cfg.nFadeOut = GetPrivateProfileInt(TEXT("Main"), TEXT("FadeOut"), 1, m_szINIPath);
 	// スタートアップフォルダ読み込み
-	GetPrivateProfileString("Main", "StartPath", "", g_cfg.szStartPath, MAX_FITTLE_PATH, m_szINIPath);
+	GetPrivateProfileString(TEXT("Main"), TEXT("StartPath"), TEXT(""), g_cfg.szStartPath, MAX_FITTLE_PATH, m_szINIPath);
 	// ファイラのパス
-	GetPrivateProfileString("Main", "FilerPath", "", g_cfg.szFilerPath, MAX_FITTLE_PATH, m_szINIPath);
+	GetPrivateProfileString(TEXT("Main"), TEXT("FilerPath"), TEXT(""), g_cfg.szFilerPath, MAX_FITTLE_PATH, m_szINIPath);
 
 	// ホットキーの設定
 	for(i=0;i<HOTKEY_COUNT;i++){
-		wsprintf(szSec, "HotKey%d", i);
-		g_cfg.nHotKey[i] = GetPrivateProfileInt("HotKey", szSec, 0, m_szINIPath);
+		wsprintf(szSec, TEXT("HotKey%d"), i);
+		g_cfg.nHotKey[i] = GetPrivateProfileInt(TEXT("HotKey"), szSec, 0, m_szINIPath);
 	}
 
 	// クリック時の動作
-	g_cfg.nTrayClick[0] = GetPrivateProfileInt("TaskTray", "Click0", 6, m_szINIPath);
-	g_cfg.nTrayClick[1] = GetPrivateProfileInt("TaskTray", "Click1", 0, m_szINIPath);
-	g_cfg.nTrayClick[2] = GetPrivateProfileInt("TaskTray", "Click2", 8, m_szINIPath);
-	g_cfg.nTrayClick[3] = GetPrivateProfileInt("TaskTray", "Click3", 0, m_szINIPath);
-	g_cfg.nTrayClick[4] = GetPrivateProfileInt("TaskTray", "Click4", 5, m_szINIPath);
-	g_cfg.nTrayClick[5] = GetPrivateProfileInt("TaskTray", "Click5", 0, m_szINIPath);
+	g_cfg.nTrayClick[0] = GetPrivateProfileInt(TEXT("TaskTray"), TEXT("Click0"), 6, m_szINIPath);
+	g_cfg.nTrayClick[1] = GetPrivateProfileInt(TEXT("TaskTray"), TEXT("Click1"), 0, m_szINIPath);
+	g_cfg.nTrayClick[2] = GetPrivateProfileInt(TEXT("TaskTray"), TEXT("Click2"), 8, m_szINIPath);
+	g_cfg.nTrayClick[3] = GetPrivateProfileInt(TEXT("TaskTray"), TEXT("Click3"), 0, m_szINIPath);
+	g_cfg.nTrayClick[4] = GetPrivateProfileInt(TEXT("TaskTray"), TEXT("Click4"), 5, m_szINIPath);
+	g_cfg.nTrayClick[5] = GetPrivateProfileInt(TEXT("TaskTray"), TEXT("Click5"), 0, m_szINIPath);
 
 	// フォント設定読み込み
-	GetPrivateProfileString("Font", "FontName", "", g_cfg.szFontName, 32, m_szINIPath);	// フォント名""がデフォルトの印
-	g_cfg.nFontHeight = GetPrivateProfileInt("Font", "Height", 10, m_szINIPath);
-	g_cfg.nFontStyle = GetPrivateProfileInt("Font", "Style", 0, m_szINIPath);
+	GetPrivateProfileString(TEXT("Font"), TEXT("FontName"), TEXT(""), g_cfg.szFontName, 32, m_szINIPath);	// フォント名""がデフォルトの印
+	g_cfg.nFontHeight = GetPrivateProfileInt(TEXT("Font"), TEXT("Height"), 10, m_szINIPath);
+	g_cfg.nFontStyle = GetPrivateProfileInt(TEXT("Font"), TEXT("Style"), 0, m_szINIPath);
 
 	// 外部ツール
-	GetPrivateProfileString("Tool", "Path0", "", g_cfg.szToolPath, MAX_FITTLE_PATH, m_szINIPath);
+	GetPrivateProfileString(TEXT("Tool"), TEXT("Path0"), TEXT(""), g_cfg.szToolPath, MAX_FITTLE_PATH, m_szINIPath);
 	return;
 }
 
 /* 終了時の状態を読み込む */
 static void LoadState(){
 	// ミニパネル表示状態
-	g_cfg.nMiniPanelEnd = (int)GetPrivateProfileInt("MiniPanel", "End", 0, m_szINIPath);
+	g_cfg.nMiniPanelEnd = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("End"), 0, m_szINIPath);
 	// ツリーの幅を設定
-	g_cfg.nTreeWidth = GetPrivateProfileInt("Main", "TreeWidth", 200, m_szINIPath);
-	//g_cfg.nTWidthSub = GetPrivateProfileInt("Main", "TWidthSub", 200, m_szINIPath);
-	g_cfg.nTreeState = GetPrivateProfileInt("Main", "TreeState", TREE_SHOW, m_szINIPath);
+	g_cfg.nTreeWidth = GetPrivateProfileInt(TEXT("Main"), TEXT("TreeWidth"), 200, m_szINIPath);
+	//g_cfg.nTWidthSub = GetPrivateProfileInt(TEXT("Main"), TEXT("TWidthSub"), 200, m_szINIPath);
+	g_cfg.nTreeState = GetPrivateProfileInt(TEXT("Main"), TEXT("TreeState"), TREE_SHOW, m_szINIPath);
 	// ステータスバー表示非表示
-	g_cfg.nShowStatus =  GetPrivateProfileInt("Main", "ShowStatus", 1, m_szINIPath);
+	g_cfg.nShowStatus =  GetPrivateProfileInt(TEXT("Main"), TEXT("ShowStatus"), 1, m_szINIPath);
 	// 終了時の再生位置も記録復元する
-	g_cfg.nResPos = GetPrivateProfileInt("Main", "ResPos", 0, m_szINIPath);
+	g_cfg.nResPos = GetPrivateProfileInt(TEXT("Main"), TEXT("ResPos"), 0, m_szINIPath);
 	// 最後に再生していたファイル
-	GetPrivateProfileString("Main", "LastFile", "", g_cfg.szLastFile, MAX_FITTLE_PATH, m_szINIPath);
-
-	// しおりをルートとして扱う
-	g_cfg.nBMRoot = GetPrivateProfileInt("BookMark", "BMRoot", 1, m_szINIPath);
-	// しおりをフルパスで表示
-	g_cfg.nBMFullPath = GetPrivateProfileInt("BookMark", "BMFullPath", 1, m_szINIPath);
+	GetPrivateProfileString(TEXT("Main"), TEXT("LastFile"), TEXT(""), g_cfg.szLastFile, MAX_FITTLE_PATH, m_szINIPath);
 
 	m_hFont = NULL;
 	m_bFLoat = (BOOL)g_cfg.nOut32bit;
@@ -2221,8 +2377,8 @@ static void LoadState(){
 /* 終了時の状態を保存する */
 static void SaveState(HWND hWnd){
 	int i;
-	char szLastPath[MAX_FITTLE_PATH];
-	char szSec[10];
+	TCHAR szLastPath[MAX_FITTLE_PATH];
+	TCHAR szSec[10];
 	WINDOWPLACEMENT wpl;
 	REBARBANDINFO rbbi;
 
@@ -2231,50 +2387,46 @@ static void SaveState(HWND hWnd){
 	lstrcpyn(szLastPath, m_szTreePath, MAX_FITTLE_PATH);
 	// コンパクトモードを考慮しながらウィンドウサイズを保存
 	GetWindowPlacement(hWnd, &wpl);
-	WritePrivateProfileInt("Main", "Maximized", (wpl.showCmd==SW_SHOWMAXIMIZED || wpl.flags & WPF_RESTORETOMAXIMIZED), m_szINIPath);	// 最大化
-	WritePrivateProfileInt("Main", "Top", wpl.rcNormalPosition.top, m_szINIPath); //ウィンドウ位置Top
-	WritePrivateProfileInt("Main", "Left", wpl.rcNormalPosition.left, m_szINIPath); //ウィンドウ位置Left
-	WritePrivateProfileInt("Main", "Height", wpl.rcNormalPosition.bottom - wpl.rcNormalPosition.top, m_szINIPath); //ウィンドウ位置Height
-	WritePrivateProfileInt("Main", "Width", wpl.rcNormalPosition.right - wpl.rcNormalPosition.left, m_szINIPath); //ウィンドウ位置Width
+	WritePrivateProfileInt(TEXT("Main"), TEXT("Maximized"), (wpl.showCmd==SW_SHOWMAXIMIZED || wpl.flags & WPF_RESTORETOMAXIMIZED), m_szINIPath);	// 最大化
+	WritePrivateProfileInt(TEXT("Main"), TEXT("Top"), wpl.rcNormalPosition.top, m_szINIPath); //ウィンドウ位置Top
+	WritePrivateProfileInt(TEXT("Main"), TEXT("Left"), wpl.rcNormalPosition.left, m_szINIPath); //ウィンドウ位置Left
+	WritePrivateProfileInt(TEXT("Main"), TEXT("Height"), wpl.rcNormalPosition.bottom - wpl.rcNormalPosition.top, m_szINIPath); //ウィンドウ位置Height
+	WritePrivateProfileInt(TEXT("Main"), TEXT("Width"), wpl.rcNormalPosition.right - wpl.rcNormalPosition.left, m_szINIPath); //ウィンドウ位置Width
 	ShowWindow(hWnd, SW_HIDE);	// 終了を高速化して見せるために非表示
 
-	WritePrivateProfileInt("Main", "TreeWidth", g_cfg.nTreeWidth, m_szINIPath); //ツリーの幅
-	WritePrivateProfileInt("Main", "TreeState", (g_cfg.nTreeState==TREE_SHOW), m_szINIPath);
-	WritePrivateProfileInt("Main", "Mode", m_nPlayMode, m_szINIPath); //プレイモード
-	WritePrivateProfileInt("Main", "Repeat", m_nRepeatFlag, m_szINIPath); //リピートモード
-	WritePrivateProfileInt("Main", "Volumes", (int)SendMessage(m_hVolume, TBM_GETPOS, 0, 0), m_szINIPath); //ボリューム
-	WritePrivateProfileInt("Main", "ShowStatus", g_cfg.nShowStatus, m_szINIPath);
-	WritePrivateProfileInt("Main", "ResPos", g_cfg.nResPos, m_szINIPath);
+	WritePrivateProfileInt(TEXT("Main"), TEXT("TreeWidth"), g_cfg.nTreeWidth, m_szINIPath); //ツリーの幅
+	WritePrivateProfileInt(TEXT("Main"), TEXT("TreeState"), (g_cfg.nTreeState==TREE_SHOW), m_szINIPath);
+	WritePrivateProfileInt(TEXT("Main"), TEXT("Mode"), m_nPlayMode, m_szINIPath); //プレイモード
+	WritePrivateProfileInt(TEXT("Main"), TEXT("Repeat"), m_nRepeatFlag, m_szINIPath); //リピートモード
+	WritePrivateProfileInt(TEXT("Main"), TEXT("Volumes"), (int)SendMessage(m_hVolume, TBM_GETPOS, 0, 0), m_szINIPath); //ボリューム
+	WritePrivateProfileInt(TEXT("Main"), TEXT("ShowStatus"), g_cfg.nShowStatus, m_szINIPath);
+	WritePrivateProfileInt(TEXT("Main"), TEXT("ResPos"), g_cfg.nResPos, m_szINIPath);
 
-	WritePrivateProfileInt("Main", "TabIndex", (m_nPlayTab==-1?TabCtrl_GetCurSel(m_hTab):m_nPlayTab), m_szINIPath);	//TabのIndex
-	WritePrivateProfileInt("Main", "MainMenu", (GetMenu(hWnd)?1:0), m_szINIPath);
+	WritePrivateProfileInt(TEXT("Main"), TEXT("TabIndex"), (m_nPlayTab==-1?TabCtrl_GetCurSel(m_hTab):m_nPlayTab), m_szINIPath);	//TabのIndex
+	WritePrivateProfileInt(TEXT("Main"), TEXT("MainMenu"), (GetMenu(hWnd)?1:0), m_szINIPath);
 
-	WritePrivateProfileString("Main", "LastPath", szLastPath, m_szINIPath); //ラストパス
-	WritePrivateProfileString("Main", "LastFile", g_cfg.szLastFile, m_szINIPath);
+	WritePrivateProfileString(TEXT("Main"), TEXT("LastPath"), szLastPath, m_szINIPath); //ラストパス
+	WritePrivateProfileString(TEXT("Main"), TEXT("LastFile"), g_cfg.szLastFile, m_szINIPath);
 
-	WritePrivateProfileInt("MiniPanel", "End", g_cfg.nMiniPanelEnd, m_szINIPath);
+	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("End"), g_cfg.nMiniPanelEnd, m_szINIPath);
 
-	WritePrivateProfileInt("Column", "Width0", ListView_GetColumnWidth(GetCurListTab(m_hTab)->hList, 0), m_szINIPath);
-	WritePrivateProfileInt("Column", "Width1", ListView_GetColumnWidth(GetCurListTab(m_hTab)->hList, 1), m_szINIPath);
-	WritePrivateProfileInt("Column", "Width2", ListView_GetColumnWidth(GetCurListTab(m_hTab)->hList, 2), m_szINIPath);
-	WritePrivateProfileInt("Column", "Width3", ListView_GetColumnWidth(GetCurListTab(m_hTab)->hList, 3), m_szINIPath);
-	WritePrivateProfileInt("Column", "Sort", GetCurListTab(m_hTab)->nSortState, m_szINIPath);
-
-	WritePrivateProfileInt("BookMark", "BMRoot", g_cfg.nBMRoot, m_szINIPath);
-	WritePrivateProfileInt("BookMark", "BMFullPath", g_cfg.nBMFullPath, m_szINIPath);
-	SaveBookMark(m_szINIPath);	// しおりの保存
+	WritePrivateProfileInt(TEXT("Column"), TEXT("Width0"), ListView_GetColumnWidth(GetCurListTab(m_hTab)->hList, 0), m_szINIPath);
+	WritePrivateProfileInt(TEXT("Column"), TEXT("Width1"), ListView_GetColumnWidth(GetCurListTab(m_hTab)->hList, 1), m_szINIPath);
+	WritePrivateProfileInt(TEXT("Column"), TEXT("Width2"), ListView_GetColumnWidth(GetCurListTab(m_hTab)->hList, 2), m_szINIPath);
+	WritePrivateProfileInt(TEXT("Column"), TEXT("Width3"), ListView_GetColumnWidth(GetCurListTab(m_hTab)->hList, 3), m_szINIPath);
+	WritePrivateProfileInt(TEXT("Column"), TEXT("Sort"), GetCurListTab(m_hTab)->nSortState, m_szINIPath);
 
 	//　レバーの状態を保存
 	rbbi.cbSize = sizeof(REBARBANDINFO);
 	rbbi.fMask = RBBIM_STYLE | RBBIM_SIZE | RBBIM_ID;
 	for(i=0;i<BAND_COUNT;i++){
 		SendMessage(GetDlgItem(hWnd, ID_REBAR), RB_GETBANDINFO, i, (WPARAM)&rbbi);
-		wsprintf(szSec, "fStyle%d", i);
-		WritePrivateProfileInt("Rebar2", szSec, rbbi.fStyle, m_szINIPath);
-		wsprintf(szSec, "cx%d", i);
-		WritePrivateProfileInt("Rebar2", szSec, rbbi.cx, m_szINIPath);
-		wsprintf(szSec, "wID%d", i);
-		WritePrivateProfileInt("Rebar2", szSec, rbbi.wID, m_szINIPath);
+		wsprintf(szSec, TEXT("fStyle%d"), i);
+		WritePrivateProfileInt(TEXT("Rebar2"), szSec, rbbi.fStyle, m_szINIPath);
+		wsprintf(szSec, TEXT("cx%d"), i);
+		WritePrivateProfileInt(TEXT("Rebar2"), szSec, rbbi.cx, m_szINIPath);
+		wsprintf(szSec, TEXT("wID%d"), i);
+		WritePrivateProfileInt(TEXT("Rebar2"), szSec, rbbi.wID, m_szINIPath);
 	}
 
 	WritePrivateProfileString(NULL, NULL, NULL, m_szINIPath);
@@ -2304,38 +2456,44 @@ static void ToggleWindowView(HWND hWnd){
 // DLL郡初期化、対応形式決定
 static int InitFileTypes(){
 	int i = 0;
-	char szPath[MAX_PATH] = {0};
+	TCHAR szPath[MAX_PATH] = {0};
 	HANDLE hFind = NULL;
 	WIN32_FIND_DATA wfd;
 
-	ZeroMemory(g_cfg.szTypeList, 5*MAX_EXT_COUNT*(sizeof(char)));
-	lstrcpy(g_cfg.szTypeList[i++], "mp3");
-	lstrcpy(g_cfg.szTypeList[i++], "mp2");
-	lstrcpy(g_cfg.szTypeList[i++], "mp1");
-	lstrcpy(g_cfg.szTypeList[i++], "wav");
-	lstrcpy(g_cfg.szTypeList[i++], "ogg");
-	lstrcpy(g_cfg.szTypeList[i++], "aif");
+	ClearTypelist();
+	AddTypelist(TEXT("mp3"));
+	AddTypelist(TEXT("mp2"));
+	AddTypelist(TEXT("mp1"));
+	AddTypelist(TEXT("wav"));
+	AddTypelist(TEXT("ogg"));
+	AddTypelist(TEXT("aif"));
+	AddTypelist(TEXT("aiff"));
 
 	GetModuleFileName(NULL, szPath, MAX_PATH);
-	lstrcpyn(PathFindFileName(szPath), _T("bass*.dll"), MAX_PATH);
+	lstrcpyn(PathFindFileName(szPath), TEXT("bass*.dll"), MAX_PATH);
 
 	hFind = FindFirstFile(szPath, &wfd);
 	if(hFind!=INVALID_HANDLE_VALUE){
 		do{
+#ifdef UNICODE
+			HPLUGIN hPlugin = BASS_PluginLoad((LPSTR)wfd.cFileName, BASS_UNICODE);
+#else
 			HPLUGIN hPlugin = BASS_PluginLoad(wfd.cFileName, 0);
+#endif
 			if(hPlugin){
 				const BASS_PLUGININFO *info = BASS_PluginGetInfo(hPlugin);
 				for(DWORD d=0;d<info->formatc;d++){
-					char szTemp[100] = {0};
-					lstrcpyn(szTemp, info->formats[d].exts, 100);
-					char *q = szTemp;
+					TCHAR szTemp[100] = {0};
+					LPTSTR q = szTemp;
+					lstrcpynAt(q, info->formats[d].exts, 100);
 					while(*q){
-						if(char *p = StrStr(q, ";")){
-							*p = '\0';
-							lstrcpy(g_cfg.szTypeList[i++], q + 2);
+						LPTSTR p = StrStr(q, TEXT(";"));
+						if(p){
+							*p = TEXT('\0');
+							AddTypelist(q + 2);
 							q = p + 1;
 						}else{
-							lstrcpy(g_cfg.szTypeList[i++], q + 2);
+							AddTypelist(q + 2);
 							break;
 						}
 					}
@@ -2347,25 +2505,35 @@ static int InitFileTypes(){
 	return i;
 }
 
+static int XATOI(LPCTSTR p){
+	int r = 0;
+	while (*p == TEXT(' ') || *p == TEXT('\t')) p++;
+	while (*p >= TEXT('0') && *p <= TEXT('9')){
+		r = r * 10 + (*p - TEXT('0'));
+		p++;
+	}
+	return r;
+}
+
 /* xx:xx:xxという表記とハンドルから時間をQWORDで取得 */
-static QWORD GetByteFromSecStr(HCHANNEL hChan, char *pszSecStr){
+static QWORD GetByteFromSecStr(HCHANNEL hChan, LPTSTR pszSecStr){
 	int min, sec, frame;
 
-	if(*pszSecStr=='\0'){
+	if(*pszSecStr == TEXT('\0')){
 		return BASS_ChannelGetLength(hChan, BASS_POS_BYTE);
 	}
 
-	min = atoi(pszSecStr);
+	min = XATOI(pszSecStr);
 	sec = 0;
 	frame = 0;
 
-	while (*pszSecStr && *pszSecStr!=':') pszSecStr++;
+	while (*pszSecStr && *pszSecStr != TEXT(':')) pszSecStr++;
 
 	if (*pszSecStr){
-		sec = atoi(++pszSecStr);
-		while (*pszSecStr && *pszSecStr!=':') pszSecStr++;
+		sec = XATOI(++pszSecStr);
+		while (*pszSecStr && *pszSecStr != TEXT(':')) pszSecStr++;
 		if (*pszSecStr){
-			frame = atoi(++pszSecStr);
+			frame = XATOI(++pszSecStr);
 		}
 	}
 
@@ -2374,9 +2542,9 @@ static QWORD GetByteFromSecStr(HCHANNEL hChan, char *pszSecStr){
 
 // ファイルをオープン、構造体を設定
 static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
-	char szFilePath[MAX_FITTLE_PATH];
+	TCHAR szFilePath[MAX_FITTLE_PATH];
 	QWORD qStart, qEnd;
-	char szStart[100], szEnd[100];
+	TCHAR szStart[100], szEnd[100];
 	szStart[0] = 0;
 	szEnd[0] = 0;
 
@@ -2394,6 +2562,9 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 	g_cInfo[bFlag].hChan = BASS_StreamCreateFile((BOOL)g_cInfo[bFlag].pBuff,
 												(g_cInfo[bFlag].pBuff?(void *)g_cInfo[bFlag].pBuff:(void *)szFilePath),
 												0, (DWORD)g_cInfo[bFlag].qDuration,
+#ifdef UNICODE
+												(g_cInfo[bFlag].pBuff?0:BASS_UNICODE) |
+#endif
 												BASS_STREAM_DECODE | m_bFLoat*BASS_SAMPLE_FLOAT);
 	if(g_cInfo[bFlag].hChan){
 		if(szStart[0]){
@@ -2407,14 +2578,22 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 		}else{
 			g_cInfo[bFlag].qDuration = BASS_ChannelGetLength(g_cInfo[bFlag].hChan, BASS_POS_BYTE);
 			// 曲を99%再生後、イベントが起こるように。
-			if(lstrcmpi(PathFindExtension(szFilePath), ".CDA")){
+			if(lstrcmpi(PathFindExtension(szFilePath), TEXT(".CDA"))){
 				BASS_ChannelSetSync(g_cInfo[bFlag].hChan, BASS_SYNC_POS, (g_cInfo[bFlag].qDuration)*99/100, &EventSync, 0);
 			}
 		}
 		return TRUE;
 	}else{
 		BASS_SetConfig(BASS_CONFIG_NET_TIMEOUT, 60000); // 5secは短いので60secにする
+#ifdef UNICODE
+		{
+			CHAR szAnsi[MAX_FITTLE_PATH];
+			WideCharToMultiByte(CP_ACP, 0, szFilePath, -1, szAnsi, MAX_FITTLE_PATH, NULL, NULL);
+			g_cInfo[bFlag].hChan = BASS_StreamCreateURL(szAnsi, 0, BASS_STREAM_BLOCK | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT * m_bFLoat, NULL, 0);
+		}
+#else
 		g_cInfo[bFlag].hChan = BASS_StreamCreateURL(szFilePath, 0, BASS_STREAM_BLOCK | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT * m_bFLoat, NULL, 0);
+#endif
 		if(g_cInfo[bFlag].hChan){
 			g_cInfo[bFlag].qDuration = BASS_ChannelGetLength(g_cInfo[bFlag].hChan, BASS_POS_BYTE);
 			if(g_cInfo[bFlag].qDuration<0){
@@ -2494,7 +2673,7 @@ static BOOL PlayByUser(HWND hWnd, struct FILEINFO *pPlayFile){
 
 		return TRUE;
 	}else{
-		SetWindowText(hWnd, "ファイルのオープンに失敗しました！");
+		SetWindowText(hWnd, TEXT("ファイルのオープンに失敗しました！"));
 		return FALSE;
 	}
 }
@@ -2512,8 +2691,8 @@ static void CALLBACK EventSync(HSYNC /*handle*/, DWORD /*channel*/, DWORD /*data
 // 表示切替
 static void OnChangeTrack(){
 	int nPlayIndex;
-	char szShortTag[64] = {0};
-	char szTitleCap[524] = {0};
+	TCHAR szShortTag[64] = {0};
+	TCHAR szTitleCap[524] = {0};
 	BASS_CHANNELINFO info;
 
 	m_bCueEnd = FALSE;
@@ -2552,7 +2731,7 @@ static void OnChangeTrack(){
 	// ファイルのオープンに失敗した
 	if(m_nGaplessState==GS_FAILED){
 		StopOutputStream(GetParent(m_hStatus));
-		SetWindowText(GetParent(m_hStatus), "ファイルのオープンに失敗しました！");
+		SetWindowText(GetParent(m_hStatus), TEXT("ファイルのオープンに失敗しました！"));
 		return;
 	}
 
@@ -2575,27 +2754,33 @@ static void OnChangeTrack(){
 	if(GetArchiveTagInfo(g_cInfo[g_bNow].szFilePath, &m_taginfo)
 	|| BASS_TAG_Read(g_cInfo[g_bNow].hChan, &m_taginfo)){
 		if(!g_cfg.nTagReverse){
-			wsprintf(m_szTag, "%s / %s", m_taginfo.szTitle, m_taginfo.szArtist);
+			wsprintf(m_szTag, TEXT("%s / %s"), m_taginfo.szTitle, m_taginfo.szArtist);
 		}else{
-			wsprintf(m_szTag, "%s / %s", m_taginfo.szArtist, m_taginfo.szTitle);
+			wsprintf(m_szTag, TEXT("%s / %s"), m_taginfo.szArtist, m_taginfo.szTitle);
 		}
 	}else{
 		lstrcpyn(m_szTag, GetFileName(g_cInfo[g_bNow].szFilePath), MAX_FITTLE_PATH);
 		lstrcpyn(m_taginfo.szTitle, m_szTag, 256);
 	}
+#ifdef UNICODE
+	lstrcpyntA(m_taginfoA.szTitle, m_taginfo.szTitle, 256);
+	lstrcpyntA(m_taginfoA.szArtist, m_taginfo.szArtist, 256);
+	lstrcpyntA(m_taginfoA.szAlbum, m_taginfo.szAlbum, 256);
+	lstrcpyntA(m_taginfoA.szTrack, m_taginfo.szTrack, 1);
+#endif
 
 	//タイトルバーの処理
-	wsprintf(szTitleCap, "%s - %s", m_szTag, FITTLE_TITLE);
+	wsprintf(szTitleCap, TEXT("%s - %s"), m_szTag, FITTLE_TITLE);
 	SetWindowText(GetParent(m_hStatus), szTitleCap);
 
-	float time = BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, BASS_ChannelGetLength(g_cInfo[g_bNow].hChan, BASS_POS_BYTE)); // playback duration
-	DWORD dLen = BASS_StreamGetFilePosition(g_cInfo[g_bNow].hChan, BASS_FILEPOS_END); // file length
+	float time = (float)BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, BASS_ChannelGetLength(g_cInfo[g_bNow].hChan, BASS_POS_BYTE)); // playback duration
+	DWORD dLen = (DWORD)BASS_StreamGetFilePosition(g_cInfo[g_bNow].hChan, BASS_FILEPOS_END); // file length
 	DWORD bitrate;
 	if(dLen>0 && time>0){
 		bitrate = (DWORD)(dLen/(125*time)+0.5); // bitrate (Kbps)
-		wsprintf(szTitleCap, "%d Kbps  %d Hz  %s", bitrate, info.freq, (info.chans!=1?"Stereo":"Mono"));
+		wsprintf(szTitleCap, TEXT("%d Kbps  %d Hz  %s"), bitrate, info.freq, (info.chans!=1?TEXT("Stereo"):TEXT("Mono")));
 	}else{
-		wsprintf(szTitleCap, "? Kbps  %d Hz  %s", info.freq, (info.chans!=1?"Stereo":"Mono"));
+		wsprintf(szTitleCap, TEXT("? Kbps  %d Hz  %s"), info.freq, (info.chans!=1?TEXT("Stereo"):TEXT("Mono")));
 	}
 
 	//ステータスバーの処理
@@ -2605,7 +2790,7 @@ static void OnChangeTrack(){
 	SendMessage(m_hStatus, SB_SETTEXT, (WPARAM)0|0, (LPARAM)szTitleCap);
 	SendMessage(m_hStatus, SB_SETTIPTEXT, (WPARAM)0, (LPARAM)szTitleCap);
 
-	wsprintf(szTitleCap, "\t%d / %d", GetPlayListTab(m_hTab)->nPlaying + 1, ListView_GetItemCount(GetPlayListTab(m_hTab)->hList));
+	wsprintf(szTitleCap, TEXT("\t%d / %d"), GetPlayListTab(m_hTab)->nPlaying + 1, ListView_GetItemCount(GetPlayListTab(m_hTab)->hList));
 	SendMessage(m_hStatus, SB_SETTEXT, (WPARAM)1|0, (LPARAM)szTitleCap);
 
 	//シークバー
@@ -2617,11 +2802,11 @@ static void OnChangeTrack(){
 
 	//タスクトレイの処理
 	lstrcpyn(szShortTag, m_szTag, 54);
-	szShortTag[52] = '.';
-	szShortTag[53] = '.';
-	szShortTag[54] = '.';
-	szShortTag[55] = '\0';
-	wsprintf(m_ni.szTip, "%s - Fittle", szShortTag);
+	szShortTag[52] = TEXT('.');
+	szShortTag[53] = TEXT('.');
+	szShortTag[54] = TEXT('.');
+	szShortTag[55] = TEXT('\0');
+	wsprintf(m_ni.szTip, TEXT("%s - Fittle"), szShortTag);
 
 	if(m_bTrayFlag)
 		Shell_NotifyIcon(NIM_MODIFY, &m_ni); //ToolTipの変更
@@ -2741,8 +2926,8 @@ static HWND CreateToolBar(HWND hRebar){
                     (HMENU)ID_TOOLBAR, m_hInst, NULL);
 	if(!hToolBar) return NULL;
 	SendMessage(hToolBar, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
-	hBmp = (HBITMAP)LoadImage(m_hInst, "toolbarex.bmp", IMAGE_BITMAP, 16*TB_BMP_NUM, 16, LR_LOADFROMFILE | LR_SHARED);
-	if(hBmp==NULL)	hBmp = LoadBitmap(m_hInst, (char *)IDR_TOOLBAR1);
+	hBmp = (HBITMAP)LoadImage(m_hInst, TEXT("toolbarex.bmp"), IMAGE_BITMAP, 16*TB_BMP_NUM, 16, LR_LOADFROMFILE | LR_SHARED);
+	if(hBmp==NULL)	hBmp = LoadBitmap(m_hInst, (LPTSTR)IDR_TOOLBAR1);
 	
 	//SendMessage(hToolBar, TB_AUTOSIZE, 0, 0) ;
 	
@@ -2873,15 +3058,15 @@ static int StopOutputStream(HWND hWnd){
 
 	SendMessage(hWnd, WM_TIMER, MAKEWPARAM(ID_TIPTIMER, 0), 0);
 
-	lstrcpy(m_szTag, "");
-	lstrcpy(m_szTime, "\t");
+	lstrcpy(m_szTag, TEXT(""));
+	lstrcpy(m_szTime, TEXT("\t"));
 
 	// ステータスバーの初期化
 	SetStatusbarIcon(NULL, FALSE);
-	SendMessage(m_hStatus, SB_SETTEXT, (WPARAM)0|0, (LPARAM)"");
-	SendMessage(m_hStatus, SB_SETTIPTEXT, (WPARAM)0, (LPARAM)"");
-	SendMessage(m_hStatus, SB_SETTEXT, (WPARAM)1|0, (LPARAM)"");
-	SendMessage(m_hStatus, SB_SETTEXT, (WPARAM)2|0, (LPARAM)"");
+	SendMessage(m_hStatus, SB_SETTEXT, (WPARAM)0|0, (LPARAM)TEXT(""));
+	SendMessage(m_hStatus, SB_SETTIPTEXT, (WPARAM)0, (LPARAM)TEXT(""));
+	SendMessage(m_hStatus, SB_SETTEXT, (WPARAM)1|0, (LPARAM)TEXT(""));
+	SendMessage(m_hStatus, SB_SETTEXT, (WPARAM)2|0, (LPARAM)TEXT(""));
 	// リストビューを再描画
 	InvalidateRect(GetCurListTab(m_hTab)->hList, NULL, TRUE); 
 
@@ -2950,7 +3135,7 @@ static int SetTaskTray(HWND hWnd){
 	static HICON hIcon = NULL;
 
 	if(!hIcon){
-		hIcon = (HICON)LoadImage(m_hInst, "MYICON", IMAGE_ICON, 16, 16, LR_SHARED);
+		hIcon = (HICON)LoadImage(m_hInst, TEXT("MYICON"), IMAGE_ICON, 16, 16, LR_SHARED);
 	}
 
 	m_bTrayFlag = TRUE;
@@ -2965,14 +3150,14 @@ static int SetTaskTray(HWND hWnd){
 }
 
 // ツールチップを表示する関数
-static int ShowToolTip(HWND hWnd, HWND hTitleTip, char *pszToolText){
+static int ShowToolTip(HWND hWnd, HWND hTitleTip, LPTSTR pszToolText){
 	TOOLINFO tin;
 	RECT rcTask, rcTip;
 	HWND hTaskBar;
 	POINT ptDraw;
 
 	//タスクバーの位置、高さを取得
-	hTaskBar = FindWindow("Shell_TrayWnd", NULL);
+	hTaskBar = FindWindow(TEXT("Shell_TrayWnd"), NULL);
 	if(hTaskBar==NULL) return 0;
 	GetWindowRect(hTaskBar, &rcTask);
 	//ツールチップを作り、表示
@@ -3033,43 +3218,44 @@ static int UnRegHotKey(HWND hWnd){
 }
 
 // 対応ファイルかどうか拡張子でチェック
-BOOL CheckFileType(char *szFilePath){
+BOOL CheckFileType(LPTSTR szFilePath){
 	int i=0;
-	char *szCheckType;
+	LPTSTR szCheckType;
+	LPTSTR lpExt;
 
 	szCheckType = PathFindExtension(szFilePath);
 	if(!szCheckType || !*szCheckType) return FALSE;
 	szCheckType++;
-	while(g_cfg.szTypeList[i][0]!='\0' && i<MAX_EXT_COUNT){
-		if(lstrcmpi(g_cfg.szTypeList[i], szCheckType)==0) return TRUE;
-		i++;
-	}
-	return FALSE;
+	do {
+		lpExt = GetTypelist(i++);
+		if (!lpExt[0]) return FALSE;
+	} while(lstrcmpi(lpExt, szCheckType) != 0);
+	return TRUE;
 }
 
 // コマンドラインオプションを考慮したExecute
-static void MyShellExecute(HWND hWnd, LPSTR pszExePath, LPSTR pszFilePathes, BOOL bMulti){
-	LPSTR pszArgs = PathGetArgs(pszExePath);
+static void MyShellExecute(HWND hWnd, LPTSTR pszExePath, LPTSTR pszFilePathes, BOOL bMulti){
+	LPTSTR pszArgs = PathGetArgs(pszExePath);
 
 	int nSize = lstrlen(pszArgs) + lstrlen(pszFilePathes) + 5;
 
-	LPSTR pszBuff = (LPSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(TCHAR) * nSize);
+	LPTSTR pszBuff = (LPTSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(TCHAR) * nSize);
 
 	if(!bMulti){
 		PathQuoteSpaces(pszFilePathes);
 	}
 	if(*pszArgs){	// コマンドラインオプションを考慮
-		*(pszArgs-1) = '\0';
-		wsprintf(pszBuff, "%s %s", pszArgs, pszFilePathes);
+		*(pszArgs-1) = TEXT('\0');
+		wsprintf(pszBuff, TEXT("%s %s"), pszArgs, pszFilePathes);
 	}else{
-		wsprintf(pszBuff, "%s", pszFilePathes);
+		wsprintf(pszBuff, TEXT("%s"), pszFilePathes);
 	}
 	if(!bMulti){
 		PathUnquoteSpaces(pszFilePathes);
 	}
-	ShellExecute(hWnd, "open", pszExePath, pszBuff, NULL, SW_SHOWNORMAL);
+	ShellExecute(hWnd, TEXT("open"), pszExePath, pszBuff, NULL, SW_SHOWNORMAL);
 	if(*pszArgs){	// 戻そう
-		*(pszArgs-1) = ' ';
+		*(pszArgs-1) = TEXT(' ');
 	}
 
 	HeapFree(GetProcessHeap(), 0, pszBuff);
@@ -3077,34 +3263,39 @@ static void MyShellExecute(HWND hWnd, LPSTR pszExePath, LPSTR pszFilePathes, BOO
 }
 
 // リストで選択されたアイテムのパスを連結して返す。どこかでFreeしてください。
-static LPSTR MallocAndConcatPath(LISTTAB *pListTab){
-	LPSTR pszRet = (LPSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(TCHAR) * 2);
+static LPTSTR MallocAndConcatPath(LISTTAB *pListTab){
+	LPTSTR pszRet = (LPTSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(TCHAR) * 2);
 
 	int i = -1;
 	while( (i = ListView_GetNextItem(pListTab->hList, i, LVNI_SELECTED)) != -1 ){
-		LPSTR pszTarget = GetPtrFromIndex(pListTab->pRoot, i)->szFilePath;
+		LPTSTR pszTarget = GetPtrFromIndex(pListTab->pRoot, i)->szFilePath;
 		if(!IsURLPath(pszTarget) && !IsArchivePath(pszTarget)){	// 削除できないファイルでなければ
 			int nNewSize = HeapSize(GetProcessHeap(), 0, pszRet) + (lstrlen(pszTarget) + 5) * sizeof(TCHAR);
-			pszRet = (LPSTR)HeapReAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, pszRet, nNewSize);
-			lstrcat(pszRet, "\"");
+			pszRet = (LPTSTR)HeapReAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, pszRet, nNewSize);
+			lstrcat(pszRet, TEXT("\""));
 			lstrcat(pszRet, pszTarget);
-			lstrcat(pszRet, "\" ");
+			lstrcat(pszRet, TEXT("\" "));
 		}
 	}
 	return pszRet;
 }
 
 // ファイルを保存ダイアログを出す
-static int SaveFileDialog(char *szDir, char *szDefTitle){
-	char szFile[MAX_FITTLE_PATH];
-	char szFileTitle[MAX_FITTLE_PATH];
+static int SaveFileDialog(LPTSTR szDir, LPTSTR szDefTitle){
+	TCHAR szFile[MAX_FITTLE_PATH];
+	TCHAR szFileTitle[MAX_FITTLE_PATH];
 	OPENFILENAME ofn;
 
 	lstrcpyn(szFile, szDefTitle, MAX_FITTLE_PATH);
 	lstrcpyn(szFileTitle, szDefTitle, MAX_FITTLE_PATH);
 	ZeroMemory(&ofn, sizeof(ofn));
 	ofn.lStructSize = sizeof(ofn);
-	ofn.lpstrFilter = "プレイリスト(絶対パス) (*.m3u)\0*.m3u\0プレイリスト(相対パス) (*.m3u)\0*.m3u\0すべてのファイル(*.*)\0*.*\0\0";
+	ofn.lpstrFilter = 
+		TEXT("プレイリスト(絶対パス) (*.m3u)\0*.m3u\0")
+		TEXT("プレイリスト(相対パス) (*.m3u)\0*.m3u\0")
+		TEXT("UTF8プレイリスト(絶対パス) (*.m3u8)\0*.m3u8\0")
+		TEXT("UTF8プレイリスト(相対パス) (*.m3u8)\0*.m3u8\0")
+		TEXT("すべてのファイル(*.*)\0*.*\0\0");
 	ofn.lpstrFile = szFile;
 	ofn.lpstrFileTitle = szFileTitle;
 	ofn.lpstrInitialDir = szDir;
@@ -3112,8 +3303,8 @@ static int SaveFileDialog(char *szDir, char *szDefTitle){
 	ofn.nMaxFile = MAX_FITTLE_PATH;
 	ofn.nMaxFileTitle = MAX_FITTLE_PATH;
 	ofn.Flags = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
-	ofn.lpstrDefExt = "m3u";
-	ofn.lpstrTitle = "名前を付けて保存する";
+	ofn.lpstrDefExt = TEXT("m3u");
+	ofn.lpstrTitle = TEXT("名前を付けて保存する");
 	if(GetSaveFileName(&ofn)==0) return 0;
 	lstrcpyn(szDir, szFile, MAX_FITTLE_PATH);
 	return ofn.nFilterIndex;
@@ -3198,7 +3389,7 @@ static BOOL SetUIFont(void){
 		m_hBoldFont = NULL;
 	}
 	// フォント作成
-	if(g_cfg.szFontName[0]!='\0'){
+	if(g_cfg.szFontName[0] != TEXT('\0')){
 		hDC = GetDC(m_hTree);
 		nPitch = -MulDiv(g_cfg.nFontHeight, GetDeviceCaps(hDC, LOGPIXELSY), 72);
 		ReleaseDC(m_hTree, hDC);
@@ -3206,7 +3397,7 @@ static BOOL SetUIFont(void){
 			(DWORD)(g_cfg.nFontStyle&ITALIC_FONTTYPE?TRUE:FALSE), FALSE, FALSE, (DWORD)DEFAULT_CHARSET,
 			OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH,
 			g_cfg.szFontName);
-		if(!m_hFont) g_cfg.szFontName[0] = '\0';	// フォントが読み込めない
+		if(!m_hFont) g_cfg.szFontName[0] = TEXT('\0');	// フォントが読み込めない
 	}else{
 		m_hFont = NULL;
 	}
@@ -3234,10 +3425,10 @@ static void UpdateWindowSize(HWND hWnd){
 	return;
 }
 
-static void SetStatusbarIcon(LPSTR pszPath, BOOL bShow){
+static void SetStatusbarIcon(LPTSTR pszPath, BOOL bShow){
 	static HICON s_hIcon = NULL;
 	SHFILEINFO shfinfo = {0};
-	char szIconPath[MAX_FITTLE_PATH] = {0};
+	TCHAR szIconPath[MAX_FITTLE_PATH] = {0};
 
 	if(s_hIcon){
 		DestroyIcon(s_hIcon);
@@ -3272,107 +3463,6 @@ static BOOL SetUIColor(void){
 	return TRUE;
 }
 
-// しおりを読み込む
-static void LoadBookMark(HMENU hBMMenu, char *pszINIPath){
-	int i;
-	char szSec[10];
-	char szMenuBuff[MAX_FITTLE_PATH+4];
-
-	for(i=0;i<MAX_BM_SIZE;i++){
-		wsprintf(szSec, "Path%d", i);
-		GetPrivateProfileString("BookMark", szSec, "", g_cfg.szBMPath[i], MAX_FITTLE_PATH, pszINIPath);
-		if(g_cfg.szBMPath[i][0]){
-			if(g_cfg.nBMFullPath){
-				wsprintf(szMenuBuff, "&%d: %s", i, g_cfg.szBMPath[i]);
-			}else{
-				wsprintf(szMenuBuff, "&%d: %s", i, PathFindFileName(g_cfg.szBMPath[i]));
-			}
-			AppendMenu(hBMMenu, MF_STRING | MF_ENABLED, IDM_BM_FIRST+i, szMenuBuff);
-		}
-	}
-	return;
-}
-
-// しおりを保存
-static void SaveBookMark(char *pszINIPath){
-	int i;
-	char szSec[10];
-
-	for(i=0;i<MAX_BM_SIZE;i++){
-		wsprintf(szSec, "Path%d", i);
-		WritePrivateProfileString("BookMark", szSec, (g_cfg.szBMPath[i][0]?g_cfg.szBMPath[i]:NULL), pszINIPath);
-	}
-	return;
-}
-
-// しおりに追加（あとで修正）
-static int AddBookMark(HMENU hBMMenu, HWND hWnd){
-	int i;
-	//HTREEITEM hNode;
-	char szMenuBuff[MAX_FITTLE_PATH+4];
-	
-	/*
-	hNode = TreeView_GetSelection(m_hTree);
-	if(hNode==NULL || hNode==TVI_ROOT) return -1;
-	GetPathFromNode(m_hTree, hNode, szMenuBuff);
-	*/
-
-	lstrcpyn(szMenuBuff, m_szTreePath, MAX_FITTLE_PATH+4);
-
-	for(i=0;i<MAX_BM_SIZE;i++){
-		if(!g_cfg.szBMPath[i][0]){
-			lstrcpyn(g_cfg.szBMPath[i], szMenuBuff, MAX_FITTLE_PATH);
-			if(g_cfg.nBMFullPath){
-				wsprintf(szMenuBuff, "&%d: %s", i, g_cfg.szBMPath[i]);
-			}else{
-				wsprintf(szMenuBuff, "&%d: %s", i, PathFindFileName(g_cfg.szBMPath[i]));
-			}
-			AppendMenu(hBMMenu, MF_STRING | MF_ENABLED, IDM_BM_FIRST+i, szMenuBuff);
-			return i;
-		}
-	}
-	MessageBox(hWnd, "しおりの個数制限を越えました。", "Fittle", MB_OK | MB_ICONEXCLAMATION);
-	return -1;
-}
-
-// しおりをメニューに描画
-static void DrawBookMark(HMENU hBMMenu){
-	int i;
-	char szMenuBuff[MAX_FITTLE_PATH+4];
-
-	// 今あるメニューを削除
-	for(i=0;i<MAX_BM_SIZE;i++){
-		if(!DeleteMenu(hBMMenu, IDM_BM_FIRST+i, MF_BYCOMMAND)) break;
-	}
-	// 新しくメニューを追加
-	for(i=0;i<MAX_BM_SIZE;i++){
-		if(g_cfg.nBMFullPath){
-			wsprintf(szMenuBuff, "&%d: %s", i, g_cfg.szBMPath[i]);
-		}else{
-			wsprintf(szMenuBuff, "&%d: %s", i, PathFindFileName(g_cfg.szBMPath[i]));
-		}
-		if(g_cfg.szBMPath[i][0]){
-			AppendMenu(hBMMenu, MF_STRING | MF_ENABLED, IDM_BM_FIRST+i, szMenuBuff);
-		}
-	}
-	return;
-}
-
-static LRESULT CALLBACK MyHookProc(int nCode, WPARAM wp, LPARAM lp){
-	MSG *msg;
-	msg = (MSG *)lp;
-
-	if(nCode<0)
-		return CallNextHookEx(m_hHook, nCode, wp, lp);
-	
-	if(msg->message==WM_MOUSEWHEEL){
-		SendMessage(WindowFromPoint(msg->pt), WM_MOUSEWHEEL, msg->wParam, msg->lParam);
-		msg->message = WM_NULL;
-	}
-
-	return CallNextHookEx(m_hHook, nCode, wp, lp);
-}
-
 // スライダバーの新しいプロシージャ
 static LRESULT CALLBACK NewSliderProc(HWND hSB, UINT msg, WPARAM wp, LPARAM lp){
 	int nXPos;
@@ -3403,7 +3493,7 @@ static LRESULT CALLBACK NewSliderProc(HWND hSB, UINT msg, WPARAM wp, LPARAM lp){
 			float fLen;
 			RECT rcSB, rcTool, rcThumb;
 			POINT pt;
-			char szDrawBuff[10];
+			TCHAR szDrawBuff[10];
 
 			//シーク中かつ領域内だったら
 			if(GetCapture()==m_hSeek || GetCapture()==m_hVolume){
@@ -3421,10 +3511,10 @@ static LRESULT CALLBACK NewSliderProc(HWND hSB, UINT msg, WPARAM wp, LPARAM lp){
 				nPos = (int)SendMessage(hSB, TBM_GETPOS, 0 ,0);
 				if(hSB==m_hSeek){
 					//バーの位置から時間を取得
-					fLen = BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, g_cInfo[g_bNow].qDuration);
-					wsprintf(szDrawBuff, "%02d:%02d", (nPos * (int)fLen / SLIDER_DIVIDED)/60, (nPos * (int)fLen / SLIDER_DIVIDED)%60);
+					fLen = (float)BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, g_cInfo[g_bNow].qDuration);
+					wsprintf(szDrawBuff, TEXT("%02d:%02d"), (nPos * (int)fLen / SLIDER_DIVIDED)/60, (nPos * (int)fLen / SLIDER_DIVIDED)%60);
 				}else if(hSB==m_hVolume){
-					wsprintf(szDrawBuff, "%02d%%", nPos/10);
+					wsprintf(szDrawBuff, TEXT("%02d%%"), nPos/10);
 				}
 
 				//ツールチップを作り、表示
@@ -3553,6 +3643,46 @@ static LRESULT CALLBACK NewSplitBarProc(HWND hSB, UINT msg, WPARAM wp, LPARAM lp
 	return CallWindowProc((WNDPROC)(LONG_PTR)GetWindowLongPtr(hSB, GWLP_USERDATA), hSB, msg, wp, lp);
 }
 
+static int GetListIndex(HWND hwndList){
+	int i;
+	for(i=0;i<TabCtrl_GetItemCount(m_hTab);i++){
+		if (hwndList == GetListTab(m_hTab, i)->hList)
+			return i;
+	}
+	return -1;
+}
+
+static LPCTSTR GetColumnText(HWND hwndList, int nRow, int nColumn, LPTSTR pWork, int nWorkMax){
+	int i = GetListIndex(hwndList);
+	if (i >= 0){
+		struct FILEINFO *pTmp = GetListTab(m_hTab, i)->pRoot;
+		switch(nColumn){
+			case 0:
+				return GetFileName(GetPtrFromIndex(pTmp, nRow)->szFilePath);
+				break;
+			case 1:
+				return GetPtrFromIndex(pTmp, nRow)->szSize;
+				break;
+			case 2:
+				LPTSTR pszPath;
+				pszPath = GetPtrFromIndex(pTmp, nRow)->szFilePath;
+				if(IsURLPath(pszPath)){
+					return TEXT("URL");
+				}else if(IsArchivePath(pszPath) && GetArchiveItemType(pszPath, pWork, nWorkMax)){
+					return pWork;
+				}else{
+					LPTSTR p = PathFindExtension(pszPath);
+					if (p && *p) return p + 1;
+				}
+				break;
+			case 3:
+				return GetPtrFromIndex(pTmp, nRow)->szTime;
+				break;
+		}
+	}
+	return NULL;
+}
+
 static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 	static int s_nDragTab = -1;
 	TCHITTESTINFO tchti;
@@ -3595,7 +3725,7 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 			HMENU hPopMenu;
 			int nItem;
 			int i;
-			char szMenu[MAX_FITTLE_PATH+4];
+			TCHAR szMenu[MAX_FITTLE_PATH+4];
 
 			switch(GetDlgCtrlID((HWND)wp)){
 				case ID_LIST:
@@ -3606,10 +3736,10 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 						MapWindowPoints((HWND)wp, HWND_DESKTOP, (LPPOINT)&rcItem, 2);
 						lp = MAKELPARAM(rcItem.left, rcItem.bottom);
 					}
-					hPopMenu = GetSubMenu(LoadMenu(m_hInst, "LISTMENU"), 0);
+					hPopMenu = GetSubMenu(LoadMenu(m_hInst, TEXT("LISTMENU")), 0);
 
 					for(i=0;i<TabCtrl_GetItemCount(hTC);i++){
-						wsprintf(szMenu, "&%d: %s", i, GetListTab(hTC, i)->szTitle);
+						wsprintf(szMenu, TEXT("&%d: %s"), i, GetListTab(hTC, i)->szTitle);
 						AppendMenu(GetSubMenu(hPopMenu, GetMenuPosFromString(hPopMenu, TEXT("プレイリストに送る(&S)"))), MF_STRING, IDM_SENDPL_FIRST+i, szMenu); 
 					}
 
@@ -3635,55 +3765,63 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 					{
 
 						// リストビューからの要求
-						case LVN_GETDISPINFO:
+#if 1
+						/* Windowsの挙動が異常 */
+						case LVN_GETDISPINFOA:
 						case LVN_GETDISPINFOW:
-							LVITEM* item;
-							struct FILEINFO *pTmp;
-							item = &((NMLVDISPINFO*)lp)->item;
-
-							// テキストをセット
-							if(item->mask & LVIF_TEXT){
-								for(i=0;pnmhdr->hwndFrom!=GetListTab(m_hTab, i)->hList;i++);
-								pTmp = GetListTab(m_hTab, i)->pRoot;
-								switch(item->iSubItem){
-									case 0:
-										lstrcpyn(item->pszText, GetFileName(GetPtrFromIndex(pTmp, item->iItem)->szFilePath), item->cchTextMax);
-										break;
-									case 1:
-										lstrcpyn(item->pszText, GetPtrFromIndex(pTmp, item->iItem)->szSize, item->cchTextMax);
-										break;
-									case 2:
-										LPSTR pszPath;
-										pszPath = GetPtrFromIndex(pTmp, item->iItem)->szFilePath;
-										if(IsURLPath(pszPath)){
-											lstrcpyn(item->pszText, "URL", item->cchTextMax);
-										}else if(IsArchivePath(pszPath) && GetArchiveItemType(pszPath, item->pszText, item->cchTextMax)){
-										}else{
-											char *p = PathFindExtension(pszPath);
-											if (p && *p) lstrcpyn(item->pszText, p+1, item->cchTextMax);
-										}
-										break;
-									case 3:
-										lstrcpyn(item->pszText, GetPtrFromIndex(pTmp, item->iItem)->szTime, item->cchTextMax);
-										break;
+							{
+								LVITEM *item = &((NMLVDISPINFO*)lp)->item;
+								// テキストをセット
+								if(item->mask & LVIF_TEXT){
+									TCHAR szBuf[32];
+									LPCTSTR lpszColText = GetColumnText(pnmhdr->hwndFrom, item->iItem, item->iSubItem, szBuf, 32);
+									if (lpszColText)
+										lstrcpyn(item->pszText, lpszColText, item->cchTextMax);
 								}
 							}
 							break;
-
-					
-						case LVN_GETINFOTIP:
-						case LVN_GETINFOTIPW:
-							NMLVGETINFOTIPW *lvgit;
-							WCHAR wFilename[MAX_FITTLE_PATH];
-
-							if(!g_cfg.nPathTip) break;
-							lvgit = (NMLVGETINFOTIPW *)lp;
-							lvgit->dwFlags = 0;
-							lvgit->cchTextMax = MAX_FITTLE_PATH;
-							MultiByteToWideChar(CP_ACP, 0, GetPtrFromIndex(GetCurListTab(m_hTab)->pRoot, lvgit->iItem)->szFilePath, -1, wFilename, MAX_FITTLE_PATH); //S-JIS->Unicode
-							lstrcpyW(lvgit->pszText, wFilename);
+#else
+						case LVN_GETDISPINFOA:
+							{
+								LVITEMA *item = &((NMLVDISPINFOA*)lp)->item;
+								// テキストをセット
+								if(item->mask & LVIF_TEXT){
+									TCHAR szBuf[32];
+									LPCTSTR lpszColText = GetColumnText(pnmhdr->hwndFrom, item->iItem, item->iSubItem, szBuf, 32);
+									if (lpszColText)
+										lstrcpyntA(item->pszText, lpszColText, item->cchTextMax);
+								}
+							}
 							break;
-
+						case LVN_GETDISPINFOW:
+							{
+								LVITEMW *item = &((NMLVDISPINFOW*)lp)->item;
+								// テキストをセット
+								if(item->mask & LVIF_TEXT){
+									TCHAR szBuf[32];
+									LPCTSTR lpszColText = GetColumnText(pnmhdr->hwndFrom, item->iItem, item->iSubItem, szBuf, 32);
+									if (lpszColText)
+										lstrcpyntW(item->pszText, lpszColText, item->cchTextMax);
+								}
+							}
+							break;
+#endif
+						case LVN_GETINFOTIPA:
+							if(g_cfg.nPathTip){
+								NMLVGETINFOTIPA *lvgit = (NMLVGETINFOTIPA *)lp;
+								LPTSTR pszFilePath = GetPtrFromIndex(GetCurListTab(m_hTab)->pRoot, lvgit->iItem)->szFilePath;
+								lvgit->dwFlags = 0;
+								lstrcpyntA(lvgit->pszText, pszFilePath, lvgit->cchTextMax);
+							}
+							break;
+						case LVN_GETINFOTIPW:
+							if(g_cfg.nPathTip){
+								NMLVGETINFOTIPW *lvgit = (NMLVGETINFOTIPW *)lp;
+								LPTSTR pszFilePath = GetPtrFromIndex(GetCurListTab(m_hTab)->pRoot, lvgit->iItem)->szFilePath;
+								lvgit->dwFlags = 0;
+								lstrcpyntW(lvgit->pszText, pszFilePath, lvgit->cchTextMax);
+							}
+							break;
 						case NM_CUSTOMDRAW:
 							NMLVCUSTOMDRAW *lplvcd;
 							LOGFONT lf;
@@ -3744,8 +3882,9 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 			SendMessage(GetParent(hTC), msg, wp, lp); //親ウィンドウにそのまま送信
 			break;
 
+		/* case WM_UNICHAR: */
 		case WM_CHAR:
-			if((int)wp=='\t'){
+			if((int)wp == '\t'){
 				if(GetKeyState(VK_SHIFT) < 0){
 					SetFocus(m_hTree);
 				}else{
@@ -3785,8 +3924,8 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 			struct FILEINFO *pSub;
 			int nFileCount;
 			POINT pt;
-			char szPath[MAX_FITTLE_PATH];
-			char szLabel[MAX_FITTLE_PATH];
+			TCHAR szPath[MAX_FITTLE_PATH];
+			TCHAR szLabel[MAX_FITTLE_PATH];
 
 			// ドラッグされたファイルを追加
 			pSub = NULL;
@@ -3821,7 +3960,7 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 					PathRemoveExtension(szLabel);
 				}
 			}else{
-				lstrcpy(szLabel, "Default");
+				lstrcpy(szLabel, TEXT("Default"));
 			}
 			if(pt.x>rcItem.right && pt.y>=rcItem.top && pt.y<=rcItem.bottom){
 				MakeNewTab(hTC, szLabel, -1);
@@ -3976,7 +4115,7 @@ LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
 
 		case WM_DROPFILES:
 			HDROP hDrop;
-			char szPath[MAX_FITTLE_PATH];
+			TCHAR szPath[MAX_FITTLE_PATH];
 
 			/*	カーソルの下に追加
 			int nHitItem;
@@ -4023,7 +4162,7 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 
 		case WM_CHAR:
 			switch(wp){
-				case '\t':
+				case TEXT('\t'):
 					if(GetKeyState(VK_SHIFT) < 0){
 						SetFocus(GetNextWindow(hTV, GW_HWNDPREV));
 					}else{
@@ -4068,7 +4207,7 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 			HWND hWnd;
 			struct FILEINFO *pSub;
 			pSub = NULL;
-			char szNowDir[MAX_FITTLE_PATH];
+			TCHAR szNowDir[MAX_FITTLE_PATH];
 			int nHitTab;
 			TCHITTESTINFO info;
 			RECT rcTab;
@@ -4155,8 +4294,8 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 
 		case WM_DROPFILES:
 			HDROP hDrop;
-			char szPath[MAX_FITTLE_PATH];
-			char szParDir[MAX_PATH];
+			TCHAR szPath[MAX_FITTLE_PATH];
+			TCHAR szParDir[MAX_PATH];
 
 			hDrop = (HDROP)wp;
 			DragQueryFile(hDrop, 0, szPath, MAX_FITTLE_PATH);
@@ -4175,104 +4314,6 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 
 
 
-static BOOL CALLBACK BookMarkDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM /*lp*/){
-	static HWND hList = NULL;
-	int i;
-	LVITEM item;
-
-	switch (msg)
-	{
-		case WM_INITDIALOG:	// 初期化
-			hList = GetDlgItem(hDlg, IDC_LIST1);
-
-			LVCOLUMN lvcol;
-			ZeroMemory(&lvcol, sizeof(LVCOLUMN));
-			lvcol.mask = LVCF_FMT;
-			lvcol.fmt = LVCFMT_LEFT;
-			ListView_InsertColumn(hList, 0, &lvcol);
-
-			ZeroMemory(&item, sizeof(LVITEM));
-			item.mask = LVIF_TEXT;
-			item.iSubItem = 0;
-			int nMax;
-			nMax = 300;
-
-			for(i=0;i<MAX_BM_SIZE;i++){
-				if(!g_cfg.szBMPath[i][0]) break;
-				item.pszText = g_cfg.szBMPath[i];
-				nMax = ListView_GetStringWidth(hList, item.pszText)+10>nMax?ListView_GetStringWidth(hList, item.pszText)+10:nMax;
-				item.iItem = i;
-				ListView_InsertItem(hList, &item);
-			}
-			ListView_SetColumnWidth(hList, 0, nMax);
-			ListView_SetItemState(hList, 0, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED));
-			SendDlgItemMessage(hDlg, IDC_CHECK1, BM_SETCHECK, (WPARAM)(g_cfg.nBMRoot?BST_CHECKED:BST_UNCHECKED), 0);
-			SendDlgItemMessage(hDlg, IDC_CHECK6, BM_SETCHECK, (WPARAM)(g_cfg.nBMFullPath?BST_CHECKED:BST_UNCHECKED), 0);
-			return FALSE;
-
-		case WM_COMMAND:
-			switch(LOWORD(wp))
-			{
-				case IDOK:
-					int nCount;
-
-					nCount = ListView_GetItemCount(hList);
-					for(i=0;i<nCount;i++){
-						ListView_GetItemText(hList, i, 0, g_cfg.szBMPath[i], MAX_FITTLE_PATH);
-					}
-					for(i=nCount;i<MAX_BM_SIZE;i++){
-						lstrcpy(g_cfg.szBMPath[i], "");
-					}
-					g_cfg.nBMRoot = SendDlgItemMessage(hDlg, IDC_CHECK1, BM_GETCHECK, 0, 0);
-					g_cfg.nBMFullPath = SendDlgItemMessage(hDlg, IDC_CHECK6, BM_GETCHECK, 0, 0);
-					EndDialog(hDlg, 1);
-					return TRUE;
-
-				case IDCANCEL:
-					EndDialog(hDlg, -1);
-					return TRUE;
-
-				case IDC_BUTTON1:	// 上へ
-					int nSel;
-					char szPath[MAX_FITTLE_PATH], szSub[MAX_FITTLE_PATH];
-
-					nSel = ListView_GetNextItem(hList, -1, LVNI_FOCUSED);
-					if(nSel<=0) return FALSE;
-					ListView_GetItemText(hList, nSel-1, 0, szSub, MAX_FITTLE_PATH);
-					ListView_GetItemText(hList, nSel, 0, szPath, MAX_FITTLE_PATH);
-					ListView_SetItemText(hList, nSel-1, 0, szPath);
-					ListView_SetItemText(hList, nSel, 0, szSub);
-					ListView_SetItemState(hList, nSel-1, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED));
-					return TRUE;
-
-				case IDC_BUTTON2:	// 下へ
-					nSel = ListView_GetNextItem(hList, -1, LVNI_FOCUSED);
-					if(nSel+1==ListView_GetItemCount(hList)) return FALSE;
-					ListView_GetItemText(hList, nSel+1, 0, szSub, MAX_FITTLE_PATH);
-					ListView_GetItemText(hList, nSel, 0, szPath, MAX_FITTLE_PATH);
-					ListView_SetItemText(hList, nSel+1, 0, szPath);
-					ListView_SetItemText(hList, nSel, 0, szSub);
-					ListView_SetItemState(hList, nSel+1, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED));
-					return TRUE;
-
-				case IDC_BUTTON3:
-					nSel = ListView_GetNextItem(hList, -1, LVNI_FOCUSED);
-					if(nSel<0) return FALSE;
-					ListView_DeleteItem(hList, nSel);
-					return TRUE;
-
-			}
-			return FALSE;
-
-		
-		case WM_CLOSE:	//終了
-			EndDialog(hDlg, -1);
-			return TRUE;
-
-		default:
-			return FALSE;
-	}
-}
 
 
 
@@ -4337,13 +4378,13 @@ static void ExecuteSettingDialog(HWND hWnd, LPCTSTR lpszConfigPath){
 	PROCESS_INFORMATION pi;
 	STARTUPINFO si;
 
-	char szCmd[MAX_FITTLE_PATH];
-	char szPath[MAX_FITTLE_PATH];
+	TCHAR szCmd[MAX_FITTLE_PATH];
+	TCHAR szPath[MAX_FITTLE_PATH];
 
 	GetModuleParentDir(szPath);
-	lstrcat(szPath, "fconfig.exe");
+	lstrcat(szPath, TEXT("fconfig.exe"));
 	
-	wsprintf(szCmd, "\"%s\" %s", szPath, lpszConfigPath);
+	wsprintf(szCmd, TEXT("\"%s\" %s"), szPath, lpszConfigPath);
 	
 
 	ZeroMemory(&si,sizeof(si));
@@ -4371,15 +4412,16 @@ static void ShowSettingDialog(HWND hWnd, int nPage){
 
 // 対応拡張子リストを取得する
 static void SendSupportList(HWND hWnd){
-	char szList[MAX_FITTLE_PATH];
+	LPTSTR lpExt;
+	TCHAR szList[MAX_FITTLE_PATH];
 	int i;
 	int p=0;
-	for(i = 0; g_cfg.szTypeList[i][0]!='\0' && i<MAX_EXT_COUNT; i++){
-		int l = lstrlen(g_cfg.szTypeList[i]);
+	for(i = 0; lpExt = GetTypelist(i), (lpExt[0] != TEXT('\0')); i++){
+		int l = lstrlen(lpExt);
 		if (l > 0 && p + (p != 0) + l + 1 < MAX_FITTLE_PATH)
 		{
 			if (p != 0) szList[p++] = TEXT(' ');
-			lstrcpy(szList + p, g_cfg.szTypeList[i]);
+			lstrcpy(szList + p, lpExt);
 			p += l;
 		}
 	}
@@ -4409,3 +4451,73 @@ static int GetMenuPosFromString(HMENU hMenu, LPTSTR lpszText){
 	}
 	return 0;
 }
+
+static LRESULT CALLBACK MyHookProc(int nCode, WPARAM wp, LPARAM lp){
+	MSG *msg;
+	msg = (MSG *)lp;
+
+	if(nCode<0)
+		return CallNextHookEx(m_hHook, nCode, wp, lp);
+	
+	if(msg->message==WM_MOUSEWHEEL){
+		SendMessage(WindowFromPoint(msg->pt), WM_MOUSEWHEEL, msg->wParam, msg->lParam);
+		msg->message = WM_NULL;
+	}
+
+	return CallNextHookEx(m_hHook, nCode, wp, lp);
+}
+
+// 選択したファイルを実際に削除する
+static void RemoveFiles(HWND hWnd){
+	// 初期化
+	SHFILEOPSTRUCT fops;
+	TCHAR szMsg[MAX_FITTLE_PATH];
+	int i, j, q;
+	LPTSTR pszTarget;
+	BOOL bPlaying;
+	LPTSTR p;
+
+	bPlaying = FALSE;
+	j = 0;
+	q = 0;
+	p = (LPTSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(TCHAR) * 2);
+
+	// パスを連結など
+	i = ListView_GetNextItem(GetCurListTab(m_hTab)->hList, -1, LVNI_SELECTED);
+	while(i!=-1){
+		pszTarget = GetPtrFromIndex(GetCurListTab(m_hTab)->pRoot, i)->szFilePath;
+		if(i==GetCurListTab(m_hTab)->nPlaying) bPlaying = TRUE;	// 削除ファイルが演奏中
+		if(!IsURLPath(pszTarget) && !IsArchivePath(pszTarget)){	// 削除できないファイルでなければ
+			j++;
+			p = (LPTSTR)HeapReAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, p,
+				HeapSize(GetProcessHeap(), 0, p) + (lstrlen(pszTarget) + 2) * sizeof(TCHAR));
+			lstrcpy(p+q, pszTarget);
+			q += lstrlen(pszTarget) + 1;
+			*(p+q) = TEXT('\0');
+		}
+		i = ListView_GetNextItem(GetCurListTab(m_hTab)->hList, i, LVNI_SELECTED);
+	}
+	if(j==1){
+		// ファイル一個選択
+		wsprintf(szMsg, TEXT("%'%s%' をごみ箱に移しますか？"), p);
+	}else if(j>1){
+		// 複数ファイル選択
+		wsprintf(szMsg, TEXT("これらの %d 個の項目をごみ箱に移しますか？"), j);
+	}
+	if(j>0 && MessageBox(hWnd, szMsg, TEXT("ファイルの削除の確認"), MB_YESNO | MB_ICONQUESTION)==IDYES){
+		// 実際に削除
+		fops.hwnd = hWnd;
+		fops.wFunc = FO_DELETE;
+		fops.pFrom = p;
+		fops.pTo = NULL;
+		fops.fFlags = FOF_FILESONLY | FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_MULTIDESTFILES;
+		if(bPlaying) SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_STOP, 0), 0);
+		if(SHFileOperation(&fops)==0){
+			if(bPlaying) PopPrevious(GetCurListTab(m_hTab));	// 履歴からとりあえず最後だけ削除
+			DeleteFiles(GetCurListTab(m_hTab));
+		}
+		if(bPlaying) SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_NEXT, 0), 0);
+	}
+	HeapFree(GetProcessHeap(), 0, p);
+}
+

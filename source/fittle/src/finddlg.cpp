@@ -16,9 +16,9 @@
 #include "func.h"
 #include "listtab.h"
 
-static int TraverseList2(HWND, struct FILEINFO *, char *);
+static int TraverseList2(HWND, struct FILEINFO *, LPTSTR);
 static LRESULT CALLBACK NewEditProc(HWND, UINT, WPARAM, LPARAM);
-void ToPlayList(struct FILEINFO **, struct FILEINFO *, char *);
+void ToPlayList(struct FILEINFO **, struct FILEINFO *, LPTSTR);
 
 static WNDPROC s_hOldEditProc = NULL;
 
@@ -41,10 +41,10 @@ BOOL CALLBACK FindDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 
 		case WM_COMMAND:
 			//EditBox
-			char szSearch[MAX_FITTLE_PATH];
+			TCHAR szSearch[MAX_FITTLE_PATH];
 			if(lp==(LPARAM)hEdit && HIWORD(wp)==EN_CHANGE){
 				GetWindowText(hEdit, szSearch, MAX_FITTLE_PATH);
-				TraverseList2(hList, pRoot, (szSearch[0]!='\0'?szSearch:NULL));
+				TraverseList2(hList, pRoot, (szSearch[0]!=TEXT('\0')?szSearch:NULL));
 				return TRUE;
 			}
 			//ListBox
@@ -67,12 +67,12 @@ BOOL CALLBACK FindDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 				case IDPLAYLIST:	// プレイリストに送る
 					HWND hTab = GetDlgItem(GetParent(hDlg), ID_TAB);
 					GetWindowText(hEdit, szSearch, MAX_FITTLE_PATH);
-					//if(lstrlen(szSearch)==0) lstrcpy(szSearch, "Default");
+					//if(lstrlen(szSearch)==0) lstrcpy(szSearch, TEXT("Default"));
 					LISTTAB *pNew = MakeNewTab(hTab, szSearch, -1);
 					ToPlayList(&(pNew->pRoot), pRoot, szSearch);
 					TraverseList(pNew);
 					if(lstrlen(szSearch)==0){
-						RenameListTab(hTab, TabCtrl_GetItemCount(hTab)-1, "Default");
+						RenameListTab(hTab, TabCtrl_GetItemCount(hTab)-1, TEXT("Default"));
 					}
 
 					TabCtrl_SetCurFocus(hTab, TabCtrl_GetItemCount(hTab)-1);
@@ -107,7 +107,7 @@ LRESULT CALLBACK NewEditProc(HWND hEB, UINT msg, WPARAM wp, LPARAM lp){
 		case WM_KEYDOWN:
 			if(wp==VK_DOWN || wp==VK_UP){
 				return SendMessage(GetParent(hEB), msg, wp, lp);
-			}else if(wp=='F'){
+			}else if(wp==TEXT('F')){
 				if(GetKeyState(VK_CONTROL) < 0)
 					SendMessage(GetParent(hEB), WM_CLOSE, 0, 0);
 			}
@@ -118,7 +118,7 @@ LRESULT CALLBACK NewEditProc(HWND hEB, UINT msg, WPARAM wp, LPARAM lp){
 	return CallWindowProc(s_hOldEditProc, hEB, msg, wp, lp);
 }
 
-int TraverseList2(HWND hLB, struct FILEINFO *ptr, char *szPart){
+int TraverseList2(HWND hLB, struct FILEINFO *ptr, LPTSTR szPart){
 	int i=0;
 
 	LockWindowUpdate(GetParent(hLB));
@@ -141,7 +141,7 @@ int TraverseList2(HWND hLB, struct FILEINFO *ptr, char *szPart){
 	return (int)SendMessage(hLB, LB_GETSELCOUNT, 0, 0);
 }
 
-void ToPlayList(struct FILEINFO **pTo, struct FILEINFO *pFrom, char *pszPart){
+void ToPlayList(struct FILEINFO **pTo, struct FILEINFO *pFrom, LPTSTR pszPart){
 	struct FILEINFO **pTale = pTo;
 	for(;pFrom;pFrom = pFrom->pNext)
 	{

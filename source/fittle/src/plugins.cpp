@@ -11,26 +11,30 @@
 static FITTLE_PLUGIN_INFO *m_fpis[256] = {0};
 static int m_nPluginCount = 0;
 
-void InitPlugins(char *pszPath, HWND hWnd){
-	char szPathW[MAX_PATH];
-	char szDllPath[MAX_PATH];
+void InitPlugins(LPTSTR pszPath, HWND hWnd){
+	TCHAR szPathW[MAX_PATH];
+	TCHAR szDllPath[MAX_PATH];
 	HANDLE hFind;
 	WIN32_FIND_DATA wfd = {0};
 	HINSTANCE hDll;
 	GetPluginInfoFunc GetPluginInfo;
 	FITTLE_PLUGIN_INFO *fpi;
 
-	//lstrcat(pszPath, "Plugins");
-	wsprintf(szPathW, "%s*.dll", pszPath);
+	//lstrcat(pszPath, TEXT("Plugins"));
+	wsprintf(szPathW, TEXT("%s*.dll"), pszPath);
 
 	hFind = FindFirstFile(szPathW, &wfd);
 	if(hFind!=INVALID_HANDLE_VALUE){
 		do{
-			wsprintf(szDllPath, "%s%s", pszPath, wfd.cFileName);
+			wsprintf(szDllPath, TEXT("%s%s"), pszPath, wfd.cFileName);
 			hDll = LoadLibrary(szDllPath);
 			if(hDll){
+				/*
+					TAR32.DLLがGetPluginInfoをエクスポートしている問題に対処	
+				*/
+				FARPROC fnTarCheck = GetProcAddress(hDll, "TarGetVersion");
 				GetPluginInfo = (GetPluginInfoFunc)GetProcAddress(hDll, "GetPluginInfo");
-				if(GetPluginInfo){
+				if(!fnTarCheck && GetPluginInfo){
 
 					fpi = GetPluginInfo();
 					if(fpi->nPDKVer==PDK_VER){

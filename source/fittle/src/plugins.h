@@ -7,7 +7,7 @@
 
 #include <windows.h>
 
-void InitPlugins(char *, HWND);
+void InitPlugins(LPTSTR, HWND);
 void QuitPlugins();
 void OnStatusChangePlugins();
 void OnTrackChagePlugins();

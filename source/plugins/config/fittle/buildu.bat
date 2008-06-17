@@ -14,13 +14,12 @@ if exist %1.exp del %1.exp
 if exist %1.lib del %1.lib
 if exist %1.obj del %1.obj
 if exist %1.res del %1.res
-if exist %1.dll move %1.dll ..\..\..\..\bin\%1.dll
+if exist %1.dll move %1.dll ..\..\..\..\bin\%1.fcp
 
 goto exitcmd
 
 :buildall
 
-call %0 addurl /MD
-call %0 addurlu /MD
+call %0 fittle /MD /D UNICODE /D _UNICODE
 
 :exitcmd

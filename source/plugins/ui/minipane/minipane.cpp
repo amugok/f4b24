@@ -54,8 +54,8 @@ static HMODULE m_hdllConfig = NULL;
 static BOOL m_fHookConfig = FALSE;
 
 static int m_nTitleDisplayPos = 1;
-static char m_szTime[100];			// 再生時間
-static char m_szTag[MAX_FITTLE_PATH];	// タグ
+static TCHAR m_szTime[100];			// 再生時間
+static TCHAR m_szTag[MAX_FITTLE_PATH];	// タグ
 
 /*設定関係*/
 static int nTagReverse;			// タイトル、アーティストを反転
@@ -80,8 +80,8 @@ static FITTLE_PLUGIN_INFO fpi = {
 	NULL
 };
 
-void GetModuleParentDir(char *szParPath){
-	char szPath[MAX_FITTLE_PATH];
+void GetModuleParentDir(LPTSTR szParPath){
+	TCHAR szPath[MAX_FITTLE_PATH];
 
 	GetModuleFileName(NULL, szPath, MAX_FITTLE_PATH);
 	GetLongPathName(szPath, szParPath, MAX_FITTLE_PATH); // 98以降
@@ -91,70 +91,70 @@ void GetModuleParentDir(char *szParPath){
 
 // 終了状態を読込
 static void LoadState(){
-	char m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
+	TCHAR m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
 
 	// INIファイルの位置を取得
 	GetModuleParentDir(m_szINIPath);
-	lstrcat(m_szINIPath, "minipane.ini");
+	lstrcat(m_szINIPath, TEXT("minipane.ini"));
 
-	nMiniPanel_x = (int)GetPrivateProfileInt("MiniPanel", "x", 0, m_szINIPath);
-	nMiniPanel_y = (int)GetPrivateProfileInt("MiniPanel", "y", 0, m_szINIPath);
-	nMiniPanelEnd = (int)GetPrivateProfileInt("MiniPanel", "End", 0, m_szINIPath);
-	nMiniWidth = (int)GetPrivateProfileInt("MiniPanel", "Width", 402, m_szINIPath);
+	nMiniPanel_x = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("x"), 0, m_szINIPath);
+	nMiniPanel_y = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("y"), 0, m_szINIPath);
+	nMiniPanelEnd = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("End"), 0, m_szINIPath);
+	nMiniWidth = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Width"), 402, m_szINIPath);
 
 }
 
 // 設定を読込
 static void LoadConfig(){
-	char m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
+	TCHAR m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
 
 	// INIファイルの位置を取得
 	GetModuleParentDir(m_szINIPath);
-	lstrcat(m_szINIPath, "minipane.ini");
+	lstrcat(m_szINIPath, TEXT("minipane.ini"));
 
 	// クリック時の動作
-	nTrayClick[0] = GetPrivateProfileInt("MiniPanel", "Click0", 0, m_szINIPath);
-	nTrayClick[1] = GetPrivateProfileInt("MiniPanel", "Click1", 6, m_szINIPath);
-	nTrayClick[2] = GetPrivateProfileInt("MiniPanel", "Click2", 8, m_szINIPath);
-	nTrayClick[3] = GetPrivateProfileInt("MiniPanel", "Click3", 0, m_szINIPath);
-	nTrayClick[4] = GetPrivateProfileInt("MiniPanel", "Click4", 5, m_szINIPath);
-	nTrayClick[5] = GetPrivateProfileInt("MiniPanel", "Click5", 0, m_szINIPath);
+	nTrayClick[0] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click0"), 0, m_szINIPath);
+	nTrayClick[1] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click1"), 6, m_szINIPath);
+	nTrayClick[2] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click2"), 8, m_szINIPath);
+	nTrayClick[3] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click3"), 0, m_szINIPath);
+	nTrayClick[4] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click4"), 5, m_szINIPath);
+	nTrayClick[5] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click5"), 0, m_szINIPath);
 
 	// タグを反転
-	nTagReverse = GetPrivateProfileInt("MiniPanel", "TagReverse", 0, m_szINIPath);
+	nTagReverse = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("TagReverse"), 0, m_szINIPath);
 
-	nMiniTop = (int)GetPrivateProfileInt("MiniPanel", "TopMost", 1, m_szINIPath);
-	nMiniScroll = (int)GetPrivateProfileInt("MiniPanel", "Scroll", 1, m_szINIPath);
-	nMiniTimeShow = (int)GetPrivateProfileInt("MiniPanel", "TimeShow", 1, m_szINIPath);
-	nMiniToolShow = (int)GetPrivateProfileInt("MiniPanel", "ToolShow", 1, m_szINIPath);
+	nMiniTop = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("TopMost"), 1, m_szINIPath);
+	nMiniScroll = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Scroll"), 1, m_szINIPath);
+	nMiniTimeShow = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("TimeShow"), 1, m_szINIPath);
+	nMiniToolShow = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("ToolShow"), 1, m_szINIPath);
 }
 
 //Int型で設定ファイル書き込み
-static int WritePrivateProfileInt(char *szAppName, char *szKeyName, int nData, char *szINIPath){
-	char szTemp[100];
+static int WritePrivateProfileInt(LPTSTR szAppName, LPTSTR szKeyName, int nData, LPTSTR szINIPath){
+	TCHAR szTemp[100];
 
-	wsprintf(szTemp, "%d", nData);
+	wsprintf(szTemp, TEXT("%d"), nData);
 	return WritePrivateProfileString(szAppName, szKeyName, szTemp, szINIPath);
 }
 
 // 終了状態を保存
 static void SaveState(){
-	char m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
+	TCHAR m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
 
 	// INIファイルの位置を取得
 	GetModuleParentDir(m_szINIPath);
-	lstrcat(m_szINIPath, "minipane.ini");
+	lstrcat(m_szINIPath, TEXT("minipane.ini"));
 
 
-	WritePrivateProfileInt("MiniPanel", "x", nMiniPanel_x, m_szINIPath);
-	WritePrivateProfileInt("MiniPanel", "y", nMiniPanel_y, m_szINIPath);
-	WritePrivateProfileInt("MiniPanel", "End", nMiniPanelEnd, m_szINIPath);
-	WritePrivateProfileInt("MiniPanel", "Width", nMiniWidth, m_szINIPath);
+	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("x"), nMiniPanel_x, m_szINIPath);
+	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("y"), nMiniPanel_y, m_szINIPath);
+	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("End"), nMiniPanelEnd, m_szINIPath);
+	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("Width"), nMiniWidth, m_szINIPath);
 	WritePrivateProfileString(NULL, NULL, NULL, m_szINIPath);
 
 	GetModuleParentDir(m_szINIPath);
-	lstrcat(m_szINIPath, "Fittle.ini");
-	WritePrivateProfileInt("MiniPanel", "End", nMiniPanelEnd, m_szINIPath);
+	lstrcat(m_szINIPath, TEXT("Fittle.ini"));
+	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("End"), nMiniPanelEnd, m_szINIPath);
 	WritePrivateProfileString(NULL, NULL, NULL, m_szINIPath);
 }
 
@@ -192,24 +192,43 @@ static int GetRepeatFlag(){
 	return IsCheckedMainMenu(IDM_PM_REPEAT) ? TRUE : FALSE;
 }
 
+#ifdef UNICODE
+static void GetF4B24String(int nCode, LPTSTR pszBuf, int nBufSize){
+	HWND hwndWork = CreateWindow(TEXT("STATIC"),TEXT(""),0,0,0,0,0,NULL,NULL,m_hinstDLL,NULL);
+	if (hwndWork){
+		SendMessage(fpi.hParent, WM_F4B24_IPC, (WPARAM)nCode, (LPARAM)hwndWork);
+		if (nBufSize > 0) pszBuf[0] = TEXT('\0');
+		GetWindowText(hwndWork, pszBuf, nBufSize);
+		//SendMessage(hwndWork, WM_GETTEXT, (WPARAM)nBufSize, (LPARAM)pszBuf);
+		DestroyWindow(hwndWork);
+	}
+}
+#endif
+
 static void UpdatePanelTitle(){
-	static char szNull[1] = { 0 };
-	char *ptitle = (char *)FittlePluginInterface(GET_TITLE);
-	char *partist = (char *)FittlePluginInterface(GET_ARTIST);
-	if (!ptitle || !ptitle[0]) ptitle = (char *)FittlePluginInterface(GET_PLAYING_PATH);
+#ifdef UNICODE
+	TCHAR ptitle[MAX_FITTLE_PATH];
+	TCHAR partist[MAX_FITTLE_PATH];
+	GetF4B24String(WM_F4B24_IPC_GET_PLAYING_TITLE, ptitle, MAX_FITTLE_PATH);
+	GetF4B24String(WM_F4B24_IPC_GET_PLAYING_ARTIST, partist, MAX_FITTLE_PATH);
+	if (!ptitle[0])
+		GetF4B24String(WM_F4B24_IPC_GET_PLAYING_PATH, ptitle, MAX_FITTLE_PATH);
+#else
+	static CHAR szNull[1] = { 0 };
+	LPTSTR ptitle = (LPSTR)FittlePluginInterface(GET_TITLE);
+	LPTSTR partist = (LPSTR)FittlePluginInterface(GET_ARTIST);
+	if (!ptitle || !ptitle[0]) ptitle = (LPSTR)FittlePluginInterface(GET_PLAYING_PATH);
 	if (!ptitle) ptitle = szNull;
 	if (!partist) partist = szNull;
+#endif
 
 	if(!nTagReverse){
 		if (!partist[0])
 			lstrcpy(m_szTag, ptitle);
 		else
-			wsprintf(m_szTag, "%s / %s", ptitle, partist);
+			wsprintf(m_szTag, TEXT("%s / %s"), ptitle, partist);
 	}else{
-		if (!partist[0])
-			lstrcpy(m_szTag, partist);
-		else
-			wsprintf(m_szTag, "%s / %s", partist, ptitle);
+		wsprintf(m_szTag, TEXT("%s / %s"), partist, ptitle);
 	}
 }
 
@@ -217,7 +236,7 @@ static void UpdatePanelTime(){
 	int nPos = FittlePluginInterface(GET_POSITION);
 	int nLen = FittlePluginInterface(GET_DURATION);
 	if (nPos >= 0 && nLen >= 0)
-		wsprintf(m_szTime, "\t%02d:%02d / %02d:%02d", nPos/60, nPos%60, nLen/60, nLen%60);
+		wsprintf(m_szTime, TEXT("\t%02d:%02d / %02d:%02d"), nPos/60, nPos%60, nLen/60, nLen%60);
 	else
 		m_szTag[0] = 0;
 }
@@ -261,8 +280,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 	switch(msg){
 	case WM_ACTIVATE:
 		{
-//			HWND hConfig = FindWindowEx(hWnd, NULL, "#32770", "設定");
-			HWND hConfig = FindWindow("#32770", "設定");
+//			HWND hConfig = FindWindowEx(hWnd, NULL, TEXT("#32770"), TEXT("設定"));
+			HWND hConfig = FindWindow(TEXT("#32770"), TEXT("設定"));
 			if (hConfig && IsWindow(hConfig) && GetWindowThreadProcessId(hWnd, NULL) == GetWindowThreadProcessId(hConfig, NULL)){
 				typedef void (CALLBACK * LPFNOLDMODE)(HWND hwnd);
 				LPFNOLDMODE pfnoldmode = (LPFNOLDMODE)GetProcAddress(m_hdllConfig, "OldMode");
@@ -293,7 +312,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			if(!m_hMiniPanel){
 				ShowWindow(hWnd, SW_HIDE);
 				nMiniPanelEnd = 1;
-				m_hMiniPanel = CreateDialogParam(m_hinstDLL, "MINI_PANEL", hWnd, MiniPanelProc, 0);
+				m_hMiniPanel = CreateDialogParam(m_hinstDLL, TEXT("MINI_PANEL"), hWnd, MiniPanelProc, 0);
 			}else{
 				PanelClose();
 			}
@@ -323,14 +342,14 @@ static BOOL OnInit(){
 	EnableMenuItem(hMainMenu, IDM_MINIPANEL, MF_BYCOMMAND | MF_ENABLED);
 
 	if (SendMessage(fpi.hParent, WM_F4B24_IPC, WM_F4B24_IPC_GET_IF_VERSION, 0) < 12){
-		char m_szPathFCP[MAX_FITTLE_PATH];
+		TCHAR m_szPathFCP[MAX_FITTLE_PATH];
 		GetModuleFileName(m_hinstDLL, m_szPathFCP, MAX_FITTLE_PATH);
-		lstrcpy(PathFindExtension(PathFindFileName(m_szPathFCP)), ".fcp");
+		lstrcpy(PathFindExtension(PathFindFileName(m_szPathFCP)), TEXT(".fcp"));
 		m_hdllConfig = LoadLibrary(m_szPathFCP);
 		m_fHookConfig = (m_hdllConfig != NULL);
 	}
 
-	hMiniMenu = LoadMenu(m_hinstDLL, "TRAYMENU");
+	hMiniMenu = LoadMenu(m_hinstDLL, TEXT("TRAYMENU"));
 	m_hOldProc = (WNDPROC)SetWindowLong(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
 
 	LoadState();
@@ -421,8 +440,8 @@ static HWND CreateToolBar(HWND hRebar){
 		(HMENU)ID_TOOLBAR, m_hinstDLL, NULL);
 	if(!hToolBar) return NULL;
 	SendMessage(hToolBar, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
-	hBmp = (HBITMAP)LoadImage(m_hinstDLL, "toolbarex.bmp", IMAGE_BITMAP, 16*TB_BMP_NUM, 16, LR_LOADFROMFILE | LR_SHARED);
-	if(hBmp==NULL)	hBmp = LoadBitmap(m_hinstDLL, (char *)IDR_TOOLBAR1);
+	hBmp = (HBITMAP)LoadImage(m_hinstDLL, TEXT("toolbarex.bmp"), IMAGE_BITMAP, 16*TB_BMP_NUM, 16, LR_LOADFROMFILE | LR_SHARED);
+	if(hBmp==NULL)	hBmp = LoadBitmap(m_hinstDLL, MAKEINTRESOURCE(IDR_TOOLBAR1));
 	
 	//SendMessage(hToolBar, TB_AUTOSIZE, 0, 0) ;
 
@@ -477,17 +496,17 @@ static void PopupPlayModeMenu(HWND hWnd, NMTOOLBAR *lpnmtb){
 	mii.fMask = MIIM_TYPE | MIIM_ID | MIIM_STATE;
 	mii.fState = MFS_UNCHECKED;
 	mii.fType = MFT_STRING;
-	mii.dwTypeData = "リスト(&L)";
+	mii.dwTypeData = TEXT("リスト(&L)");
 	mii.wID = IDM_PM_LIST;
 	if(m_nPlayMode==PM_LIST) mii.fState = MFS_CHECKED;
 	InsertMenuItem(hPopMenu, 0, FALSE, &mii);
 	mii.fState = MFS_UNCHECKED;
-	mii.dwTypeData = "ランダム(&R)";
+	mii.dwTypeData = TEXT("ランダム(&R)");
 	mii.wID = IDM_PM_RANDOM;
 	if(m_nPlayMode==PM_RANDOM) mii.fState = MFS_CHECKED;
 	InsertMenuItem(hPopMenu, IDM_PM_LIST, TRUE, &mii);
 	mii.fState = MFS_UNCHECKED;
-	mii.dwTypeData = "シングル(&S)";
+	mii.dwTypeData = TEXT("シングル(&S)");
 	mii.wID = IDM_PM_SINGLE;
 	if(m_nPlayMode==PM_SINGLE) mii.fState = MFS_CHECKED;
 	InsertMenuItem(hPopMenu, IDM_PM_RANDOM, TRUE, &mii);
@@ -568,6 +587,37 @@ static void UpdateMenuRepeatMode(){
 	if (m_hMiniTool) SendMessage(m_hMiniTool,  TB_CHECKBUTTON, (WPARAM)IDM_PM_REPEAT, (LPARAM)MAKELONG(m_nRepeatFlag, 0));
 }
 
+/*  既に実行中のFittleにパラメータを送信する */
+static void SendCopyData(HWND hFittle, int iType, LPTSTR lpszString){
+#ifdef UNICODE
+	CHAR nameA[MAX_FITTLE_PATH];
+	LPBYTE lpWork;
+	COPYDATASTRUCT cds;
+	DWORD la, lw, cbData;
+	WideCharToMultiByte(CP_ACP, 0, lpszString, -1, nameA, MAX_FITTLE_PATH, NULL, NULL);
+	la = lstrlenA(nameA) + 1;
+	if (la & 1) la++; /* WORD align */
+	lw = lstrlenW(lpszString) + 1;
+	cbData = la * sizeof(CHAR) + lw * sizeof(WCHAR);
+	lpWork = (LPBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, cbData);
+	if (!lpWork) return;
+	lstrcpyA((LPSTR)(lpWork), nameA);
+	lstrcpyW((LPWSTR)(lpWork + la), lpszString);
+	cds.dwData = iType;
+	cds.lpData = (LPVOID)lpWork;
+	cds.cbData = cbData;
+	SendMessage(hFittle, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
+	HeapFree(GetProcessHeap(), 0, lpWork);
+#else
+	COPYDATASTRUCT cds;
+	cds.dwData = iType;
+	cds.lpData = (LPVOID)lpszString;
+	cds.cbData = (lstrlenA(lpszString) + 1) * sizeof(CHAR);
+	// 文字列送信
+	SendMessage(hFittle, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
+#endif
+}
+
 #define MINIPANEL_HEIGHT 30
 #define MINIPANEL_TIME_WIDTH 70
 #define MINIPANEL_SEPARATOR 4
@@ -596,7 +646,7 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 
 			hDC = GetDC(hDlg);
 			ZeroMemory(&lf, sizeof(LOGFONT));
-			lstrcpy(lf.lfFaceName, "ＭＳ Ｐゴシック");
+			lstrcpy(lf.lfFaceName, TEXT("ＭＳ Ｐゴシック"));
 			lf.lfCharSet = DEFAULT_CHARSET;
 			lf.lfHeight = -MulDiv(9, GetDeviceCaps(hDC, LOGPIXELSY), 72);
 			s_hFont = CreateFontIndirect(&lf);
@@ -815,16 +865,13 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 
 		case WM_DROPFILES:
 			HDROP hDrop;
-			char szPath[MAX_FITTLE_PATH];
-			COPYDATASTRUCT cds;
+			TCHAR szPath[MAX_FITTLE_PATH];
 
 			hDrop = (HDROP)wp;
 			DragQueryFile(hDrop, 0, szPath, MAX_FITTLE_PATH);
 			DragFinish(hDrop);
-			cds.dwData = 0;
-			cds.lpData = (void *)szPath;
-			cds.cbData = lstrlen(szPath) + 1;
-			SendMessage(fpi.hParent, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
+			SendCopyData(fpi.hParent, 0, szPath);
+
 			return TRUE;
 
 		case WM_F4B24_IPC:

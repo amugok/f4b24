@@ -14,29 +14,32 @@
 #include "archive.h"
 
 /* ファイル名のポインタを取得 */
-char *GetFileName(char *szIn){
-	char *p, *q;
+LPTSTR GetFileName(LPTSTR szIn){
+	LPTSTR p, q;
 
 	p = q = szIn;
 	if(IsURLPath(szIn)) return q;
 	if(IsArchivePath(szIn)){
-		char *r = GetArchiveItemFileName(szIn);
+		LPTSTR r = GetArchiveItemFileName(szIn);
 		if (r) return r;
 	}
 	while(*p){
+#ifdef UNICODE
+#else
 		if(IsDBCSLeadByte(*p)){
-			p++;
-		}else{
-			if(*p=='\\' || *p=='/'/* || *p=='?'*/) q = p + 1;
+			p += 2;
+			continue;
 		}
+#endif
+		if(*p==TEXT('\\') || *p==TEXT('/') /* || *p==TEXT('?')*/ ) q = p + 1;
 		p++;
 	}
 	return q;
 }
 
 //親フォルダを取得
-int GetParentDir(char *pszFilePath, char *pszParPath){
-	char szLongPath[MAX_FITTLE_PATH] = {0};
+int GetParentDir(LPCTSTR pszFilePath, LPTSTR pszParPath){
+	TCHAR szLongPath[MAX_FITTLE_PATH] = {0};
 
 	GetLongPathName(pszFilePath, szLongPath, MAX_FITTLE_PATH); //98以降のみ
 	if(!FILE_EXIST(pszFilePath)){
@@ -60,34 +63,34 @@ int GetParentDir(char *pszFilePath, char *pszParPath){
 		}else{
 			// 音楽ファイル
 			lstrcpyn(pszParPath, szLongPath, MAX_FITTLE_PATH);
-			*PathFindFileName(pszParPath) = '\0';
+			*PathFindFileName(pszParPath) = TEXT('\0');
 			return FILES;
 		}
 	}
 }
 
 /*プレイリストかどうか判断*/
-BOOL IsPlayList(char *szFilePath){
-	char *p;
+BOOL IsPlayList(LPTSTR szFilePath){
+	LPTSTR p;
 
 	if(GetFileAttributes(szFilePath) & FILE_ATTRIBUTE_DIRECTORY) return FALSE;
 	if((p = PathFindExtension(szFilePath)) == NULL || !*p) return FALSE;
 	p++;
-	if(lstrcmpi(p, "M3U")==0 || lstrcmpi(p, "PLS")==0)
+	if(lstrcmpi(p, TEXT("M3U"))==0 || lstrcmpi(p, TEXT("M3U8"))==0 || lstrcmpi(p, TEXT("PLS"))==0)
 		return TRUE;
 	else
 		return FALSE;
 }
 
 //Int型で設定ファイル書き込み
-int WritePrivateProfileInt(char *szAppName, char *szKeyName, int nData, char *szINIPath){
-	char szTemp[100];
+int WritePrivateProfileInt(LPTSTR szAppName, LPTSTR szKeyName, int nData, LPTSTR szINIPath){
+	TCHAR szTemp[100];
 
-	wsprintf(szTemp, "%d", nData);
+	wsprintf(szTemp, TEXT("%d"), nData);
 	return WritePrivateProfileString(szAppName, szKeyName, szTemp, szINIPath);
 }
 
-BOOL GetTimeAndSize(const char *pszFilePath, char *pszFileSize, char *pszFileTime){
+BOOL GetTimeAndSize(LPCTSTR pszFilePath, LPTSTR pszFileSize, LPTSTR pszFileTime){
 	HANDLE hFile;
 	FILETIME ft;
 	SYSTEMTIME st;
@@ -97,19 +100,19 @@ BOOL GetTimeAndSize(const char *pszFilePath, char *pszFileSize, char *pszFileTim
 	hFile = CreateFile(pszFilePath, GENERIC_READ, 0, NULL,
 		OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if(hFile==INVALID_HANDLE_VALUE){
-		lstrcpy(pszFileSize, "-");
-		lstrcpy(pszFileTime, "-");
+		lstrcpy(pszFileSize, TEXT("-"));
+		lstrcpy(pszFileTime, TEXT("-"));
 		return FALSE;
 	}
 
 	GetFileTime(hFile, NULL, NULL, &ft);
 	FileTimeToLocalFileTime(&ft, &lt);
 	FileTimeToSystemTime(&lt, &st);
-	wsprintf(pszFileTime, "%02d/%02d/%02d %02d:%02d:%02d",
+	wsprintf(pszFileTime, TEXT("%02d/%02d/%02d %02d:%02d:%02d"),
 			st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
 
 	dwSize = GetFileSize(hFile, NULL);
-	wsprintf(pszFileSize, "%d KB", dwSize/1024);
+	wsprintf(pszFileSize, TEXT("%d KB"), dwSize/1024);
 
 	CloseHandle(hFile);
 
@@ -121,23 +124,23 @@ void SetOLECursor(int nIndex){
 	HCURSOR hCur;
 
 	if(!hMod){
-		hMod = GetModuleHandle("ole32");
+		hMod = GetModuleHandle(TEXT("ole32"));
 	}
 	hCur = LoadCursor(hMod, MAKEINTRESOURCE(nIndex));
 	SetCursor(hCur);
 	return;
 }
 
-void GetModuleParentDir(char *szParPath){
-	char szPath[MAX_FITTLE_PATH];
+void GetModuleParentDir(LPTSTR szParPath){
+	TCHAR szPath[MAX_FITTLE_PATH];
 
 	GetModuleFileName(NULL, szPath, MAX_FITTLE_PATH);
 	GetLongPathName(szPath, szParPath, MAX_FITTLE_PATH); // 98以降
-	*PathFindFileName(szParPath) = '\0';
+	*PathFindFileName(szParPath) = TEXT('\0');
 	return;
 }
 
-LPSTR MyPathAddBackslash(LPSTR pszPath){
+LPTSTR MyPathAddBackslash(LPTSTR pszPath){
 	if(PathIsDirectory(pszPath)){
 		return PathAddBackslash(pszPath);
 	}else if(IsPlayList(pszPath) || IsArchive(pszPath)){

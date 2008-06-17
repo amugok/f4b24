@@ -8,10 +8,10 @@
 /* APDKのバージョン */
 #define APDK_VER 1
 
-typedef void (CALLBACK * LPFNARCHIVEENUMPROC)(char *pszFileName, DWORD dwSize, FILETIME ft, void *pData);
+typedef void (CALLBACK * LPFNARCHIVEENUMPROC)(LPTSTR pszFileName, DWORD dwSize, FILETIME ft, void *pData);
 
-typedef void (CALLBACK * LPFNADDLISTPROC)(char *pszFileName, char *pszSize, char *pszTime, void *pData);
-typedef BOOL (CALLBACK * LPFNCHECKFILETYPEPROC)(char *pszFileName);
+typedef void (CALLBACK * LPFNADDLISTPROC)(LPTSTR pszFileName, LPTSTR pszSize, LPTSTR pszTime, void *pData);
+typedef BOOL (CALLBACK * LPFNCHECKFILETYPEPROC)(LPTSTR pszFileName);
 
 /* 構造体宣言 */
 typedef struct ARCHIVE_PLUGIN_INFO_TAG {
@@ -19,21 +19,21 @@ typedef struct ARCHIVE_PLUGIN_INFO_TAG {
 	int nAPDKVer;
 
 	/* v0 */
-	BOOL (CALLBACK * IsArchiveExt)(char *pszExt);
-	char *(CALLBACK * CheckArchivePath)(char *pszFilePath);
-	BOOL (CALLBACK * EnumArchive)(char *pszFilePath, LPFNARCHIVEENUMPROC lpfnProc, void *pData);
-	BOOL (CALLBACK * ExtractArchive)(char *pszArchivePath, char *pszFileName, void **ppBuf, DWORD *pSize);
+	BOOL (CALLBACK * IsArchiveExt)(LPTSTR pszExt);
+	LPTSTR (CALLBACK * CheckArchivePath)(LPTSTR pszFilePath);
+	BOOL (CALLBACK * EnumArchive)(LPTSTR pszFilePath, LPFNARCHIVEENUMPROC lpfnProc, void *pData);
+	BOOL (CALLBACK * ExtractArchive)(LPTSTR pszArchivePath, LPTSTR pszFileName, void **ppBuf, DWORD *pSize);
 
 	/* v1 */
 	HWND hwndMain;
 	HMODULE hmodPlugin;
 
 	/* v2 */
-	BOOL (CALLBACK * EnumArchive2)(char *pszFilePath, LPFNADDLISTPROC lpfnAddListProc, LPFNCHECKFILETYPEPROC lpfnCheckProc, void *pData);
-	BOOL (CALLBACK * ResolveIndirect)(char *pszArchivePath, char *pszTrackPart, char *pszStart, char *pszEnd);
-	BOOL (CALLBACK * GetBasicTag)(char *pszArchivePath, char *pszTrackPart, char *pszTrack, char *pszTitle, char *pszAlbum, char *pszArtist);
-	BOOL (CALLBACK * GetItemType)(char *pszArchivePath, char *pszTrackPart, char *pBuf, int nBufMax);
-	char * (CALLBACK * GetItemFileName)(char *pszArchivePath, char *pszTrackPart);
+	BOOL (CALLBACK * EnumArchive2)(LPTSTR pszFilePath, LPFNADDLISTPROC lpfnAddListProc, LPFNCHECKFILETYPEPROC lpfnCheckProc, void *pData);
+	BOOL (CALLBACK * ResolveIndirect)(LPTSTR pszArchivePath, LPTSTR pszTrackPart, LPTSTR pszStart, LPTSTR pszEnd);
+	BOOL (CALLBACK * GetBasicTag)(LPTSTR pszArchivePath, LPTSTR pszTrackPart, LPTSTR pszTrack, LPTSTR pszTitle, LPTSTR pszAlbum, LPTSTR pszArtist);
+	BOOL (CALLBACK * GetItemType)(LPTSTR pszArchivePath, LPTSTR pszTrackPart, LPTSTR pBuf, int nBufMax);
+	LPTSTR (CALLBACK * GetItemFileName)(LPTSTR pszArchivePath, LPTSTR pszTrackPart);
 
 } ARCHIVE_PLUGIN_INFO;
 

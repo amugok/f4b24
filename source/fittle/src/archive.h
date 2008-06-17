@@ -10,15 +10,15 @@
 
 #include "fittle.h"
 
-BOOL InitArchive(char *pszPath, HWND hWnd);
-BOOL ReadArchive(struct FILEINFO **, char *);
-BOOL AnalyzeArchivePath(CHANNELINFO *, char *, char *, char *);
-BOOL IsArchive(char *);
-BOOL IsArchivePath(char *);
-BOOL GetArchiveTagInfo(LPSTR, TAGINFO *);
-HICON GetArchiveItemIcon(char *);
-int GetArchiveIconIndex(char *);
-BOOL GetArchiveItemType(char *, char *, int);
-char *GetArchiveItemFileName(char *);
+BOOL InitArchive(LPTSTR pszPath, HWND hWnd);
+BOOL ReadArchive(struct FILEINFO **, LPTSTR);
+BOOL AnalyzeArchivePath(CHANNELINFO *, LPTSTR, LPTSTR, LPTSTR);
+BOOL IsArchive(LPTSTR);
+BOOL IsArchivePath(LPTSTR);
+BOOL GetArchiveTagInfo(LPTSTR, TAGINFO *);
+HICON GetArchiveItemIcon(LPTSTR);
+int GetArchiveIconIndex(LPTSTR);
+BOOL GetArchiveItemType(LPTSTR, LPTSTR, int);
+LPTSTR GetArchiveItemFileName(LPTSTR);
 
 #endif

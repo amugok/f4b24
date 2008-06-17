@@ -14,14 +14,14 @@ static LPBASS_WADSP_ChannelSetDSP BASS_WADSP_ChannelSetDSP = NULL;
 static LPBASS_WADSP_Stop BASS_WADSP_Stop = NULL;
 static LPBASS_WADSP_Free BASS_WADSP_Free = NULL;
 
-HWADSP wadsp[10] = {0};
-int nCount = 0;
+static HWADSP wadsp[10] = {0};
+static int nCount = 0;
 
 BOOL InitBassWaDsp(HWND hWnd){
 	HANDLE hFind;
 	WIN32_FIND_DATA wfd;
 
-	HMODULE hWaDsp = LoadLibrary("bass_wadsp.dll");
+	HMODULE hWaDsp = LoadLibrary(TEXT("bass_wadsp.dll"));
 	if(!hWaDsp){
 		return FALSE;
 	}
@@ -37,14 +37,20 @@ BOOL InitBassWaDsp(HWND hWnd){
 	
 	int i = 0;
 
-	char szPath[MAX_PATH];
+	TCHAR szPath[MAX_PATH];
 	GetModuleFileName(NULL, szPath, MAX_PATH);
-	lstrcpyn(PathFindFileName(szPath), _T("dsp_*.dll"), MAX_PATH);
+	lstrcpyn(PathFindFileName(szPath), TEXT("dsp_*.dll"), MAX_PATH);
 
 	hFind = FindFirstFile(szPath, &wfd);
 	if(hFind!=INVALID_HANDLE_VALUE){
 		do{
+#ifdef UNICODE
+			CHAR szAnsi[MAX_PATH];
+			WideCharToMultiByte(CP_ACP, 0, wfd.cFileName, -1, szAnsi, MAX_PATH, NULL, NULL);
+			wadsp[i] = BASS_WADSP_Load(szAnsi, 0, 0, 5, 5, NULL);
+#else
 			wadsp[i] = BASS_WADSP_Load(wfd.cFileName, 0, 0, 5, 5, NULL);
+#endif
 			if(wadsp[i]){
 				BASS_WADSP_Start(wadsp[i], 0, 0);
 				i++;

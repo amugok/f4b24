@@ -23,7 +23,7 @@
 
 #define MAX_FITTLE_PATH 260*2
 #define FILE_EXIST(X) (GetFileAttributes(X)==0xFFFFFFFF ? FALSE : TRUE)
-#define IsURLPath(X) StrStr(X, "://")
+#define IsURLPath(X) StrStr(X, TEXT("://"))
 
 static BOOL OnInit();
 static void OnQuit();
@@ -83,16 +83,13 @@ static void UpdateMenuItems(HMENU hMenu){
 			}
 		}
 		if (p >= 0){
-			InsertMenu(hMenu, p, MF_STRING | MF_BYPOSITION, IDM_LIST_URL, "アドレスを追加(&U)\tCtrl+U");
+			InsertMenu(hMenu, p, MF_STRING | MF_BYPOSITION, IDM_LIST_URL, TEXT("アドレスを追加(&U)\tCtrl+U"));
 		}else{
-			AppendMenu(hMenu, MF_STRING, IDM_LIST_URL, "アドレスを追加(&U)\tCtrl+U");
+			AppendMenu(hMenu, MF_STRING, IDM_LIST_URL, TEXT("アドレスを追加(&U)\tCtrl+U"));
 		}
 	}else{
 		EnableMenuItem(hMenu, IDM_LIST_URL, MF_BYCOMMAND | MF_ENABLED);
 	}
-//        MENUITEM "アドレスを追加(&U)\tCtrl+U",  IDM_LIST_URL
-  //      MENUITEM "一番上に移動(&T)",            IDM_LIST_MOVETOP
-
 }
 
 // サブクラス化したウィンドウプロシージャ
@@ -135,13 +132,13 @@ static void OnConfig(){
 }
 
 static BOOL CALLBACK AddURLDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
-	static char *pszText;
-	char szTemp[MAX_FITTLE_PATH];
+	static LPTSTR pszText;
+	TCHAR szTemp[MAX_FITTLE_PATH];
 
 	switch(msg)
 	{		
 		case WM_INITDIALOG:
-			pszText = (char *)lp;
+			pszText = (LPTSTR)lp;
 
 			// クリップボードに有効なURIが入っていればエディットボックスにコピー
 			if(IsClipboardFormatAvailable(CF_TEXT)){
@@ -157,7 +154,7 @@ static BOOL CALLBACK AddURLDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 					SendMessage(GetDlgItem(hDlg, IDC_EDIT1), EM_SETSEL, (WPARAM)0, (LPARAM)lstrlen(szTemp));
 				}
 			}
-			SendMessage(hDlg, WM_SETTEXT, 0, (LPARAM)"アドレスを追加");
+			SendMessage(hDlg, WM_SETTEXT, 0, (LPARAM)TEXT("アドレスを追加"));
 			SetFocus(GetDlgItem(hDlg, IDC_EDIT1));
 			return FALSE;
 
@@ -191,14 +188,40 @@ static BOOL CALLBACK AddURLDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 	}
 }
 
+static void SendCopyData(HWND hFittle, int iType, LPTSTR lpszString){
+#ifdef UNICODE
+	CHAR nameA[MAX_FITTLE_PATH];
+	LPBYTE lpWork;
+	COPYDATASTRUCT cds;
+	DWORD la, lw, cbData;
+	WideCharToMultiByte(CP_ACP, 0, lpszString, -1, nameA, MAX_FITTLE_PATH, NULL, NULL);
+	la = lstrlenA(nameA) + 1;
+	if (la & 1) la++; /* WORD align */
+	lw = lstrlenW(lpszString) + 1;
+	cbData = la * sizeof(CHAR) + lw * sizeof(WCHAR);
+	lpWork = (LPBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, cbData);
+	if (!lpWork) return;
+	lstrcpyA((LPSTR)(lpWork), nameA);
+	lstrcpyW((LPWSTR)(lpWork + la), lpszString);
+	cds.dwData = iType;
+	cds.lpData = (LPVOID)lpWork;
+	cds.cbData = cbData;
+	SendMessage(hFittle, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
+	HeapFree(GetProcessHeap(), 0, lpWork);
+#else
+	COPYDATASTRUCT cds;
+	cds.dwData = iType;
+	cds.lpData = (LPVOID)lpszString;
+	cds.cbData = (lstrlenA(lpszString) + 1) * sizeof(CHAR);
+	// 文字列送信
+	SendMessage(hFittle, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
+#endif
+}
+
 static void AddURL(HWND hWnd){
-	char szLabel[MAX_FITTLE_PATH];
+	TCHAR szLabel[MAX_FITTLE_PATH];
 	szLabel[0] = '\0';
-	if(DialogBoxParam(hDLL, "TAB_NAME_DIALOG", hWnd, AddURLDlgProc, (LPARAM)szLabel)){
-		COPYDATASTRUCT cds;
-		cds.dwData = 1;
-		cds.cbData = lstrlen(szLabel) + 1;
-		cds.lpData = szLabel;
-		SendMessage(fpi.hParent, WM_COPYDATA, (WPARAM)fpi.hParent, (LPARAM)&cds);
+	if(DialogBoxParam(hDLL, TEXT("TAB_NAME_DIALOG"), hWnd, AddURLDlgProc, (LPARAM)szLabel)){
+		SendCopyData(fpi.hParent, 1, szLabel);
 	}
 }

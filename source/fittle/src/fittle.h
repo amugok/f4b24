@@ -66,78 +66,80 @@ typedef long LONG_PTR;
 #define IDM_BM_FIRST 60000		// しおり動的メニュー
 #define FITTLE_WIDTH 435		// ウィンドウ幅
 #define FITTLE_HEIGHT 356		// ウィンドウ高さ
-#define MAX_EXT_COUNT 30		// 検索拡張子の数
-#define MAX_BM_SIZE 10			// しおりの数
 #define BAND_COUNT 3			// リバーのバンドの数
 
 struct FILEINFO{
-	char szFilePath[MAX_FITTLE_PATH];	// ファイルパス
-	char szSize[50];			// サイズ
-	char szTime[50];			// 更新時間
+	TCHAR szFilePath[MAX_FITTLE_PATH];	// ファイルパス
+	TCHAR szSize[50];			// サイズ
+	TCHAR szTime[50];			// 更新時間
 	BOOL bPlayFlag;				// 再生済みチェックフラグ
 	struct FILEINFO *pNext;		// 次のリストへのポインタ
 };
 
 typedef struct {
 	HSTREAM hChan;				// ストリームハンドル
-	char szFilePath[MAX_FITTLE_PATH];	// フルパス
+	TCHAR szFilePath[MAX_FITTLE_PATH];	// フルパス
 	QWORD qStart;				// 再生開始位置
 	QWORD qDuration;			// 再生終了位置
 	LPBYTE pBuff;				// メモリバッファ
 } CHANNELINFO;
 
 struct CONFIG{
-	int nTrayOpt;				// タスクトレイモード
-	int nInfoTip;				// 曲名お知らせ機能
-	int nHighTask;				// システムの優先度
-	int nTreeIcon;				// ツリー、コンボのアイコン表示
-	int nHideShow;				// 隠しフォルダを表示するか
-	int nAllSub;				// 全てのフォルダがサブフォルダを持つ
-	int nPathTip;				// ヒントでフルパスを表示
-	int nGridLine;				// グリッドラインを表示
-	int nSingleExpand;			// フォルダを一つしか開かない
-	int nBMRoot;				// しおりをルートとして扱うか
-	int nBMFullPath;			// しおりをフルパスで表示
-	int nTagReverse;			// タイトル、アーティストを反転
-	int nTimeInList;			// プレイリストで更新日時を取得する
-	int nHotKey[HOTKEY_COUNT];	// ホットキー
-	int nTreeWidth;				// ツリーの幅
-	int nExistCheck;
-	int nCompact;				// コンパクトモード
-	int nFontHeight;			// フォントの高さ
-	int nFontStyle;				// フォントのスタイル
-	int nTextColor;				// 文字の色
 	int nBkColor;				// 背景の色
+	int nTextColor;				// 文字の色
 	int nPlayTxtCol;			// 再生曲文字列
 	int nPlayBkCol;				// 再生曲背景
 	int nPlayView;				// 再生曲の表示方法
-	int nSeekAmount;			// シーク量
-	int nVolAmount;
-	int nTabMulti;
-	int nTabHide;				// タブが一つの時はタブを隠す
+	int nHighTask;				// システムの優先度
+	int nGridLine;				// グリッドラインを表示
+	int nSingleExpand;			// フォルダを一つしか開かない
+	int nExistCheck;			// 存在確認
+	int nTimeInList;			// プレイリストで更新日時を取得する
+	int nTreeIcon;				// ツリー、コンボのアイコン表示
+	int nTrayOpt;				// タスクトレイモード
+	int nHideShow;				// 隠しフォルダを表示するか
+	int nTabBottom;				// タブを下に表示する
+	int nTabMulti;				// 多段で表示する
+	int nAllSub;				// 全てのフォルダがサブフォルダを持つ
+	int nPathTip;				// ヒントでフルパスを表示
+	int nInfoTip;				// 曲名お知らせ機能
+	int nTagReverse;			// タイトル、アーティストを反転
 	int nShowHeader;			// ヘッダコントロールを表示する
+	int nSeekAmount;			// シーク量
+	int nVolAmount;				// 音量変化量(隠し設定?)
+	int nResume;				// 終了時に再生していた曲を起動時にも再生する
+	int nResPosFlag;			// 終了時の再生位置も記録復元する
+	int nCloseMin;				// 閉じるボタンで最小化する
+	int nZipSearch;				// サブフォルダを検索で圧縮ファイルも検索する
+	int nTabHide;				// タブが一つの時はタブを隠す
+	int nOut32bit;				// 32bit(float)で出力する
+	int nFadeOut;				// 停止時にフェードアウトする
+
+	TCHAR szStartPath[MAX_FITTLE_PATH];	// スタートアップパス
+	TCHAR szFilerPath[MAX_FITTLE_PATH];	// ファイラのパス
+
+	int nHotKey[HOTKEY_COUNT];	// ホットキー
+
 	int nTrayClick[6];			// クリック時の動作
-	int nResume;
-	int nResPosFlag;
+
+	TCHAR szFontName[32];		// フォントの名前
+	int nFontHeight;			// フォントの高さ
+	int nFontStyle;				// フォントのスタイル
+
+	TCHAR szToolPath[MAX_FITTLE_PATH];
+
+	/* 状態 */
+
+	int nTreeWidth;				// ツリーの幅
+	int nCompact;				// コンパクトモード
 	int nResPos;
 	int nTreeState;
 	int nShowStatus;
-	int nCloseMin;
-	int nZipSearch;
-	int nTabBottom;
-	int nOut32bit;
-	int nFadeOut;
 
 	int nMiniPanelEnd;
 
-	char szStartPath[MAX_FITTLE_PATH];	// スタートアップパス
-	char szTypeList[MAX_EXT_COUNT][5];		// 検索拡張子
-	char szBMPath[MAX_BM_SIZE][MAX_FITTLE_PATH];	// しおり
-	char szFontName[32];		// フォントの名前
-	char szFilerPath[MAX_FITTLE_PATH];	// ファイラのパス
-	char szWAPPath[MAX_FITTLE_PATH];
-	char szLastFile[MAX_FITTLE_PATH];
-	char szToolPath[MAX_FITTLE_PATH];
+	TCHAR szWAPPath[MAX_FITTLE_PATH];
+	TCHAR szLastFile[MAX_FITTLE_PATH];
 };
 
 extern struct CONFIG g_cfg;
@@ -145,6 +147,6 @@ extern CHANNELINFO g_cInfo[2];
 extern BOOL g_bNow;
 
 LRESULT CALLBACK NewListProc(HWND, UINT, WPARAM, LPARAM); //リストビュー用のプロシージャ
-BOOL CheckFileType(char *);
+BOOL CheckFileType(LPTSTR);
 
 #endif

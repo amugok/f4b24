@@ -14,14 +14,15 @@ enum {OTHERS=0, FOLDERS, FILES, LISTS, ARCHIVES, NA_CUESHEETS_, URLS};
 
 //--É}ÉNÉç--
 #define FILE_EXIST(X) (GetFileAttributes(X)==0xFFFFFFFF ? FALSE : TRUE)
-#define IsURLPath(X) StrStr(X, "://")
+#define IsURLPath(X) StrStr(X, TEXT("://"))
+#define IsURLPathA(X) StrStrA(X, "://")
 
-char *GetFileName(char *);
-int GetParentDir(char *, char *);
-BOOL IsPlayList(char *);
-int WritePrivateProfileInt(char *, char *, int, char *);
-BOOL GetTimeAndSize(const char *, char *, char *);
+LPTSTR GetFileName(LPTSTR);
+int GetParentDir(LPCTSTR, LPTSTR);
+BOOL IsPlayList(LPTSTR);
+int WritePrivateProfileInt(LPTSTR, LPTSTR, int, LPTSTR);
+BOOL GetTimeAndSize(LPCTSTR, LPTSTR, LPTSTR);
 void SetOLECursor(int);
-void GetModuleParentDir(char *);
-LPSTR MyPathAddBackslash(LPSTR);
+void GetModuleParentDir(LPTSTR);
+LPTSTR MyPathAddBackslash(LPTSTR);
 #endif

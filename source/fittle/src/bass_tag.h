@@ -62,10 +62,10 @@ typedef struct{
 }ID3TAG;
 
 typedef struct{
-	char szTitle[256];
-	char szArtist[256];
-	char szAlbum[256];
-	char szTrack[10];
+	TCHAR szTitle[256];
+	TCHAR szArtist[256];
+	TCHAR szAlbum[256];
+	TCHAR szTrack[10];
 }TAGINFO;
 
 BOOL BASS_TAG_Read(DWORD, TAGINFO *);

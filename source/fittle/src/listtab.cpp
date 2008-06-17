@@ -16,7 +16,7 @@
 #include "archive.h"
 
 // 新しいタブもろもろを作成
-struct LISTTAB *MakeNewTab(HWND hTab, char *szTabName, int nItem){
+struct LISTTAB *MakeNewTab(HWND hTab, LPTSTR szTabName, int nItem){
 	struct LISTTAB *pNew = NULL;
 	HWND hList = NULL;
 	WNDPROC OldProc = NULL;
@@ -24,7 +24,7 @@ struct LISTTAB *MakeNewTab(HWND hTab, char *szTabName, int nItem){
 
 	pNew = (struct LISTTAB *)HeapAlloc(GetProcessHeap(), 0/*HEAP_ZERO_MEMORY*/, sizeof(struct LISTTAB));
 	if(!pNew){
-		MessageBox(GetParent(hTab), "タブの作成に失敗しました。メモリを確保してください。", "Fittle", MB_OK);
+		MessageBox(GetParent(hTab), TEXT("タブの作成に失敗しました。メモリを確保してください。"), TEXT("Fittle"), MB_OK);
 		return NULL;
 	}
 	// 構造体の初期化
@@ -53,37 +53,37 @@ struct LISTTAB *MakeNewTab(HWND hTab, char *szTabName, int nItem){
 		(HINSTANCE)(LONG_PTR)GetWindowLongPtr(GetParent(hTab), GWLP_HINSTANCE),
 		NULL);
 	if(!hList){
-		MessageBox(GetParent(hTab), "リストの作成に失敗しました。メモリを確保してください。", "Fittle", MB_OK);
+		MessageBox(GetParent(hTab), TEXT("リストの作成に失敗しました。メモリを確保してください。"), TEXT("Fittle"), MB_OK);
 		return NULL;
 	}
 	pNew->hList = hList;
 
 	// INIファイルの位置を取得
-	char szINIPath[MAX_FITTLE_PATH];
+	TCHAR szINIPath[MAX_FITTLE_PATH];
 	GetModuleParentDir(szINIPath);
-	lstrcat(szINIPath, "Fittle.ini");
+	lstrcat(szINIPath, TEXT("Fittle.ini"));
 
 	// カラムの設定
 	LVCOLUMN lvcol;
 	lvcol.mask = LVCF_TEXT | LVCF_FMT | LVCF_WIDTH | LVCF_SUBITEM;
 	lvcol.fmt = LVCFMT_LEFT;
-	lvcol.cx = GetPrivateProfileInt("Column", "Width0", 200, szINIPath);
+	lvcol.cx = GetPrivateProfileInt(TEXT("Column"), TEXT("Width0"), 200, szINIPath);
 	lvcol.iSubItem = 0;
-	lvcol.pszText = "ファイル名";
+	lvcol.pszText = TEXT("ファイル名");
 	ListView_InsertColumn(hList, 0, &lvcol);
-	lvcol.cx = GetPrivateProfileInt("Column", "Width1", 70, szINIPath);
+	lvcol.cx = GetPrivateProfileInt(TEXT("Column"), TEXT("Width1"), 70, szINIPath);
 	lvcol.fmt = LVCFMT_RIGHT;
-	lvcol.pszText = "サイズ";
+	lvcol.pszText = TEXT("サイズ");
 	ListView_InsertColumn(hList, 1, &lvcol);
 	lvcol.fmt = LVCFMT_LEFT;
-	lvcol.cx = GetPrivateProfileInt("Column", "Width2", 40, szINIPath);
-	lvcol.pszText = "種類";
+	lvcol.cx = GetPrivateProfileInt(TEXT("Column"), TEXT("Width2"), 40, szINIPath);
+	lvcol.pszText = TEXT("種類");
 	ListView_InsertColumn(hList, 2, &lvcol);
-	lvcol.cx = GetPrivateProfileInt("Column", "Width3", 130, szINIPath);
-	lvcol.pszText = "更新日時";
+	lvcol.cx = GetPrivateProfileInt(TEXT("Column"), TEXT("Width3"), 130, szINIPath);
+	lvcol.pszText = TEXT("更新日時");
 	ListView_InsertColumn(hList, 3, &lvcol);
 
-	pNew->nSortState = GetPrivateProfileInt("Column", "Sort", 0, szINIPath);;	// フルパスでソート
+	pNew->nSortState = GetPrivateProfileInt(TEXT("Column"), TEXT("Sort"), 0, szINIPath);;	// フルパスでソート
 
 	ListView_SetExtendedListViewStyle(hList, (g_cfg.nGridLine?LVS_EX_GRIDLINES:0) | LVS_EX_FULLROWSELECT | LVS_EX_INFOTIP | 0x00010000/*LVS_EX_DOUBLEBUFFER*/);
 
@@ -121,7 +121,7 @@ int TraverseList(struct LISTTAB *pListTab){
 
 #ifdef _DEBUG
 	DWORD dTime;
-	char szBuff[100];
+	TCHAR szBuff[100];
 	dTime = GetTickCount();
 #endif
 
@@ -162,7 +162,7 @@ int TraverseList(struct LISTTAB *pListTab){
 	}
 
 #ifdef _DEBUG
-	wsprintf(szBuff, "Travese  time:\t%d ms\n", GetTickCount() - dTime);
+	wsprintf(szBuff, TEXT("Travese  time:\t%d ms\n"), GetTickCount() - dTime);
 	OutputDebugString(szBuff);
 #endif
 
@@ -260,7 +260,7 @@ void SendToPlaylist(struct LISTTAB *ltFrom, struct LISTTAB *ltTo){
 }
 
 // リストタブリネーム
-int RenameListTab(HWND hTab, int nItem, char *szLabel){
+int RenameListTab(HWND hTab, int nItem, LPTSTR szLabel){
 	TCITEM tci;
 
 	lstrcpyn(GetListTab(hTab, nItem)->szTitle, szLabel, MAX_FITTLE_PATH);
@@ -295,7 +295,7 @@ int RemoveListTab(HWND hTab, int nItem){
 // タブ移動
 int MoveTab(HWND hTab, int nTarget, int nDir){
 	TCITEM tciFrom, tciTo;
-	char szFrom[MAX_FITTLE_PATH], szTo[MAX_FITTLE_PATH];
+	TCHAR szFrom[MAX_FITTLE_PATH], szTo[MAX_FITTLE_PATH];
 
 	// 初期設定
 	tciFrom.mask = tciTo.mask = TCIF_PARAM | TCIF_TEXT;
@@ -412,10 +412,10 @@ int InsertList(struct LISTTAB *pTo, int nStart, struct FILEINFO *pSub){
 }
 
 BOOL LoadPlaylists(HWND hTab){
-	char szColPath[MAX_FITTLE_PATH];
-	char szTempPath[MAX_FITTLE_PATH];
-	char *szBuff, *p;
-	char szTime[50] = "-", szSize[50] = "-";
+	TCHAR szColPath[MAX_FITTLE_PATH];
+	TCHAR szTempPath[MAX_FITTLE_PATH];
+	LPTSTR szBuff, p;
+	TCHAR szTime[50] = TEXT("-"), szSize[50] = TEXT("-");
 	int i;
 	struct LISTTAB *pNew;
 	struct FILEINFO **pTale;
@@ -425,40 +425,44 @@ BOOL LoadPlaylists(HWND hTab){
 
 	// ファイルをオープン＆リード
 	GetModuleParentDir(szColPath);
-	lstrcat(szColPath, "Playlist.fpf");
+#ifdef UNICODE
+	lstrcat(szColPath, TEXT("Playlist.fpu"));
+#else
+	lstrcat(szColPath, TEXT("Playlist.fpf"));
+#endif
 
 	hFile = CreateFile(szColPath, GENERIC_READ, 0, NULL,
 		OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if(hFile==INVALID_HANDLE_VALUE) return FALSE;
 
-	dwSize = GetFileSize(hFile, NULL)+1;
-	szBuff = (char *)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwSize);
+	dwSize = GetFileSize(hFile, NULL) + sizeof(TCHAR);
+	szBuff = (LPTSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwSize);
 	if(!szBuff){
-		MessageBox(GetParent(hTab), "メモリの確保に失敗しました。", "Fittle", MB_OK);
+		MessageBox(GetParent(hTab), TEXT("メモリの確保に失敗しました。"), TEXT("Fittle"), MB_OK);
 		return FALSE;
 	}
 	ReadFile(hFile, szBuff, dwSize, &dwAccBytes, NULL);
 	CloseHandle(hFile);
-	szBuff[dwAccBytes] = '\0';
+	szBuff[dwAccBytes / sizeof(TCHAR)] = TEXT('\0');
 
 	// 読み込んだバッファを処理
-	for(p=szBuff;*p!='\0';p++){
+	for(p=szBuff;*p!=TEXT('\0');p++){
 		// タイトル読み込み
-		for(i=0;*p!='\n';p++){
+		for(i=0;*p!=TEXT('\n');p++){
 			szTempPath[i++] = *p;
 		}
-		szTempPath[i] = '\0';
+		szTempPath[i] = TEXT('\0');
 		pNew = MakeNewTab(hTab, szTempPath, -1);
 		pTale = &(pNew->pRoot);
 		p++;
 
 		// ファイル読み込み
-		while(*p=='\t'){
+		while(*p==TEXT('\t')){
 			i = 0;
-			for(p+=1;*p!='\n';p++){
+			for(p+=1;*p!=TEXT('\n');p++){
 				szTempPath[i++] = *p;
 			}
-			szTempPath[i] = '\0';
+			szTempPath[i] = TEXT('\0');
 			if(!g_cfg.nExistCheck || FILE_EXIST(szTempPath) || IsArchivePath(szTempPath) || IsURLPath(szTempPath))
 			{
 				if(g_cfg.nTimeInList){
@@ -486,19 +490,19 @@ static void RemoveAllTabs(HWND hTab, int nTabCount){
 	}
 }
 
-static int WriteBuff(char *szBuff, int nBuffSize, int nBuffPos, const char *pData){
+static int WriteBuff(LPTSTR szBuff, int nBuffSize, int nBuffPos, LPCTSTR pData){
 	int l = lstrlen(pData);
 	if (nBuffPos + l <= nBuffSize)
 	{
-		CopyMemory(szBuff + nBuffPos, pData, l);
+		CopyMemory(szBuff + nBuffPos, pData, l * sizeof(TCHAR));
 		nBuffPos += l;
 	}
 	return nBuffPos;
 }
 
 BOOL SavePlaylists(HWND hTab){
-	char szColPath[MAX_FITTLE_PATH];
-	char *szBuff;
+	TCHAR szColPath[MAX_FITTLE_PATH];
+	LPTSTR szBuff;
 	int nTabCount;
 	int nBuffSize = 0;
 	int nBuffPos = 0;
@@ -509,7 +513,11 @@ BOOL SavePlaylists(HWND hTab){
 	DWORD dwAccBytes;
 
 	GetModuleParentDir(szColPath);
-	lstrcat(szColPath, "Playlist.fpf");
+#ifdef UNICODE
+	lstrcat(szColPath, TEXT("Playlist.fpu"));
+#else
+	lstrcat(szColPath, TEXT("Playlist.fpf"));
+#endif
 
 	nTabCount = TabCtrl_GetItemCount(hTab) - 1;
 	if(nTabCount<=0){
@@ -521,11 +529,11 @@ BOOL SavePlaylists(HWND hTab){
 	for(i=1;i<=nTabCount;i++){
 		nBuffSize += ListView_GetItemCount(GetListTab(hTab, i)->hList) + 2; //タイトル分で+1
 	}
-	nBuffSize *= MAX_FITTLE_PATH + 1;
+	nBuffSize *= (MAX_FITTLE_PATH + 1) * sizeof(TCHAR);
 
-	szBuff = (char *)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, nBuffSize);
+	szBuff = (LPTSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, nBuffSize);
 	if(!szBuff){
-		MessageBox(GetParent(hTab), "メモリの確保に失敗しました。", "Fittle", MB_OK);
+		MessageBox(GetParent(hTab), TEXT("メモリの確保に失敗しました。"), TEXT("Fittle"), MB_OK);
 		RemoveAllTabs(hTab, nTabCount);
 		return FALSE;
 	}
@@ -533,14 +541,14 @@ BOOL SavePlaylists(HWND hTab){
 	for(i=1;i<=nTabCount;i++){
 		pListTab = GetListTab(hTab, i);
 		nBuffPos = WriteBuff(szBuff, nBuffSize, nBuffPos, pListTab->szTitle);
-		nBuffPos = WriteBuff(szBuff, nBuffSize, nBuffPos, "\n");
+		nBuffPos = WriteBuff(szBuff, nBuffSize, nBuffPos, TEXT("\n"));
 
 		for(pTmp = pListTab->pRoot;pTmp!=NULL;pTmp = pTmp->pNext){
-			nBuffPos = WriteBuff(szBuff, nBuffSize, nBuffPos, "\t");	// ファイル識別子(\t)を挿入
+			nBuffPos = WriteBuff(szBuff, nBuffSize, nBuffPos, TEXT("\t"));	// ファイル識別子(\t)を挿入
 			nBuffPos = WriteBuff(szBuff, nBuffSize, nBuffPos, pTmp->szFilePath);
-			nBuffPos = WriteBuff(szBuff, nBuffSize, nBuffPos, "\n");	// 改行コードを挿入
+			nBuffPos = WriteBuff(szBuff, nBuffSize, nBuffPos, TEXT("\n"));	// 改行コードを挿入
 		}
-		nBuffPos = WriteBuff(szBuff, nBuffSize, nBuffPos, "\n");
+		nBuffPos = WriteBuff(szBuff, nBuffSize, nBuffPos, TEXT("\n"));
 	}
 
 	RemoveAllTabs(hTab, nTabCount);
@@ -552,7 +560,7 @@ BOOL SavePlaylists(HWND hTab){
 		HeapFree(GetProcessHeap(), 0, szBuff);
 		return FALSE;
 	}
-	WriteFile(hFile, szBuff, (DWORD)nBuffPos, &dwAccBytes, NULL);
+	WriteFile(hFile, szBuff, (DWORD)nBuffPos * sizeof(TCHAR), &dwAccBytes, NULL);
 	CloseHandle(hFile);
 
 	// メモリの開放
@@ -562,18 +570,18 @@ BOOL SavePlaylists(HWND hTab){
 }
 
 BOOL CALLBACK TabNameDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
-	static char *pszText;
+	static LPTSTR pszText;
 
 	switch(msg){	
 		case WM_INITDIALOG:
-			pszText = (char *)lp;
+			pszText = (LPTSTR)lp;
 			SetWindowText(GetDlgItem(hDlg, IDC_EDIT1), pszText);
 			SendMessage(GetDlgItem(hDlg, IDC_EDIT1), EM_SETSEL, (WPARAM)0, (LPARAM)lstrlen(pszText));
 			SetFocus(GetDlgItem(hDlg, IDC_EDIT1));
 			return FALSE;
 
 		case WM_COMMAND:
-			char szTemp[MAX_FITTLE_PATH];
+			TCHAR szTemp[MAX_FITTLE_PATH];
 			switch(LOWORD(wp))
 			{
 				case IDOK:	// 設定保存

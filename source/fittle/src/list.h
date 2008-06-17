@@ -11,22 +11,22 @@
 #include "fittle.h"
 #include <commctrl.h>
 
-struct FILEINFO **AddList(struct FILEINFO **, char *, char *, char *);
+struct FILEINFO **AddList(struct FILEINFO **, LPTSTR, LPTSTR, LPTSTR);
 int DeleteAList(struct FILEINFO *, struct FILEINFO **);
 int DeleteAllList(struct FILEINFO **);
 int GetListCount(struct FILEINFO *);
 struct FILEINFO *GetPtrFromIndex(struct FILEINFO *, int);
 int GetIndexFromPtr(struct FILEINFO *, struct FILEINFO *);
-int GetIndexFromPath(struct FILEINFO *,char *);
+int GetIndexFromPath(struct FILEINFO *,LPTSTR);
 int SetUnPlayed(struct FILEINFO *);
 int GetUnPlayedFile(struct FILEINFO *);
 int GetUnPlayedIndex(struct FILEINFO *, int);
-BOOL SearchFolder(struct FILEINFO **, char *, BOOL);
-int ReadM3UFile(struct FILEINFO **, char *);
-BOOL WriteM3UFile(struct FILEINFO *, char *, int);
-BOOL ReadArchive(struct FILEINFO **, char *);
+BOOL SearchFolder(struct FILEINFO **, LPTSTR, BOOL);
+int ReadM3UFile(struct FILEINFO **, LPTSTR);
+BOOL WriteM3UFile(struct FILEINFO *, LPTSTR, int);
+BOOL ReadArchive(struct FILEINFO **, LPTSTR);
 void MergeSort(struct FILEINFO **, int);
-int SearchFiles(struct FILEINFO **, char *, BOOL);
+int SearchFiles(struct FILEINFO **, LPTSTR, BOOL);
 int LinkCheck(struct FILEINFO **);
 
 #endif
