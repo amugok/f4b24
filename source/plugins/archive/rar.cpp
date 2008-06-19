@@ -6,7 +6,6 @@
 #pragma comment(lib,"kernel32.lib")
 #pragma comment(lib,"user32.lib")
 #pragma comment(lib,"shlwapi.lib")
-#pragma comment(lib,"../../../extra/unrar/unrar.lib")
 #ifdef UNICODE
 #pragma comment(linker, "/EXPORT:GetAPluginInfoW=_GetAPluginInfoW@0")
 #define GetAPluginInfo GetAPluginInfoW
@@ -18,10 +17,12 @@
 #pragma comment(linker,"/MERGE:.rdata=.text")
 #pragma comment(linker,"/ENTRY:DllMain")
 #pragma comment(linker,"/OPT:NOWIN98")
+#pragma comment(linker,"/STUB:stub.exe")
 #endif
 
 
 static HMODULE hDLL = 0;
+static HMODULE hUNRARDLL = 0;
 
 #if 0
 extern "C" void *memcpy(void *dest, const void *src, size_t count)
@@ -36,6 +37,46 @@ extern "C" void *memset( void *dest, int c, size_t count )
 	return dest;
 }
 #endif
+
+#ifdef UNICODE
+typedef HANDLE (PASCAL * LPFNRAROPENARCHIVEEX)(struct RAROpenArchiveDataEx *ArchiveData);
+typedef int    (PASCAL * LPFNRARREADHEADEREX)(HANDLE hArcData,struct RARHeaderDataEx *HeaderData);
+#else
+typedef HANDLE (PASCAL * LPFNRAROPENARCHIVE)(struct RAROpenArchiveData *ArchiveData);
+typedef int    (PASCAL * LPFNRARREADHEADER)(HANDLE hArcData,struct RARHeaderData *HeaderData);
+#endif
+typedef int    (PASCAL * LPFNRARCLOSEARCHIVE)(HANDLE hArcData);
+typedef int    (PASCAL * LPFNRARPROCESSFILE)(HANDLE hArcData,int Operation,char *DestPath,char *DestName);
+typedef void   (PASCAL * LPFNRARSETCALLBACK)(HANDLE hArcData,UNRARCALLBACK Callback,LPARAM UserData);
+
+#ifdef UNICODE
+static LPFNRAROPENARCHIVEEX pRAROpenArchiveEx;
+static LPFNRARREADHEADEREX pRARReadHeaderEx;
+#else
+static LPFNRAROPENARCHIVE pRAROpenArchive;
+static LPFNRARREADHEADER pRARReadHeader;
+#endif
+static LPFNRARCLOSEARCHIVE pRARCloseArchive;
+static LPFNRARPROCESSFILE pRARProcessFile;
+static LPFNRARSETCALLBACK pRARSetCallback;
+
+static /*const*/ struct IMPORT_FUNC_TABLE {
+	LPSTR/*LPCSTR*/ lpszFuncName;
+	FARPROC * ppFunc;
+} functbl[] = {
+#ifdef UNICODE
+	{ "RAROpenArchiveEx", (FARPROC *)&pRAROpenArchiveEx },
+	{ "RARReadHeaderEx", (FARPROC *)&pRARReadHeaderEx },
+#else
+	{ "RAROpenArchive", (FARPROC *)&pRAROpenArchive },
+	{ "RARReadHeader", (FARPROC *)&pRARReadHeader },
+#endif
+	{ "RARCloseArchive", (FARPROC *)&pRARCloseArchive },
+	{ "RARProcessFile", (FARPROC *)&pRARProcessFile },
+	{ "RARSetCallback", (FARPROC *)&pRARSetCallback },
+	{ 0, (FARPROC *)0 }
+};
+static /*const*/ TCHAR szDllName[] = TEXT("unrar.dll");
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
@@ -98,22 +139,22 @@ static BOOL CALLBACK EnumArchive(LPTSTR pszFilePath, LPFNARCHIVEENUMPROC lpfnPro
 	OpenArchiveData.CmtBufSize=sizeof(CmtBuf);
 	OpenArchiveData.OpenMode=RAR_OM_LIST;
 #ifdef UNICODE
-	hArcData=RAROpenArchiveEx(&OpenArchiveData);
+	hArcData=pRAROpenArchiveEx(&OpenArchiveData);
 #else
-	hArcData=RAROpenArchive(&OpenArchiveData);
+	hArcData=pRAROpenArchive(&OpenArchiveData);
 #endif
 
 	if (OpenArchiveData.OpenResult!=0) return FALSE;
 
-	RARSetCallback(hArcData,CallbackProcEN,0);
+	pRARSetCallback(hArcData,CallbackProcEN,0);
 
 	HeaderData.CmtBuf=CmtBuf;
 	HeaderData.CmtBufSize=sizeof(CmtBuf);
 
 #ifdef UNICODE
-	while ((RHCode=RARReadHeaderEx(hArcData,&HeaderData))==0)
+	while ((RHCode=pRARReadHeaderEx(hArcData,&HeaderData))==0)
 #else
-	while ((RHCode=RARReadHeader(hArcData,&HeaderData))==0)
+	while ((RHCode=pRARReadHeader(hArcData,&HeaderData))==0)
 #endif
 	{
 		FILETIME ft;
@@ -125,10 +166,10 @@ static BOOL CALLBACK EnumArchive(LPTSTR pszFilePath, LPFNARCHIVEENUMPROC lpfnPro
 #else
 		lpfnProc(HeaderData.FileName, HeaderData.UnpSize, ft, pData);
 #endif
-		if ((PFCode=RARProcessFile(hArcData,RAR_SKIP,NULL,NULL))!=0) break;
+		if ((PFCode=pRARProcessFile(hArcData,RAR_SKIP,NULL,NULL))!=0) break;
 	}
 
-	RARCloseArchive(hArcData);
+	pRARCloseArchive(hArcData);
 
 	return TRUE;
 }
@@ -188,21 +229,21 @@ static BOOL CALLBACK ExtractArchive(LPTSTR pszArchivePath, LPTSTR pszFileName, v
 	OpenArchiveData.CmtBufSize=sizeof(CmtBuf);
 	OpenArchiveData.OpenMode=RAR_OM_EXTRACT;
 #ifdef UNICODE
-	hArcData=RAROpenArchiveEx(&OpenArchiveData);
+	hArcData=pRAROpenArchiveEx(&OpenArchiveData);
 #else
-	hArcData=RAROpenArchive(&OpenArchiveData);
+	hArcData=pRAROpenArchive(&OpenArchiveData);
 #endif
 
 	if (OpenArchiveData.OpenResult!=0) return FALSE;
 
-	RARSetCallback(hArcData, CallbackProcEX, (LPARAM)&work);
+	pRARSetCallback(hArcData, CallbackProcEX, (LPARAM)&work);
 
 	HeaderData.CmtBuf=NULL;
 
 #ifdef UNICODE
-	while ((RHCode=RARReadHeaderEx(hArcData,&HeaderData)) == 0)
+	while ((RHCode=pRARReadHeaderEx(hArcData,&HeaderData)) == 0)
 #else
-	while ((RHCode=RARReadHeader(hArcData,&HeaderData)) == 0)
+	while ((RHCode=pRARReadHeader(hArcData,&HeaderData)) == 0)
 #endif
 	{
 #ifdef UNICODE
@@ -213,14 +254,14 @@ static BOOL CALLBACK ExtractArchive(LPTSTR pszArchivePath, LPTSTR pszFileName, v
 		{
 			work.dwSize = HeaderData.UnpSize;
 			if (work.dwSize == 0){
-				RARCloseArchive(hArcData);
+				pRARCloseArchive(hArcData);
 				return FALSE;
 			}
 			work.pBuf = work.dwSize ? (LPBYTE)HeapAlloc(GetProcessHeap(), 0, work.dwSize) : 0;
 			work.pCur = work.pBuf;
 			if (work.pBuf)
 			{
-				PFCode=RARProcessFile(hArcData, RAR_TEST, NULL,NULL);
+				PFCode=pRARProcessFile(hArcData, RAR_TEST, NULL,NULL);
 				if (PFCode!=0) work.dwSize = 0;
 			}
 			else
@@ -229,10 +270,10 @@ static BOOL CALLBACK ExtractArchive(LPTSTR pszArchivePath, LPTSTR pszFileName, v
 			}
 			break;
 		} else {
-			if ((PFCode=RARProcessFile(hArcData,RAR_SKIP,NULL,NULL))!=0) break;
+			if ((PFCode=pRARProcessFile(hArcData,RAR_SKIP,NULL,NULL))!=0) break;
 		}
 	}
-	RARCloseArchive(hArcData);
+	pRARCloseArchive(hArcData);
 	if (work.dwSize && work.pBuf && work.pBuf + work.dwSize == work.pCur)
 	{
 		*ppBuf = work.pBuf;
@@ -253,6 +294,24 @@ static ARCHIVE_PLUGIN_INFO apinfo = {
 };
 
 static BOOL InitArchive(){	
+	const struct IMPORT_FUNC_TABLE *pft;
+	if (!hUNRARDLL) hUNRARDLL = LoadLibrary(szDllName);
+	if (!hUNRARDLL) {
+		TCHAR szDllPath[MAX_PATH];
+		GetModuleFileName(hDLL, szDllPath, MAX_PATH);
+		lstrcpy(PathFindFileName(szDllPath), szDllName);
+		hUNRARDLL = LoadLibrary(szDllPath);
+		if (!hUNRARDLL) return FALSE;
+	}
+	for (pft = functbl; pft->lpszFuncName; pft++){
+		FARPROC fp = GetProcAddress(hUNRARDLL, pft->lpszFuncName);
+		if (!fp){
+			FreeLibrary(hUNRARDLL);
+			hUNRARDLL = NULL;
+			return FALSE;
+		}
+		*pft->ppFunc = fp;
+	}
 	return TRUE;
 }
 

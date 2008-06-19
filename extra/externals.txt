@@ -31,7 +31,6 @@ unlha32/
 
 unrar/
 	unrar.h
-	unrar.lib
 
 		UnRAR.dll
 		http://www.rarlab.com/rar_add.htm

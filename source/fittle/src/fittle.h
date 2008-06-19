@@ -138,7 +138,6 @@ struct CONFIG{
 
 	int nMiniPanelEnd;
 
-	TCHAR szWAPPath[MAX_FITTLE_PATH];
 	TCHAR szLastFile[MAX_FITTLE_PATH];
 };
 

@@ -21,6 +21,7 @@
 #pragma comment(linker,"/MERGE:.rdata=.text")
 #pragma comment(linker,"/ENTRY:DllMain")
 #pragma comment(linker,"/OPT:NOWIN98")
+#pragma comment(linker,"/STUB:stub.exe")
 #endif
 
 
@@ -308,6 +309,12 @@ private:
 	bool LoadDll(LPTSTR pszName)
 	{
 		HMODULE hDll = LoadLibrary(pszName);
+		if (!hDll) {
+			TCHAR szDllPath[MAX_PATH];
+			GetModuleFileName(hDLL, szDllPath, MAX_PATH);
+			lstrcpy(PathFindFileName(szDllPath), pszName);
+			hDll = LoadLibrary(szDllPath);
+		}
 		if (hDll)
 		{
 			m_lpfncreate = (LPFNFDICREATE)GetProcAddress(hDll, "FDICreate");

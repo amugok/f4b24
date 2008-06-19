@@ -20,6 +20,7 @@
 #pragma comment(linker,"/MERGE:.rdata=.text")
 #pragma comment(linker,"/ENTRY:DllMain")
 #pragma comment(linker,"/OPT:NOWIN98")
+#pragma comment(linker,"/STUB:stub.exe")
 #endif
 
 typedef HARC (WINAPI *LPUNLHAOPENARCHIVE)(const HWND, LPCTSTR, const DWORD);
@@ -88,29 +89,10 @@ static BOOL CALLBACK EnumArchive(LPTSTR pszFilePath, LPFNARCHIVEENUMPROC lpfnPro
 
 static BOOL CALLBACK ExtractArchive(LPTSTR pszArchivePath, LPTSTR pszFileName, void **ppBuf, DWORD *pSize)
 {
-	LPTSTR p, q;
 	int i=0;
 	INDIVIDUALINFO iinfo;
 	HARC hArc;
-	TCHAR cmd[MAX_PATH*2*2];
-	TCHAR szPlayFile[MAX_PATH*2] = {0};
 	int ret;
-
-	p = pszFileName;
-
-	// エスケープシーケンスの処理
-	for(i=0;*p;p++){
-#ifdef UNICODE
-#else
-		if(IsDBCSLeadByte(*p)){
-			szPlayFile[i++] = *p++;
-			szPlayFile[i++] = *p;
-			continue;
-		}
-#endif
-//		if(*p==TEXT('[') || *p==TEXT(']') || *p==TEXT('!') || *p==TEXT('^') || *p==TEXT('-') || *p==TEXT('\\')) szPlayFile[i++] = TEXT('\\');
-		szPlayFile[i++] = *p;
-	}
 
 	// アーカイブをオープン
 	hArc = lpUnLhaOpenArchive(NULL, pszArchivePath, M_CHECK_FILENAME_ONLY);
@@ -131,7 +113,8 @@ static BOOL CALLBACK ExtractArchive(LPTSTR pszArchivePath, LPTSTR pszFileName, v
 	*ppBuf = (LPBYTE)HeapAlloc(GetProcessHeap(), /*HEAP_ZERO_MEMORY*/0, iinfo.dwOriginalSize);
 	if (*ppBuf)
 	{
-		wsprintf(cmd, TEXT("-n -gm \"%s\" \"%s\""), pszArchivePath, szPlayFile);
+		TCHAR cmd[MAX_PATH*2*2];
+		wsprintf(cmd, TEXT("-n -gm \"%s\" \"%s\""), pszArchivePath, pszFileName);
 		ret = lpUnLhaExtractMem(NULL, cmd, (LPBYTE)*ppBuf, iinfo.dwOriginalSize, NULL, NULL, NULL);
 		if(!ret){
 			*pSize = iinfo.dwOriginalSize;
@@ -157,8 +140,13 @@ static ARCHIVE_PLUGIN_INFO apinfo = {
 
 static BOOL InitArchive(){	
 	if (!hUnlha32) hUnlha32 = LoadLibrary(TEXT("UNLHA32.DLL"));
-	if(!hUnlha32) return FALSE;
-
+	if (!hUnlha32) {
+		TCHAR szDllPath[MAX_PATH];
+		GetModuleFileName(hDLL, szDllPath, MAX_PATH);
+		lstrcpy(PathFindFileName(szDllPath), TEXT("UNLHA32.DLL"));
+		hUnlha32 = LoadLibrary(szDllPath);
+		if (!hUnlha32) return FALSE;
+	}
 	lpUnLhaOpenArchive = (LPUNLHAOPENARCHIVE )GetProcAddress(hUnlha32,"UnlhaOpenArchive" UNICODE_POSTFIX);
 	if(!lpUnLhaOpenArchive) return FALSE;
 	lpUnLhaFindFirst = (LPUNLHAFINDFIRST )GetProcAddress(hUnlha32,"UnlhaFindFirst" UNICODE_POSTFIX);

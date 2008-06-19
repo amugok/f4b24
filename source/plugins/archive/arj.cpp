@@ -20,6 +20,7 @@
 #pragma comment(linker,"/MERGE:.rdata=.text")
 #pragma comment(linker,"/ENTRY:DllMain")
 #pragma comment(linker,"/OPT:NOWIN98")
+#pragma comment(linker,"/STUB:stub.exe")
 #endif
 
 typedef HARC (WINAPI *LPUNLHAOPENARCHIVE)(const HWND, LPCTSTR, const DWORD);
@@ -153,8 +154,13 @@ static ARCHIVE_PLUGIN_INFO apinfo = {
 
 static BOOL InitArchive(){	
 	if (!hUnlha32) hUnlha32 = LoadLibrary(TEXT("UNARJ32J.DLL"));
-	if(!hUnlha32) return FALSE;
-
+	if (!hUnlha32) {
+		TCHAR szDllPath[MAX_PATH];
+		GetModuleFileName(hDLL, szDllPath, MAX_PATH);
+		lstrcpy(PathFindFileName(szDllPath), TEXT("UNARJ32J.DLL"));
+		hUnlha32 = LoadLibrary(szDllPath);
+		if (!hUnlha32) return FALSE;
+	}
 	lpUnLhaOpenArchive = (LPUNLHAOPENARCHIVE )GetProcAddress(hUnlha32,"UnarjOpenArchive" UNICODE_POSTFIX);
 	if(!lpUnLhaOpenArchive) return FALSE;
 	lpUnLhaFindFirst = (LPUNLHAFINDFIRST )GetProcAddress(hUnlha32,"UnarjFindFirst" UNICODE_POSTFIX);

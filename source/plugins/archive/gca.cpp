@@ -21,6 +21,7 @@
 #pragma comment(linker,"/MERGE:.rdata=.text")
 //#pragma comment(linker,"/ENTRY:DllMain")
 #pragma comment(linker,"/OPT:NOWIN98")
+#pragma comment(linker,"/STUB:stub.exe")
 #endif
 
 
