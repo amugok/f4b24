@@ -94,7 +94,7 @@ static void clearres(unsigned char *rdir, unsigned long rofs){
 	}
 }
 
-static int perb(const char *path, int s){
+static int perb(const char *path, int s, int dctmin){
 	unsigned char *rbf = 0;
 	unsigned char *wbf = 0;
 	size_t rsz;
@@ -163,6 +163,9 @@ static int perb(const char *path, int s){
 	}
 
 	memcpy(wbf + woptofs, rbf + roptofs, woptsz);
+	if (wdctnum < dctmin) wdctnum = dctmin;	/* 16‚æ‚è¬‚³‚¢‚ÆƒAƒCƒRƒ“‚ð“Ç‚ß‚È‚¢ê‡‚ª‚ ‚é */
+	woptsz = 96 + wdctnum * 8;
+
 	setdwordle(wbf + woptofs + 64, 0);	/* checksum */
 	setwordle(wbf + wcoffofs + 16, woptsz);
 	setdwordle(wbf + woptofs + 92, wdctnum);
@@ -223,14 +226,21 @@ static int perb(const char *path, int s){
 
 int main(int argc, char **argv){
 	int i = 1;
-	int s = 0;
-	if (argc > 2) {
-		s = atoi(argv[1]);
-		if (s > 0) i = 2;
+	int s = 9;
+	int d = 16;
+	for (; i < argc; i++) {
+		if (strcmpi(argv[i], "/s") == 0 && i + 1 < argc){
+			s = atoi(argv[++i]);
+			if (!s) s = 9;
+			continue;
+		} else if (strcmpi(argv[i], "/d") == 0 && i + 1 < argc){
+			d = atoi(argv[++i]);
+			if (!d) d = 16;
+			continue;
+		} else {
+			perb(argv[i], s, d);
+		}
 	}
-	if (!s) s = 9;
-	for (; i < argc; i++)
-		perb(argv[i], s);
 	return 0;
 }
 
