@@ -12,7 +12,7 @@ mzhead:
 .mz06_Number_of_relocation_entries:
 	dw	0
 .mz08_Header_size_in_paragraphs:
-	dw	2
+	dw	3
 .mz0a_Minimum_paragraphs_of_memory_allocated_in_addition_to_the_code_size:
 	dw	0100h
 .mz0c_Maximum_number_of_paragraphs_allocated_in_addition_to_the_code_size:
@@ -29,7 +29,8 @@ mzhead:
 .mz18_Offset_of_relocation_table:
 	dw	040h
 .mz1a_Overlay_number:
-	times 3 dw 0
+	dw	0
+	times 10 dw 0
 
 mzbody:
 entry:

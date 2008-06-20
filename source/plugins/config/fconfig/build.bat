@@ -14,6 +14,8 @@ if exist %1.exp del %1.exp
 if exist %1.lib del %1.lib
 if exist %1.obj del %1.obj
 if exist %1.res del %1.res
+if exist %1.exe perb %1.exe
+if exist %1.exe editbin /release %1.exe
 if exist %1.exe move %1.exe ..\..\..\..\bin\%1.exe
 
 goto exitcmd
