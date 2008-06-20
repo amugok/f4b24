@@ -82,15 +82,16 @@ void RefreshComboIcon(HWND hCB){
 		if(cbi.pszText[3]) {
 			if (IsArchive(cbi.pszText)) {
 				cbi.lParam = cbi.iImage = cbi.iSelectedImage = GetArchiveIconIndex(cbi.pszText);
-				SendMessage(hCB, CBEM_SETITEM, (WPARAM)0, (LPARAM)&cbi);
+			}else{
+				cbi.lParam = cbi.iImage = cbi.iSelectedImage = m_iFolderIcon;
 			}
 		} else {
 			SHGetFileInfo(cbi.pszText, 0, &shfi, sizeof(shfi), 
 				SHGFI_SMALLICON | SHGFI_SYSICONINDEX);
 			DestroyIcon(shfi.hIcon);
 			cbi.lParam = cbi.iImage = cbi.iSelectedImage = shfi.iIcon;
-			SendMessage(hCB, CBEM_SETITEM, (WPARAM)0, (LPARAM)&cbi);
 		}
+		SendMessage(hCB, CBEM_SETITEM, (WPARAM)0, (LPARAM)&cbi);
 	}
 	return;
 }
@@ -106,21 +107,21 @@ int InitTreeIconIndex(HWND hCB, HWND hTV, BOOL bShow){
 		hSysImglst = (HIMAGELIST)SHGetFileInfo(TEXT(""), 0, &shfi,
 			sizeof(shfi), SHGFI_SMALLICON | SHGFI_SYSICONINDEX);
 			ImageList_SetBkColor(hSysImglst, (COLORREF)g_cfg.nBkColor);
+
+		// リストアイコンインデックス取得
+		GetModuleParentDir(szIconPath);
+		SHGetFileInfo(szIconPath, 0, &shfi, sizeof(SHFILEINFO),
+			SHGFI_SMALLICON | SHGFI_SYSICONINDEX);
+		DestroyIcon(shfi.hIcon);
+		m_iFolderIcon = shfi.iIcon;
+		m_iListIcon = GetArchiveIconIndex(TEXT("*.m3u"));
 	}else{
 		hSysImglst = NULL;
+		m_iFolderIcon = -1;
+		m_iListIcon = -1;
 	}
 	SendMessage(hCB, CBEM_SETIMAGELIST, 0, (LPARAM)hSysImglst);
 	TreeView_SetImageList(hTV, hSysImglst, TVSIL_NORMAL);
-
-	// フォルダアイコンインデックス取得
-	GetModuleParentDir(szIconPath);
-	SHGetFileInfo(szIconPath, 0, &shfi, sizeof(SHFILEINFO),
-		SHGFI_SMALLICON | SHGFI_SYSICONINDEX);
-	DestroyIcon(shfi.hIcon);
-	m_iFolderIcon = shfi.iIcon;
-
-	// リストアイコンインデックス取得
-	m_iListIcon = GetArchiveIconIndex(TEXT("*.m3u"));
 
 	return 0;
 }
@@ -189,7 +190,7 @@ HTREEITEM MakeTwoTree(HWND hTV,	HTREEITEM hTarNode){
 							tvi.hParent = hTarNode;
 						}
 					}else if(IsArchive(szTargetPath)){
-						tvi.item.iImage = tvi.item.iSelectedImage = GetArchiveIconIndex(szTargetPath);
+						tvi.item.iImage = tvi.item.iSelectedImage = (m_iListIcon != -1) ? GetArchiveIconIndex(szTargetPath) : -1;
 						hChildNode = TreeView_InsertItem(hTV, &tvi);
 					}else if(IsPlayList(szTargetPath)){
 						tvi.item.iImage = tvi.item.iSelectedImage = m_iListIcon;

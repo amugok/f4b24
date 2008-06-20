@@ -27,11 +27,11 @@
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test18u")
+#define F4B24_VERSION_STRING TEXT("test19u")
 #else
-#define F4B24_VERSION_STRING TEXT("test18")
+#define F4B24_VERSION_STRING TEXT("test19")
 #endif
-#define F4B24_VERSION 18
+#define F4B24_VERSION 19
 #define F4B24_IF_VERSION 18
 #ifndef _DEBUG
 #define FITTLE_TITLE FITTLE_VERSION TEXT(" for BASS 2.4 ") F4B24_VERSION_STRING
@@ -407,10 +407,6 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 		return 0;
 	}
 
-	// INIファイルの位置を取得
-	GetModuleParentDir(m_szINIPath);
-	lstrcat(m_szINIPath, TEXT("Fittle.ini"));
-
 	// ウィンドウ・クラスの登録
 	wc.cbSize = sizeof(WNDCLASSEX);
 	wc.style = CS_DBLCLKS; //CS_HREDRAW | CS_VREDRAW;
@@ -425,6 +421,10 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 	wc.lpszMenuName = TEXT("MAINMENU");	//メニュー名
 	wc.lpszClassName = (LPCTSTR)szClassName;
 	if(!RegisterClassEx(&wc)) return 0;
+
+	// INIファイルの位置を取得
+	GetModuleParentDir(m_szINIPath);
+	lstrcat(m_szINIPath, TEXT("Fittle.ini"));
 
 	LoadState();
 	LoadConfig();
@@ -498,6 +498,21 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 	return (int)msg.wParam;
 }
 
+#if 1 
+#define TIMESTART
+#define TIMECHECK(m) 
+#else
+#define TIMESTART \
+	DWORD dStartTime; \
+	dStartTime = GetTickCount();
+
+#define TIMECHECK(m) { \
+	TCHAR buf[128]; \
+	wsprintf(buf, TEXT(m) TEXT(": %d ms\n"), GetTickCount() - dStartTime); \
+	OutputDebugString(buf); \
+}
+#endif
+
 // ウィンドウプロシージャ
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 	static HWND s_hRebar = NULL;			// レバーハンドル
@@ -524,6 +539,9 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			break;
 
 		case WM_CREATE:
+
+			TIMESTART
+
 			// BASS初期化
 			if(!BASS_Init(1, 44100, 0, hWnd, NULL)){
 				MessageBox(hWnd, TEXT("BASSの初期化に失敗しました。"), TEXT("Fittle"), MB_OK);
@@ -531,26 +549,45 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				ExitProcess(1);
 			}
 
+			TIMECHECK("BASS初期化")
+
 			InitBassWaDsp(hWnd);
-			
+
+			TIMECHECK("BASSWADSP初期化")
+
 			// 優先度
 			if(g_cfg.nHighTask){
 				SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 			}
 
-			// 検索拡張子の決定
+			TIMECHECK("優先度設定")
+
 			GetModuleParentDir(szLastPath);
+
+			TIMECHECK("EXEパスの取得")
+
+			// 書庫プラグイン初期化
 			InitArchive(szLastPath, hWnd);
+			TIMECHECK("書庫プラグイン初期化")
+
+			// 検索拡張子の決定
 			InitFileTypes();
+			TIMECHECK("検索拡張子の決定")
 
 			// タスクトレイ再描画のメッセージを保存
 			s_uTaskbarRestart = RegisterWindowMessage(TEXT("TaskbarCreated"));
 
+			TIMECHECK("タスクトレイ再描画のメッセージを保存")
+
 			// 現在のプロセスIDで乱数ジェネレータを初期化
 			init_genrand((unsigned int)(GetTickCount()+GetCurrentProcessId()));
 
+			TIMECHECK("RNG初期化")
+
 			// メニューハンドルを保存
 			m_hMainMenu = GetMenu(hWnd);
+
+			TIMECHECK("メニューハンドルを保存")
 
 			// コントロールを作成
 			INITCOMMONCONTROLSEX ic;
@@ -560,12 +597,16 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					 | ICC_COOL_CLASSES | ICC_TAB_CLASSES;
 			InitCommonControlsEx(&ic);
 
+			TIMECHECK("InitCommonControlsEx")
+
 			// ステータスバー作成
 			m_hStatus = CreateStatusWindow(WS_CHILD | /*WS_VISIBLE |*/ SBARS_SIZEGRIP | CCS_BOTTOM | SBT_TOOLTIPS, TEXT(""), hWnd, ID_STATUS);
 			if(g_cfg.nShowStatus){
 				g_cfg.nShowStatus = 0;
 				PostMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_SHOWSTATUS, 0), 0);
 			}
+
+			TIMECHECK("ステータスバー作成")
 
 			// コンボボックス作成
 			m_hCombo = CreateWindowEx(0,
@@ -577,6 +618,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				(HMENU)ID_COMBO,
 				m_hInst,
 				NULL);
+
+			TIMECHECK("コンボボックス作成")
 
 			// ツリー作成
 			m_hTree = CreateWindowEx(WS_EX_CLIENTEDGE,
@@ -592,6 +635,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			TreeView_SetTextColor(m_hTree, g_cfg.nTextColor);
 			DragAcceptFiles(m_hTree, TRUE);
 
+			TIMECHECK("ツリー作成")
+
 			// タブコントロール作成
 			m_hTab = CreateWindow( 
 				WC_TABCONTROL,
@@ -605,10 +650,16 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			SendMessage(m_hTab, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), 0);
 			DragAcceptFiles(m_hTab, TRUE);
 
+			TIMECHECK("タブ作成")
+
 			MakeNewTab(m_hTab, TEXT("フォルダ"), 0);
+
+			TIMECHECK("フォルダタブ作成")
 
 			// プレイリストリスト読み込み
 			LoadPlaylists(m_hTab);
+
+			TIMECHECK("プレイリストリスト読み込み")
 
 			//スプリットウィンドウを作成
 			s_hSplitter = CreateWindow(TEXT("static"),
@@ -620,6 +671,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				m_hInst,
 				NULL
 			);
+
+			TIMECHECK("スプリッター作成")
 
 			//レバーコントロールの作成
 			REBARINFO rbi;
@@ -636,6 +689,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			rbi.himl = 0;
 			PostMessage(s_hRebar, RB_SETBARINFO, 0, (LPARAM)&rbi);
 
+			TIMECHECK("レバー作成")
+
 			//ツールチップの作成
 			m_hTitleTip = CreateWindowEx(0, TOOLTIPS_CLASS, NULL,
 				WS_POPUP | TTS_ALWAYSTIP,
@@ -643,6 +698,9 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				CW_USEDEFAULT, CW_USEDEFAULT,
 				NULL, NULL, 
 				m_hInst, NULL);
+
+			TIMECHECK("ツールチップ作成")
+
 			m_hSliderTip = CreateWindowEx(0, TOOLTIPS_CLASS, NULL,
 				WS_POPUP | TTS_ALWAYSTIP,
 				CW_USEDEFAULT, CW_USEDEFAULT,
@@ -654,6 +712,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			m_hToolBar = CreateToolBar(s_hRebar);
 			//RECT rc;	// ツールバーの横の長さを取得
 			//SendMessage(m_hToolBar, TB_GETITEMRECT, SendMessage(m_hToolBar, TB_BUTTONCOUNT, 0, 0) - 1, (LPARAM)&rc);
+			TIMECHECK("ツールバー作成")
 
 			//ボリュームバーの作成
 			m_hVolume = CreateWindowEx(0,
@@ -668,6 +727,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				NULL); 
 			PostMessage(m_hVolume, TBM_SETTHUMBLENGTH, (WPARAM)16, (LPARAM)0);
 			PostMessage(m_hVolume, TBM_SETRANGEMAX, (WPARAM)FALSE, (LPARAM)SLIDER_DIVIDED); //精度の設定
+			TIMECHECK("ボリュームバー作成")
 
 			//シークバーの作成
 			m_hSeek = CreateWindowEx(0,
@@ -681,6 +741,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				NULL); 
 			PostMessage(m_hSeek, TBM_SETTHUMBLENGTH, (WPARAM)16, (LPARAM)0);
 			PostMessage(m_hSeek, TBM_SETRANGEMAX, (WPARAM)FALSE, (LPARAM)SLIDER_DIVIDED); //精度の設定
+			TIMECHECK("シークバー作成")
 
 			// レバーコントロールの復元
 			REBARBANDINFO rbbi;
@@ -723,6 +784,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				}
 			}
 
+			TIMECHECK("レバー状態復元")
+
 			// メニューチェック
 			if(rbbi.fStyle & RBBS_NOGRIPPER){
 				CheckMenuItem(GetMenu(hWnd), IDM_FIXBAR, MF_BYCOMMAND | MF_CHECKED);
@@ -731,6 +794,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			if(g_cfg.nTreeState==TREE_SHOW){
 				CheckMenuItem(GetMenu(hWnd), IDM_TOGGLETREE, MF_BYCOMMAND | MF_CHECKED);
 			}
+
+			TIMECHECK("メニュー状態復元")
 
 			//コントロールのサブクラス化
 			SET_SUBCLASS(m_hSeek, NewSliderProc);
@@ -741,9 +806,13 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			SET_SUBCLASS(m_hTree, NewTreeProc);
 			SET_SUBCLASS(s_hSplitter, NewSplitBarProc);
 
+			TIMECHECK("コントロールのサブクラス化")
+
 			// TREE_INIT
 			InitTreeIconIndex(m_hCombo, m_hTree, (BOOL)g_cfg.nTreeIcon);
-			
+
+			TIMECHECK("ツリーアイコンの初期化")
+
 			// システムメニューの変更
 			m_hTrayMenu = GetSubMenu(LoadMenu(m_hInst, TEXT("TRAYMENU")), 0);
 			ZeroMemory(&mii, sizeof(mii));
@@ -766,6 +835,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 			DrawMenuBar(hWnd);
 
+			TIMECHECK("メニュー状態復元2")
+
 			// プレイモードを設定する
 			ControlPlayMode(GetMenu(hWnd), (int)GetPrivateProfileInt(TEXT("Main"), TEXT("Mode"), PM_LIST, m_szINIPath));
 			m_nRepeatFlag = GetPrivateProfileInt(TEXT("Main"), TEXT("Repeat"), TRUE, m_szINIPath);
@@ -784,25 +855,39 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			// ボリュームの設定
 			PostMessage(m_hVolume, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)GetPrivateProfileInt(TEXT("Main"), TEXT("Volumes"), SLIDER_DIVIDED, m_szINIPath));
 
+			TIMECHECK("諸々")
+
 			// グローバルホットキー
 			RegHotKey(hWnd);
+
+			TIMECHECK("グローバルホットキー")
 
 			// ローカルフック
 			m_hHook = SetWindowsHookEx(WH_GETMESSAGE, (HOOKPROC)MyHookProc, m_hInst, GetWindowThreadProcessId(hWnd, NULL));
 
+			TIMECHECK("ローカルフック")
+
 			// クリティカルセクションの作成
 			InitializeCriticalSection(&m_cs);
 
+			TIMECHECK("クリティカルセクションの作成")
+
 			// ユーザインターフェイス
 			SetUIFont();
+
+			TIMECHECK("外観の初期化")
 
 			// メニューの非表示
 			if(!GetPrivateProfileInt(TEXT("Main"), TEXT("MainMenu"), 1, m_szINIPath))
 				PostMessage(hWnd, WM_COMMAND, IDM_TOGGLEMENU, 0);
 
+			TIMECHECK("メニューの非表示")
+
 			// コンボボックスの初期化
 			SendMessage(hWnd, WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_UPDATE_DRIVELIST, (LPARAM)0);
 			//SetDrivesToCombo(m_hCombo);
+
+			TIMECHECK("コンボボックスの初期化")
 
 			// コマンドラインの処理
 			BOOL bCmd;
@@ -837,9 +922,13 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				}
 			}
 
+			TIMECHECK("コマンドラインの処理")
+
 			// プラグインを呼び出す
 			//GetModuleParentDir(szLastPath);
 			InitPlugins(szLastPath, hWnd);
+
+			TIMECHECK("プラグインの初期化")
 
 			if(bCmd){
 				PostMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_PLAY, 0), 0);
@@ -854,15 +943,19 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				if(FILE_EXIST(szLastPath)){
 					if(g_cfg.nTreeState==TREE_SHOW){
 						MakeTreeFromPath(m_hTree, m_hCombo, szLastPath);
+						TIMECHECK("ツリー展開")
 					}else{
 						lstrcpyn(m_szTreePath, szLastPath, MAX_FITTLE_PATH);
 						SendMessage(hWnd, WM_COMMAND, IDM_FILEREVIEW, 0);
+						TIMECHECK("フォルダ展開")
 					}
 				}else{
 					TreeView_Select(m_hTree, MakeDriveNode(m_hCombo, m_hTree), TVGN_CARET);
 				}
 				// タブの復元
 				TabCtrl_SetCurFocus(m_hTab, m_nPlayTab = GetPrivateProfileInt(TEXT("Main"), TEXT("TabIndex"), 0, m_szINIPath));
+
+				TIMECHECK("タブの復元")
 
 				// 最後に再生していたファイルを再生
 				if(g_cfg.nResume){
@@ -883,8 +976,11 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					// Shiftキーが押されていたら再生
 					PostMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_NEXT, 0), 0);
 				}
+				TIMECHECK("レジューム")
 			}
 			break;
+
+			TIMECHECK("ウインドウ作成終了")
 
 		case WM_SETFOCUS:
 			if(GetCurListTab(m_hTab)) SetFocus(GetCurListTab(m_hTab)->hList);
@@ -4311,12 +4407,6 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 	return CallWindowProc((WNDPROC)(LONG_PTR)GetWindowLongPtr(hTV, GWLP_USERDATA), hTV, msg, wp, lp);
 }
 
-
-
-
-
-
-
 // ツールバーの幅を取得（ドロップダウンがあってもうまく行きます）
 static LONG GetToolbarTrueWidth(HWND hToolbar){
 	RECT rct;
@@ -4327,6 +4417,7 @@ static LONG GetToolbarTrueWidth(HWND hToolbar){
 
 // 設定ファイルを読み直し適用する(一部設定を除く)
 static void ApplyConfig(HWND hWnd){
+	TCHAR szNowDir[MAX_FITTLE_PATH];
 	BOOL fIsIconic = IsIconic(hWnd);
 	BOOL fOldTrayVisible = m_bTrayFlag;
 	BOOL fNewTrayVisible = FALSE;
@@ -4368,6 +4459,9 @@ static void ApplyConfig(HWND hWnd){
 	if (!fOldTrayVisible && fNewTrayVisible){
 			SetTaskTray(GetParent(m_hStatus));
 	}
+
+	lstrcpyn(szNowDir, m_szTreePath, MAX_FITTLE_PATH);
+	MakeTreeFromPath(m_hTree, m_hCombo, szNowDir); 
 
 	RegHotKey(hWnd);
 	InvalidateRect(hWnd, NULL, TRUE);

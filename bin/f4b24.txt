@@ -1,7 +1,7 @@
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test18
+              for BASS 2.4 test19
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
@@ -58,6 +58,9 @@ All rights reserved.
 	minipane.fcp  minipane.dll 設定プラグイン 要fconfig.exe又はfconfig.dll
 
 実験履歴
+	test19/test19u
+		ツリーアイコン非表示時に無駄なアイコン取得が発生し起動速度が低下していた問題対策
+
 	test18/test18u
 		終端文字の無いID3V2.2で末尾にゴミが付く問題対策
 		しおり機能を削除してみた

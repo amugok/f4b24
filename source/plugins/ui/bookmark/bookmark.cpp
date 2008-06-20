@@ -52,10 +52,6 @@ static BOOL HookTreeRoot(HWND);
 static HMODULE m_hinstDLL = 0;
 static WNDPROC m_hOldProc = 0;
 
-static int m_iFolderIcon = -1;
-static int m_iListIcon = -1;
-
-
 #define MAX_BM_SIZE 100			// ÇµÇ®ÇËÇÃêî
 
 static FITTLE_PLUGIN_INFO fpi = {
@@ -300,13 +296,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 /* ãNìÆéûÇ…àÍìxÇæÇØåƒÇŒÇÍÇ‹Ç∑ */
 static BOOL OnInit(){
-	SHFILEINFO shfi = {0, -1};
-	TCHAR szFolderPath[MAX_FITTLE_PATH];
-	GetModuleParentDir(szFolderPath);
-	SHGetFileInfo(szFolderPath, 0, &shfi, sizeof(SHFILEINFO), SHGFI_SMALLICON | SHGFI_SYSICONINDEX);
-	if (shfi.hIcon) DestroyIcon(shfi.hIcon);
-	m_iFolderIcon = shfi.iIcon;
-
 	LoadState();
 
 	EnableMenuItem(GetMenu(fpi.hParent), IDM_BM_ADD, MF_BYCOMMAND | MF_ENABLED);
@@ -593,7 +582,7 @@ static void HookComboUpdate(HWND hCB){
 			citem.pszText = szDrawBuff;
 			citem.iItem = i;
 			//TODO
-			citem.lParam = citem.iImage = citem.iSelectedImage = m_iFolderIcon;
+			citem.lParam = citem.iImage = citem.iSelectedImage = -1;
 			SendMessage(hCB, CBEM_INSERTITEM, 0, (LPARAM)&citem);
 			i++;
 //		}else if(IsPlayList(lpszBMPath) || IsArchive(lpszBMPath)){
@@ -601,7 +590,7 @@ static void HookComboUpdate(HWND hCB){
 			wsprintf(szDrawBuff, TEXT("%s"), lpszBMPath);
 			citem.pszText = szDrawBuff;
 			citem.iItem = i;
-			citem.lParam = citem.iImage = citem.iSelectedImage = m_iFolderIcon;
+			citem.lParam = citem.iImage = citem.iSelectedImage = -1;
 			SendMessage(hCB, CBEM_INSERTITEM, 0, (LPARAM)&citem);
 			i++;
 		}
