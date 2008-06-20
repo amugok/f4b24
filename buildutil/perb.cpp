@@ -122,7 +122,7 @@ static int perb(const char *path, int s, int dctmin){
 		return 1;
 	}
 
-	wsz = rsz * 4;
+	wsz = rsz * 2;
 	wbf = (unsigned char *)malloc(wsz);
 	if (!wbf) {
 		fprintf(stderr, "メモリが不足しています\n");
@@ -197,6 +197,18 @@ static int perb(const char *path, int s, int dctmin){
 		unsigned long wdsz = realign(rdsz, s);
 		memcpy(wbf + wsecofs + rsec * 40, rbf + rsecofs + rsec * 40, 40);
 		setdwordle(wbf + wsecofs + rsec * 40 + 20, wdofs);
+		if (wsz < wdofs + wdsz) {
+			size_t nwsz = wdofs + wdsz;
+			unsigned char *nwbf = (unsigned char *)realloc(wbf, nwsz); 
+			if (!nwbf){
+				fprintf(stderr, "メモリが不足しています\n");
+				free(wbf);
+				return 2;
+			}
+			memset(nwbf + wsz, 0, nwsz - wsz); /* 増分をクリア */
+			wsz = nwsz;
+			wbf = nwbf;
+		}
 		memcpy(wbf + wdofs, rbf + rdofs, rdsz);
 		if (erva && rdva <= erva && erva < rdva + rdsz){
 			setdwordle(wbf + wdofs + erva - rdva + 4, 0);	/* time stamp */
@@ -210,7 +222,7 @@ static int perb(const char *path, int s, int dctmin){
 		if (rrva && rdva <= rrva && rrva < rdva + rdsz){
 			clearres(wbf + wdofs + rrva - rdva, 0);
 		}
-		wdofs += rdsz;
+		wdofs += wdsz;
 	}
 
 	if (!writefile(path, wbf, wdofs)){
