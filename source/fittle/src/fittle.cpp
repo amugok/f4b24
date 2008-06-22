@@ -1502,6 +1502,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 				case IDM_LIST_DELFILE:
 					RemoveFiles(hWnd);
+					break;
 
 				case IDM_LIST_TOOL:
 					if((nLBIndex = ListView_GetNextItem(GetCurListTab(m_hTab)->hList, -1, LVNI_SELECTED))!=-1){
