@@ -136,7 +136,6 @@ static HINSTANCE m_hInst = NULL;	// インスタンス
 static NOTIFYICONDATA m_ni;	// タスクトレイのアイコンのデータ
 static BOOL m_nRepeatFlag = FALSE;	// リピート中かどうか
 static BOOL m_bTrayFlag = FALSE;	// タスクトレイに入ってるかどうか
-static struct FILEINFO *m_pNext = NULL;	// 再生曲
 static TCHAR m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
 static TCHAR m_szTime[100];			// 再生時間
 static TCHAR m_szTag[MAX_FITTLE_PATH];	// タグ
@@ -179,6 +178,7 @@ static HMENU m_hMainMenu = NULL;	// メインメニューハンドル
 struct CONFIG g_cfg = {0};			// 設定構造体
 CHANNELINFO g_cInfo[2] = {0};		// チャンネル情報
 BOOL g_bNow = FALSE;				// アクティブなチャンネル0 or 1
+struct FILEINFO *g_pNextFile = NULL;	// 再生曲
 
 static HMODULE XARGD = 0;
 static int XARGC = 0;
@@ -2197,12 +2197,12 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				break;
 
 			case WM_F4B24_INTERNAL_SETUP_NEXT:
-				m_pNext = SelectNextFile(TRUE);
+				g_pNextFile = SelectNextFile(TRUE);
 				m_nGaplessState = GS_OK;
 
-				if(m_pNext){
+				if(g_pNextFile){
 					// オープン
-					if(!SetChannelInfo(!g_bNow, m_pNext)){
+					if(!SetChannelInfo(!g_bNow, g_pNextFile)){
 						m_nGaplessState = GS_FAILED;
 					}else{
 						BASS_CHANNELINFO info1,info2;
@@ -2775,7 +2775,7 @@ static BOOL PlayByUser(HWND hWnd, struct FILEINFO *pPlayFile){
 		SetTimer(hWnd, ID_SEEKTIMER, 500, NULL);
 
 		// 表示切替
-		m_pNext = pPlayFile;
+		g_pNextFile = pPlayFile;
 		m_nGaplessState = GS_OK;
 		OnChangeTrack();
 
@@ -2806,10 +2806,10 @@ static void OnChangeTrack(){
 	m_bCueEnd = FALSE;
 
 	// 99％までいかなかった場合
-	if(m_nGaplessState==GS_NOEND){
-		m_pNext = SelectNextFile(TRUE);
-		if(m_pNext){
-			SetChannelInfo(g_bNow, m_pNext);
+	if(m_nGaplessState==GS_NOEND || !g_pNextFile){
+		g_pNextFile = SelectNextFile(TRUE);
+		if(g_pNextFile){
+			SetChannelInfo(g_bNow, g_pNextFile);
 		}else{
 			StopOutputStream(GetParent(m_hStatus));
 			return;
@@ -2817,7 +2817,7 @@ static void OnChangeTrack(){
 	}
 
 	// リピート終了
-	if(!m_pNext){
+	if(!g_pNextFile){
 		StopOutputStream(GetParent(m_hStatus));
 		return;
 	}
@@ -2830,7 +2830,7 @@ static void OnChangeTrack(){
 	}
 
 	// 切り替わったファイルのインデックスを取得
-	nPlayIndex = GetIndexFromPtr(GetPlayListTab(m_hTab)->pRoot, m_pNext);
+	nPlayIndex = GetIndexFromPtr(GetPlayListTab(m_hTab)->pRoot, g_pNextFile);
 
 	// 表示を切り替え
 	ListView_SingleSelect(GetPlayListTab(m_hTab)->hList, nPlayIndex);
@@ -2844,15 +2844,15 @@ static void OnChangeTrack(){
 	}
 
 	// 再生済みにする
-	m_pNext->bPlayFlag = TRUE;
-	lstrcpyn(g_cfg.szLastFile, m_pNext->szFilePath, MAX_FITTLE_PATH);
+	g_pNextFile->bPlayFlag = TRUE;
+	lstrcpyn(g_cfg.szLastFile, g_pNextFile->szFilePath, MAX_FITTLE_PATH);
 
 	// ステータスクリア
 	m_nGaplessState = GS_NOEND;
 
 	// 現在再生曲と違う曲なら再生履歴に追加する
-	if(GetPlaying(GetPlayListTab(m_hTab))!=m_pNext)
-		PushPlaying(GetPlayListTab(m_hTab), m_pNext);
+	if(GetPlaying(GetPlayListTab(m_hTab))!=g_pNextFile)
+		PushPlaying(GetPlayListTab(m_hTab), g_pNextFile);
 	
 	// カレントファイルを変更
 	GetPlayListTab(m_hTab)->nPlaying = nPlayIndex;
@@ -2923,7 +2923,7 @@ static void OnChangeTrack(){
 
 	OnTrackChagePlugins();
 
-	m_pNext = NULL;	// 消去
+	g_pNextFile = NULL;	// 消去
 	return;
 }
 

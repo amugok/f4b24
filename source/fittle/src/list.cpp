@@ -43,6 +43,7 @@ int DeleteAList(struct FILEINFO *pDel, struct FILEINFO **pRoot){
 
 	for(pTmp = pRoot;*pTmp!=NULL;pTmp=&(*pTmp)->pNext){
 		if(*pTmp==pDel){
+			if (pDel == g_pNextFile) g_pNextFile = NULL;
 			*pTmp = pDel->pNext; // íœƒZƒ‹‚ð”ò‚Î‚µ‚Ä˜AŒ‹
 			HeapFree(GetProcessHeap(), 0, pDel);
 			break;
@@ -59,6 +60,7 @@ int DeleteAllList(struct FILEINFO **pRoot){
 
 	pTmp = *pRoot;
 	while(pTmp){
+		if (pTmp == g_pNextFile) g_pNextFile = NULL;
 		pNxt = pTmp->pNext;
 		HeapFree(hPH, 0, pTmp);
 		pTmp = pNxt;

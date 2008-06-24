@@ -144,6 +144,7 @@ struct CONFIG{
 extern struct CONFIG g_cfg;
 extern CHANNELINFO g_cInfo[2];
 extern BOOL g_bNow;
+extern struct FILEINFO *g_pNextFile;
 
 LRESULT CALLBACK NewListProc(HWND, UINT, WPARAM, LPARAM); //リストビュー用のプロシージャ
 BOOL CheckFileType(LPTSTR);
