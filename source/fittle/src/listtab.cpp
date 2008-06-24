@@ -446,20 +446,27 @@ BOOL LoadPlaylists(HWND hTab){
 	szBuff[dwAccBytes / sizeof(TCHAR)] = TEXT('\0');
 
 	// 読み込んだバッファを処理
-	for(p=szBuff;*p!=TEXT('\0');p++){
+	for(p=szBuff;*p!=TEXT('\0');){
+#ifdef UNICODE
+		if (*p == (WCHAR)0xfeff) p++;
+#endif
 		// タイトル読み込み
-		for(i=0;*p!=TEXT('\n');p++){
+		for(i=0;*p!=TEXT('\n') && *p!=TEXT('\r');p++){
 			szTempPath[i++] = *p;
 		}
 		szTempPath[i] = TEXT('\0');
 		pNew = MakeNewTab(hTab, szTempPath, -1);
 		pTale = &(pNew->pRoot);
-		p++;
+		while (*p == TEXT('\n') || *p == TEXT('\r'))
+			p++;
 
 		// ファイル読み込み
 		while(*p==TEXT('\t')){
 			i = 0;
-			for(p+=1;*p!=TEXT('\n');p++){
+#ifdef UNICODE
+			if (*p == (WCHAR)0xfeff) p++;
+#endif
+			for(p+=1;*p!=TEXT('\n') && *p!=TEXT('\r');p++){
 				szTempPath[i++] = *p;
 			}
 			szTempPath[i] = TEXT('\0');
@@ -470,7 +477,8 @@ BOOL LoadPlaylists(HWND hTab){
 				}
 				pTale = AddList(pTale, szTempPath, szSize, szTime);
 			}
-			p++;
+			while (*p == TEXT('\n') || *p == TEXT('\r'))
+				p++;
 		}
 		TraverseList(pNew);
 	}
