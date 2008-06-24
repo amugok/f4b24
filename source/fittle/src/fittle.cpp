@@ -27,11 +27,11 @@
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test19u")
+#define F4B24_VERSION_STRING TEXT("test20u")
 #else
-#define F4B24_VERSION_STRING TEXT("test19")
+#define F4B24_VERSION_STRING TEXT("test20")
 #endif
-#define F4B24_VERSION 19
+#define F4B24_VERSION 20
 #define F4B24_IF_VERSION 18
 #ifndef _DEBUG
 #define FITTLE_TITLE FITTLE_VERSION TEXT(" for BASS 2.4 ") F4B24_VERSION_STRING
@@ -211,6 +211,15 @@ static  LPSTRING_LIST StringListWalk(LPSTRING_LIST *pList, int nIndex){
 	return NULL;
 }
 
+static  LPSTRING_LIST StringListFindI(LPSTRING_LIST *pList, LPCTSTR szValue){
+	LPSTRING_LIST pCur = *pList;
+	while (pCur){
+		if (lstrcmpi(pCur->szString, szValue) == 0) return pCur;
+		pCur = pCur->pNext;
+	}
+	return NULL;
+}
+
 static int StringListAdd(LPSTRING_LIST *pList, LPTSTR szValue){
 	int i = 0;
 	LPSTRING_LIST pCur = *pList;
@@ -236,8 +245,10 @@ static int StringListAdd(LPSTRING_LIST *pList, LPTSTR szValue){
 static void ClearTypelist(){
 	StringListFree(&lpTypelist);
 }
+
 static int AddTypelist(LPTSTR szExt){
 	if (!szExt || !*szExt) return TRUE;
+	if (StringListFindI(&lpTypelist, szExt)) return TRUE;
 	return StringListAdd(&lpTypelist, szExt);
 }
 
