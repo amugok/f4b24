@@ -1,7 +1,7 @@
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test20
+              for BASS 2.4 test21
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
@@ -58,6 +58,9 @@ All rights reserved.
 	minipane.fcp  minipane.dll 設定プラグイン 要fconfig.exe又はfconfig.dll
 
 実験履歴
+	test21/test21u
+		次に再生する予定の曲をリストから削除すると不正なメモリアクセスを行う可能性があった問題を修正
+
 	test20/test20u
 		ファイル削除後に余計な処理をしていた問題の修正
 
