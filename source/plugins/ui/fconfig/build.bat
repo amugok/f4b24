@@ -23,5 +23,6 @@ goto exitcmd
 :buildall
 
 call %0 fconfig /MD
+call %0 fconfigu /MD
 
 :exitcmd

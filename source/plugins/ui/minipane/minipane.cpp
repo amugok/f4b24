@@ -333,7 +333,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 		EnableMenuItem((HMENU)wp, IDM_MINIPANEL, MF_BYCOMMAND | MF_ENABLED);
 		break;
 	}
-	return CallWindowProc(m_hOldProc, hWnd, msg, wp, lp);
+	return (IsWindowUnicode(hWnd) ? CallWindowProcW : CallWindowProcA)(m_hOldProc, hWnd, msg, wp, lp);
 }
 
 /* ‹N“®Žž‚Éˆê“x‚¾‚¯ŒÄ‚Î‚ê‚Ü‚· */
@@ -350,7 +350,7 @@ static BOOL OnInit(){
 	}
 
 	hMiniMenu = LoadMenu(m_hinstDLL, TEXT("TRAYMENU"));
-	m_hOldProc = (WNDPROC)SetWindowLong(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
+	m_hOldProc = (WNDPROC)(IsWindowUnicode(fpi.hParent) ? SetWindowLongW : SetWindowLongA)(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
 
 	LoadState();
 
@@ -646,7 +646,11 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 
 			hDC = GetDC(hDlg);
 			ZeroMemory(&lf, sizeof(LOGFONT));
+#ifdef UNICODE
+			lstrcpy(lf.lfFaceName, TEXT("MS UI Gothic"));
+#else
 			lstrcpy(lf.lfFaceName, TEXT("‚l‚r ‚oƒSƒVƒbƒN"));
+#endif
 			lf.lfCharSet = DEFAULT_CHARSET;
 			lf.lfHeight = -MulDiv(9, GetDeviceCaps(hDC, LOGPIXELSY), 72);
 			s_hFont = CreateFontIndirect(&lf);

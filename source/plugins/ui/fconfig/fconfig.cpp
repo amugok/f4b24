@@ -214,7 +214,7 @@ static int CALLBACK PropSheetProc(HWND hwndDlg, UINT uMsg, LPARAM lParam){
 	return 0;
 }
 
-static int SheetSetup(PROPSHEETHEADER *ppsh, HWND hwndParent, LPCTSTR lpszStartPath){
+static int SheetSetup(PROPSHEETHEADER *ppsh, HWND hwndParent, LPCSTR lpszStartPath){
 	int nMaxPage = 0;
 	int nNumPage = 0;
 	int nStartPage = 0;
@@ -236,10 +236,10 @@ static int SheetSetup(PROPSHEETHEADER *ppsh, HWND hwndParent, LPCTSTR lpszStartP
 				int nIndex = 0;
 				HPROPSHEETPAGE hpspAdd;
 				do{
-					TCHAR szPath[64];
+					CHAR szPath[64];
 					hpspAdd = pCur->GetConfigPage(nIndex++, nLevel, szPath, 64);
 					if (hpspAdd && nNumPage < nMaxPage){
-						if (lpszStartPath && lstrcmp(szPath, lpszStartPath) == 0)
+						if (lpszStartPath && lstrcmpA(szPath, lpszStartPath) == 0)
 							nStartPage = nNumPage;
 						ppsh->phpage[nNumPage++] = hpspAdd;
 					}
@@ -251,7 +251,7 @@ static int SheetSetup(PROPSHEETHEADER *ppsh, HWND hwndParent, LPCTSTR lpszStartP
 			ppsh->dwFlags = PSH_USEICONID | PSH_USECALLBACK;
 			ppsh->hwndParent = hwndParent;
 			ppsh->hInstance = GetModuleHandle(NULL);
-			ppsh->pszIcon = "MYICON";
+			ppsh->pszIcon = TEXT("MYICON");
 			ppsh->pszCaption = TEXT("Ý’è");
 			ppsh->nPages = nNumPage;
 			ppsh->nStartPage = nStartPage;
@@ -262,13 +262,13 @@ static int SheetSetup(PROPSHEETHEADER *ppsh, HWND hwndParent, LPCTSTR lpszStartP
 }
 
 static void ShowSettingDialog(HWND hWnd, int nPage){
-	static const LPCTSTR table[] = {
-		TEXT("fittle/general"),
-		TEXT("fittle/path"),
-		TEXT("fittle/control"),
-		TEXT("fittle/tasktray"),
-		TEXT("fittle/hotkey"),
-		TEXT("fittle/about")
+	static const LPCSTR table[] = {
+		"fittle/general",
+		"fittle/path",
+		"fittle/control",
+		"fittle/tasktray",
+		"fittle/hotkey",
+		"fittle/about"
 	};
 	SHARED_MEMORY_STATUS sms = OpenSharedMemory();
 
@@ -300,13 +300,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 		ShowSettingDialog(hWnd, lp);
 		return 0;
 	}
-	return CallWindowProc(hOldProc, hWnd, msg, wp, lp);
+	return (IsWindowUnicode(hWnd) ? CallWindowProcW : CallWindowProcA)(hOldProc, hWnd, msg, wp, lp);
 }
 
 /* ‹N“®Žž‚Éˆê“x‚¾‚¯ŒÄ‚Î‚ê‚Ü‚· */
 static BOOL OnInit(){
 	InitPlugins();
-	hOldProc = (WNDPROC)SetWindowLong(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
+	hOldProc = (WNDPROC)(IsWindowUnicode(fpi.hParent) ? SetWindowLongW : SetWindowLongA)(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
 	return TRUE;
 }
 
