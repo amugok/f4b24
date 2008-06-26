@@ -7,8 +7,8 @@
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")
 #pragma comment(lib,"user32.lib")
-//#pragma comment(lib,"gdi32.lib")
-//#pragma comment(lib,"shell32.lib")
+#pragma comment(lib,"gdi32.lib")
+#pragma comment(lib,"comdlg32.lib")
 #pragma comment(lib,"comctl32.lib")
 #pragma comment(lib,"shlwapi.lib")
 #pragma comment(linker, "/EXPORT:GetCPluginInfo=_GetCPluginInfo@0")
@@ -23,12 +23,24 @@
 static HMODULE hDLL = 0;
 
 /*設定関係*/
-static int nTrayClick[6];			// クリック時の動作
-static int nTagReverse;			// タイトル、アーティストを反転
-static int nMiniTop;
-static int nMiniScroll;
-static int nMiniTimeShow;
-static int nMiniToolShow;
+static struct {
+	int nTagReverse;			// タイトル、アーティストを反転
+	int nTrayClick[6];			// クリック時の動作
+	int nMiniTop;
+	int nMiniScroll;
+	int nMiniTimeShow;
+	int nMiniToolShow;
+	TCHAR szFontName[LF_FACESIZE];
+	int nFontHeight;
+	int nFontStyle;
+} m_cfg;
+
+static struct ControlSheetWork {
+	TCHAR szFontName[LF_FACESIZE];
+	int nFontHeight;
+	int nFontStyle;
+} m_csw;
+
 
 static DWORD CALLBACK GetConfigPageCount(void);
 static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel, char *pszConfigPath, int nConfigPathSize);
@@ -77,20 +89,24 @@ static void LoadConfig(){
 	lstrcat(m_szINIPath, "minipane.ini");
 
 	// クリック時の動作
-	nTrayClick[0] = GetPrivateProfileInt("MiniPanel", "Click0", 0, m_szINIPath);
-	nTrayClick[1] = GetPrivateProfileInt("MiniPanel", "Click1", 6, m_szINIPath);
-	nTrayClick[2] = GetPrivateProfileInt("MiniPanel", "Click2", 8, m_szINIPath);
-	nTrayClick[3] = GetPrivateProfileInt("MiniPanel", "Click3", 0, m_szINIPath);
-	nTrayClick[4] = GetPrivateProfileInt("MiniPanel", "Click4", 5, m_szINIPath);
-	nTrayClick[5] = GetPrivateProfileInt("MiniPanel", "Click5", 0, m_szINIPath);
+	m_cfg.nTrayClick[0] = GetPrivateProfileInt("MiniPanel", "Click0", 0, m_szINIPath);
+	m_cfg.nTrayClick[1] = GetPrivateProfileInt("MiniPanel", "Click1", 6, m_szINIPath);
+	m_cfg.nTrayClick[2] = GetPrivateProfileInt("MiniPanel", "Click2", 8, m_szINIPath);
+	m_cfg.nTrayClick[3] = GetPrivateProfileInt("MiniPanel", "Click3", 0, m_szINIPath);
+	m_cfg.nTrayClick[4] = GetPrivateProfileInt("MiniPanel", "Click4", 5, m_szINIPath);
+	m_cfg.nTrayClick[5] = GetPrivateProfileInt("MiniPanel", "Click5", 0, m_szINIPath);
 
 	// タグを反転
-	nTagReverse = GetPrivateProfileInt("MiniPanel", "TagReverse", 0, m_szINIPath);
+	m_cfg.nTagReverse = GetPrivateProfileInt("MiniPanel", "TagReverse", 0, m_szINIPath);
 
-	nMiniTop = (int)GetPrivateProfileInt("MiniPanel", "TopMost", 1, m_szINIPath);
-	nMiniScroll = (int)GetPrivateProfileInt("MiniPanel", "Scroll", 1, m_szINIPath);
-	nMiniTimeShow = (int)GetPrivateProfileInt("MiniPanel", "TimeShow", 1, m_szINIPath);
-	nMiniToolShow = (int)GetPrivateProfileInt("MiniPanel", "ToolShow", 1, m_szINIPath);
+	m_cfg.nMiniTop = (int)GetPrivateProfileInt("MiniPanel", "TopMost", 1, m_szINIPath);
+	m_cfg.nMiniScroll = (int)GetPrivateProfileInt("MiniPanel", "Scroll", 1, m_szINIPath);
+	m_cfg.nMiniTimeShow = (int)GetPrivateProfileInt("MiniPanel", "TimeShow", 1, m_szINIPath);
+	m_cfg.nMiniToolShow = (int)GetPrivateProfileInt("MiniPanel", "ToolShow", 1, m_szINIPath);
+
+	GetPrivateProfileString(TEXT("MiniPanel"), TEXT("FontName"), TEXT(""), m_cfg.szFontName, LF_FACESIZE, m_szINIPath);
+	m_cfg.nFontHeight = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("FontHeight"), 9, m_szINIPath);
+	m_cfg.nFontStyle = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("FontStyle"), 0, m_szINIPath);
 }
 
 // 設定を保存
@@ -107,25 +123,30 @@ static void SaveConfig(){
 	// タスクトレイを保存
 	for(i=0;i<6;i++){
 		wsprintf(szSec, "Click%d", i);
-		WritePrivateProfileInt("MiniPanel", szSec, nTrayClick[i], m_szINIPath); //ホットキー
+		WritePrivateProfileInt("MiniPanel", szSec, m_cfg.nTrayClick[i], m_szINIPath); //ホットキー
 	}
 
-	WritePrivateProfileInt("MiniPanel", "TagReverse", nTagReverse, m_szINIPath);
+	WritePrivateProfileInt("MiniPanel", "TagReverse", m_cfg.nTagReverse, m_szINIPath);
 
-	WritePrivateProfileInt("MiniPanel", "TopMost", nMiniTop, m_szINIPath);
-	WritePrivateProfileInt("MiniPanel", "Scroll", nMiniScroll, m_szINIPath);
-	WritePrivateProfileInt("MiniPanel", "TimeShow", nMiniTimeShow, m_szINIPath);
-	WritePrivateProfileInt("MiniPanel", "ToolShow", nMiniToolShow, m_szINIPath);
+	WritePrivateProfileInt("MiniPanel", "TopMost", m_cfg.nMiniTop, m_szINIPath);
+	WritePrivateProfileInt("MiniPanel", "Scroll", m_cfg.nMiniScroll, m_szINIPath);
+	WritePrivateProfileInt("MiniPanel", "TimeShow", m_cfg.nMiniTimeShow, m_szINIPath);
+	WritePrivateProfileInt("MiniPanel", "ToolShow", m_cfg.nMiniToolShow, m_szINIPath);
+
+	WritePrivateProfileString(TEXT("MiniPanel"), TEXT("FontName"), m_cfg.szFontName, m_szINIPath);
+	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("FontHeight"), m_cfg.nFontHeight, m_szINIPath);
+	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("FontStyle"), m_cfg.nFontStyle, m_szINIPath);
+
 	WritePrivateProfileString(NULL, NULL, NULL, m_szINIPath);
 }
 
 static void ViewConfig(HWND hDlg){
 	int i;
-	SendDlgItemMessage(hDlg, IDC_CHECK1, BM_SETCHECK, (WPARAM)nMiniTop, 0);
-	SendDlgItemMessage(hDlg, IDC_CHECK2, BM_SETCHECK, (WPARAM)nTagReverse, 0);
-	SendDlgItemMessage(hDlg, IDC_CHECK3, BM_SETCHECK, (WPARAM)nMiniTimeShow, 0);
-	SendDlgItemMessage(hDlg, IDC_CHECK4, BM_SETCHECK, (WPARAM)nMiniScroll, 0);
-	SendDlgItemMessage(hDlg, IDC_CHECK5, BM_SETCHECK, (WPARAM)nMiniToolShow, 0);
+	SendDlgItemMessage(hDlg, IDC_CHECK1, BM_SETCHECK, (WPARAM)m_cfg.nMiniTop, 0);
+	SendDlgItemMessage(hDlg, IDC_CHECK2, BM_SETCHECK, (WPARAM)m_cfg.nTagReverse, 0);
+	SendDlgItemMessage(hDlg, IDC_CHECK3, BM_SETCHECK, (WPARAM)m_cfg.nMiniTimeShow, 0);
+	SendDlgItemMessage(hDlg, IDC_CHECK4, BM_SETCHECK, (WPARAM)m_cfg.nMiniScroll, 0);
+	SendDlgItemMessage(hDlg, IDC_CHECK5, BM_SETCHECK, (WPARAM)m_cfg.nMiniToolShow, 0);
 	for(i=0;i<6;i++){
 		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)0, (LPARAM)"なし");
 		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)1, (LPARAM)"再生");
@@ -137,33 +158,42 @@ static void ViewConfig(HWND hDlg){
 		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)7, (LPARAM)"終了");
 		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)8, (LPARAM)"メニュー表示");
 		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)9, (LPARAM)"再生/一時停止");
-		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_SETCURSEL, (WPARAM)nTrayClick[i], (LPARAM)0);
+		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_SETCURSEL, (WPARAM)m_cfg.nTrayClick[i], (LPARAM)0);
 	}
+	lstrcpyn(m_csw.szFontName, m_cfg.szFontName, LF_FACESIZE);
+	m_csw.nFontHeight = m_cfg.nFontHeight;
+	m_csw.nFontStyle = m_cfg.nFontStyle;
 }
 
-static bool CheckConfig(HWND hDlg){
+static BOOL CheckConfig(HWND hDlg){
 	int i;
-	if (nMiniTop !=      (int)SendDlgItemMessage(hDlg, IDC_CHECK1, BM_GETCHECK, 0, 0)) return true;
-	if (nTagReverse !=   (int)SendDlgItemMessage(hDlg, IDC_CHECK2, BM_GETCHECK, 0, 0)) return true;
-	if (nMiniTimeShow != (int)SendDlgItemMessage(hDlg, IDC_CHECK3, BM_GETCHECK, 0, 0)) return true;
-	if (nMiniScroll !=   (int)SendDlgItemMessage(hDlg, IDC_CHECK4, BM_GETCHECK, 0, 0)) return true;
-	if (nMiniToolShow != (int)SendDlgItemMessage(hDlg, IDC_CHECK5, BM_GETCHECK, 0, 0)) return true;
+	if (m_cfg.nMiniTop !=      (int)SendDlgItemMessage(hDlg, IDC_CHECK1, BM_GETCHECK, 0, 0)) return TRUE;
+	if (m_cfg.nTagReverse !=   (int)SendDlgItemMessage(hDlg, IDC_CHECK2, BM_GETCHECK, 0, 0)) return TRUE;
+	if (m_cfg.nMiniTimeShow != (int)SendDlgItemMessage(hDlg, IDC_CHECK3, BM_GETCHECK, 0, 0)) return TRUE;
+	if (m_cfg.nMiniScroll !=   (int)SendDlgItemMessage(hDlg, IDC_CHECK4, BM_GETCHECK, 0, 0)) return TRUE;
+	if (m_cfg.nMiniToolShow != (int)SendDlgItemMessage(hDlg, IDC_CHECK5, BM_GETCHECK, 0, 0)) return TRUE;
 	for(i=0;i<6;i++){
-		if (nTrayClick[i] != SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_GETCURSEL, (WPARAM)0, (LPARAM)0)) return true;
+		if (m_cfg.nTrayClick[i] != SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_GETCURSEL, (WPARAM)0, (LPARAM)0)) return TRUE;
 	}
+	if (lstrcmp(m_cfg.szFontName, m_csw.szFontName) != 0) return TRUE;
+	if (m_cfg.nFontHeight !=m_csw.nFontHeight) return TRUE;
+	if (m_cfg.nFontStyle !=m_csw.nFontStyle) return TRUE;
 	return false;
 }
 
 static void ApplyConfig(HWND hDlg){
 	int i;
-	nMiniTop =      (int)SendDlgItemMessage(hDlg, IDC_CHECK1, BM_GETCHECK, 0, 0);
-	nTagReverse =   (int)SendDlgItemMessage(hDlg, IDC_CHECK2, BM_GETCHECK, 0, 0);
-	nMiniTimeShow = (int)SendDlgItemMessage(hDlg, IDC_CHECK3, BM_GETCHECK, 0, 0);
-	nMiniScroll =   (int)SendDlgItemMessage(hDlg, IDC_CHECK4, BM_GETCHECK, 0, 0);
-	nMiniToolShow = (int)SendDlgItemMessage(hDlg, IDC_CHECK5, BM_GETCHECK, 0, 0);
+	m_cfg.nMiniTop =      (int)SendDlgItemMessage(hDlg, IDC_CHECK1, BM_GETCHECK, 0, 0);
+	m_cfg.nTagReverse =   (int)SendDlgItemMessage(hDlg, IDC_CHECK2, BM_GETCHECK, 0, 0);
+	m_cfg.nMiniTimeShow = (int)SendDlgItemMessage(hDlg, IDC_CHECK3, BM_GETCHECK, 0, 0);
+	m_cfg.nMiniScroll =   (int)SendDlgItemMessage(hDlg, IDC_CHECK4, BM_GETCHECK, 0, 0);
+	m_cfg.nMiniToolShow = (int)SendDlgItemMessage(hDlg, IDC_CHECK5, BM_GETCHECK, 0, 0);
 	for(i=0;i<6;i++){
-		nTrayClick[i] = SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
+		m_cfg.nTrayClick[i] = SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
 	}
+	m_cfg.nFontHeight = m_csw.nFontHeight;
+	m_cfg.nFontStyle = m_csw.nFontStyle;
+	lstrcpyn(m_cfg.szFontName, m_csw.szFontName, LF_FACESIZE);
 }
 
 static void ApplyFittle(){
@@ -176,12 +206,44 @@ static void ApplyFittle(){
 	}
 }
 
+static BOOL SelectFont(HWND hDlg){
+	CHOOSEFONT cf;
+	LOGFONT lf;
+	HDC hDC;
+
+	hDC = GetDC(hDlg);
+	ZeroMemory(&lf, sizeof(LOGFONT));
+	lstrcpyn(lf.lfFaceName, m_csw.szFontName, LF_FACESIZE);
+	lf.lfHeight = -MulDiv(m_csw.nFontHeight, GetDeviceCaps(hDC, LOGPIXELSY), 72);
+	lf.lfItalic = (m_cfg.nFontStyle&ITALIC_FONTTYPE?TRUE:FALSE);
+	lf.lfWeight = (m_cfg.nFontStyle&BOLD_FONTTYPE?FW_BOLD:0);
+	ReleaseDC(hDlg, hDC);
+
+	ZeroMemory(&cf, sizeof(CHOOSEFONT));
+	lf.lfCharSet = SHIFTJIS_CHARSET;
+	cf.lStructSize = sizeof(CHOOSEFONT);
+	cf.hwndOwner = hDlg;
+	cf.lpLogFont = &lf;
+	cf.Flags = CF_SCREENFONTS | CF_INITTOLOGFONTSTRUCT | CF_NOSCRIPTSEL;
+	cf.nFontType = SCREEN_FONTTYPE;
+	if(ChooseFont(&cf)){
+		lstrcpyn(m_csw.szFontName, lf.lfFaceName, LF_FACESIZE);
+		m_csw.nFontStyle = cf.nFontType;
+		m_csw.nFontHeight = cf.iPointSize / 10;
+		return TRUE;
+	}
+	return FALSE;
+}
+
 static BOOL CALLBACK MiniPanePageProc(HWND hWnd , UINT msg , WPARAM wp , LPARAM lp) {
 	switch (msg){
 	case WM_INITDIALOG:
 		LoadConfig();
 		ViewConfig(hWnd);
 	case WM_COMMAND:
+		if (LOWORD(wp) == IDC_BUTTON2) {
+			if (!SelectFont(hWnd)) return TRUE;
+		}
 		if (CheckConfig(hWnd))
 			PropSheet_Changed(GetParent(hWnd) , hWnd);
 		else

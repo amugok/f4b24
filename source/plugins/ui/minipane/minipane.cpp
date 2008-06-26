@@ -52,22 +52,35 @@ static WNDPROC m_hOldProc = 0;
 static HIMAGELIST m_hImageList = NULL;
 static HMODULE m_hdllConfig = NULL;
 static BOOL m_fHookConfig = FALSE;
+static HFONT m_hFont = 0;
+
+static int m_nMiniHeight = 30;
+static int m_nTimeWidth = 70;
 
 static int m_nTitleDisplayPos = 1;
 static TCHAR m_szTime[100];			// 再生時間
 static TCHAR m_szTag[MAX_FITTLE_PATH];	// タグ
 
 /*設定関係*/
-static int nTagReverse;			// タイトル、アーティストを反転
-static int nTrayClick[6];			// クリック時の動作
-static int nMiniPanel_x;
-static int nMiniPanel_y;
-static int nMiniPanelEnd;
-static int nMiniTop;
-static int nMiniWidth;
-static int nMiniScroll;
-static int nMiniTimeShow;
-static int nMiniToolShow;
+static struct {
+	int nTagReverse;			// タイトル、アーティストを反転
+	int nTrayClick[6];			// クリック時の動作
+	int nMiniTop;
+	int nMiniScroll;
+	int nMiniTimeShow;
+	int nMiniToolShow;
+	TCHAR szFontName[LF_FACESIZE];
+	int nFontHeight;
+	int nFontStyle;
+} m_cfg;
+
+/*状態保存関係*/
+static struct {
+	int nMiniPanel_x;
+	int nMiniPanel_y;
+	int nMiniPanelEnd;
+	int nMiniWidth;
+} m_sta;
 
 static FITTLE_PLUGIN_INFO fpi = {
 	PDK_VER,
@@ -97,10 +110,10 @@ static void LoadState(){
 	GetModuleParentDir(m_szINIPath);
 	lstrcat(m_szINIPath, TEXT("minipane.ini"));
 
-	nMiniPanel_x = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("x"), 0, m_szINIPath);
-	nMiniPanel_y = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("y"), 0, m_szINIPath);
-	nMiniPanelEnd = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("End"), 0, m_szINIPath);
-	nMiniWidth = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Width"), 402, m_szINIPath);
+	m_sta.nMiniPanel_x = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("x"), 0, m_szINIPath);
+	m_sta.nMiniPanel_y = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("y"), 0, m_szINIPath);
+	m_sta.nMiniPanelEnd = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("End"), 0, m_szINIPath);
+	m_sta.nMiniWidth = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Width"), 402, m_szINIPath);
 
 }
 
@@ -113,20 +126,24 @@ static void LoadConfig(){
 	lstrcat(m_szINIPath, TEXT("minipane.ini"));
 
 	// クリック時の動作
-	nTrayClick[0] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click0"), 0, m_szINIPath);
-	nTrayClick[1] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click1"), 6, m_szINIPath);
-	nTrayClick[2] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click2"), 8, m_szINIPath);
-	nTrayClick[3] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click3"), 0, m_szINIPath);
-	nTrayClick[4] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click4"), 5, m_szINIPath);
-	nTrayClick[5] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click5"), 0, m_szINIPath);
+	m_cfg.nTrayClick[0] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click0"), 0, m_szINIPath);
+	m_cfg.nTrayClick[1] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click1"), 6, m_szINIPath);
+	m_cfg.nTrayClick[2] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click2"), 8, m_szINIPath);
+	m_cfg.nTrayClick[3] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click3"), 0, m_szINIPath);
+	m_cfg.nTrayClick[4] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click4"), 5, m_szINIPath);
+	m_cfg.nTrayClick[5] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click5"), 0, m_szINIPath);
 
 	// タグを反転
-	nTagReverse = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("TagReverse"), 0, m_szINIPath);
+	m_cfg.nTagReverse = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("TagReverse"), 0, m_szINIPath);
 
-	nMiniTop = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("TopMost"), 1, m_szINIPath);
-	nMiniScroll = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Scroll"), 1, m_szINIPath);
-	nMiniTimeShow = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("TimeShow"), 1, m_szINIPath);
-	nMiniToolShow = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("ToolShow"), 1, m_szINIPath);
+	m_cfg.nMiniTop = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("TopMost"), 1, m_szINIPath);
+	m_cfg.nMiniScroll = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Scroll"), 1, m_szINIPath);
+	m_cfg.nMiniTimeShow = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("TimeShow"), 1, m_szINIPath);
+	m_cfg.nMiniToolShow = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("ToolShow"), 1, m_szINIPath);
+
+	GetPrivateProfileString(TEXT("MiniPanel"), TEXT("FontName"), TEXT(""), m_cfg.szFontName, LF_FACESIZE, m_szINIPath);
+	m_cfg.nFontHeight = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("FontHeight"), 9, m_szINIPath);
+	m_cfg.nFontStyle = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("FontStyle"), 0, m_szINIPath);
 }
 
 //Int型で設定ファイル書き込み
@@ -146,15 +163,15 @@ static void SaveState(){
 	lstrcat(m_szINIPath, TEXT("minipane.ini"));
 
 
-	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("x"), nMiniPanel_x, m_szINIPath);
-	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("y"), nMiniPanel_y, m_szINIPath);
-	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("End"), nMiniPanelEnd, m_szINIPath);
-	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("Width"), nMiniWidth, m_szINIPath);
+	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("x"), m_sta.nMiniPanel_x, m_szINIPath);
+	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("y"), m_sta.nMiniPanel_y, m_szINIPath);
+	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("End"), m_sta.nMiniPanelEnd, m_szINIPath);
+	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("Width"), m_sta.nMiniWidth, m_szINIPath);
 	WritePrivateProfileString(NULL, NULL, NULL, m_szINIPath);
 
 	GetModuleParentDir(m_szINIPath);
 	lstrcat(m_szINIPath, TEXT("Fittle.ini"));
-	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("End"), nMiniPanelEnd, m_szINIPath);
+	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("End"), m_sta.nMiniPanelEnd, m_szINIPath);
 	WritePrivateProfileString(NULL, NULL, NULL, m_szINIPath);
 }
 
@@ -222,7 +239,7 @@ static void UpdatePanelTitle(){
 	if (!partist) partist = szNull;
 #endif
 
-	if(!nTagReverse){
+	if(!m_cfg.nTagReverse){
 		if (!partist[0])
 			lstrcpy(m_szTag, ptitle);
 		else
@@ -311,7 +328,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 		case IDM_MINIPANEL:
 			if(!m_hMiniPanel){
 				ShowWindow(hWnd, SW_HIDE);
-				nMiniPanelEnd = 1;
+				m_sta.nMiniPanelEnd = 1;
 				m_hMiniPanel = CreateDialogParam(m_hinstDLL, TEXT("MINI_PANEL"), hWnd, MiniPanelProc, 0);
 			}else{
 				PanelClose();
@@ -527,7 +544,7 @@ static void PopupTrayMenu(HWND hWnd){
 }
 
 static void DoTrayClickAction(HWND hWnd, int nKind){
-	switch(nTrayClick[nKind]){
+	switch(m_cfg.nTrayClick[nKind]){
 	case 1:
 		SendCommand(IDM_PLAY);
 		break;
@@ -618,25 +635,57 @@ static void SendCopyData(HWND hFittle, int iType, LPTSTR lpszString){
 #endif
 }
 
-#define MINIPANEL_HEIGHT 30
-#define MINIPANEL_TIME_WIDTH 70
 #define MINIPANEL_SEPARATOR 4
 
-static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
+static void UpdateFont(HWND hDlg){
+	TCHAR szTime[] = TEXT("\t88:88 / 88:88");
+	HDC hDC = GetDC(hDlg);
 	HGDIOBJ hOldFont;
-	static HFONT s_hFont = 0;
+	LOGFONT lf;
+	SIZE size;
+	int nWidth = MulDiv(m_cfg.nFontHeight, GetDeviceCaps(hDC, LOGPIXELSX), 72);
+	int nHeight = MulDiv(m_cfg.nFontHeight, GetDeviceCaps(hDC, LOGPIXELSY), 72);
+	if (m_hFont) {
+		DeleteObject(m_hFont);
+		m_hFont = 0;
+	}
+	ZeroMemory(&lf, sizeof(LOGFONT));
+	if (m_cfg.szFontName[0]) {
+		lstrcpyn(lf.lfFaceName, m_cfg.szFontName, LF_FACESIZE);
+	} else {
+#ifdef UNICODE
+		lstrcpy(lf.lfFaceName, TEXT("MS UI Gothic"));
+#else
+		lstrcpy(lf.lfFaceName, TEXT("ＭＳ Ｐゴシック"));
+#endif
+	}
+	lf.lfItalic = (m_cfg.nFontStyle&ITALIC_FONTTYPE?TRUE:FALSE);
+	lf.lfWeight = (m_cfg.nFontStyle&BOLD_FONTTYPE?FW_BOLD:0);
+	lf.lfCharSet = DEFAULT_CHARSET;
+	lf.lfHeight = -nHeight;
+	m_hFont = CreateFontIndirect(&lf);
+	m_nMiniHeight = 6 + nHeight + 12;
+	hOldFont = SelectObject(hDC, (HGDIOBJ)m_hFont);
+	GetTextExtentPoint32(hDC, szTime, lstrlen(szTime), &size);
+	SelectObject(hDC, hOldFont);
+	m_nTimeWidth = size.cx;
+	ReleaseDC(hDlg, hDC);
+}
+
+static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
+	HDC hDC;
+	HGDIOBJ hOldFont;
+	RECT rc;
+
 	static int s_nToolWidth = 0;
 
-	switch (msg)
-	{
+	switch (msg) {
 		case WM_INITDIALOG:	// 初期化
-			LOGFONT lf;
-			HDC hDC;
 
 			LoadConfig();
 
 			m_hMiniTool = CreateToolBar(hDlg);
-			if(nMiniToolShow){
+			if(m_cfg.nMiniToolShow){
 				s_nToolWidth = GetToolbarTrueWidth(m_hMiniTool) + GetSystemMetrics(SM_CXDLGFRAME)*2;
 				ShowWindow(m_hMiniTool, SW_SHOWNA);
 			}else{
@@ -644,25 +693,15 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 				ShowWindow(m_hMiniTool, SW_HIDE);
 			}
 
-			hDC = GetDC(hDlg);
-			ZeroMemory(&lf, sizeof(LOGFONT));
-#ifdef UNICODE
-			lstrcpy(lf.lfFaceName, TEXT("MS UI Gothic"));
-#else
-			lstrcpy(lf.lfFaceName, TEXT("ＭＳ Ｐゴシック"));
-#endif
-			lf.lfCharSet = DEFAULT_CHARSET;
-			lf.lfHeight = -MulDiv(9, GetDeviceCaps(hDC, LOGPIXELSY), 72);
-			s_hFont = CreateFontIndirect(&lf);
-			ReleaseDC(hDlg, hDC);
+			UpdateFont(hDlg);
 
 			UpdateMenuPlayMode();
 			UpdateMenuRepeatMode();
 			UpdatePanelTitle();
 			UpdatePanelTime();
 
-			MoveWindow(hDlg, nMiniPanel_x, nMiniPanel_y, nMiniWidth, MINIPANEL_HEIGHT, FALSE);
-			SetWindowPos(hDlg, (nMiniTop?HWND_TOPMOST:HWND_NOTOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+			MoveWindow(hDlg, m_sta.nMiniPanel_x, m_sta.nMiniPanel_y, m_sta.nMiniWidth, m_nMiniHeight, FALSE);
+			SetWindowPos(hDlg, (m_cfg.nMiniTop?HWND_TOPMOST:HWND_NOTOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
 
 			SET_SUBCLASS(m_hMiniTool, NewMiniToolProc);	// 仕方ないからサブクラス化
 
@@ -683,37 +722,36 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			return TRUE;
 
 		case WM_SIZE:
-			nMiniWidth = LOWORD(lp) + GetSystemMetrics(SM_CXDLGFRAME)*2;
-			MoveWindow(m_hMiniTool, nMiniWidth - s_nToolWidth, 1, 240, 36, TRUE);
+			m_sta.nMiniWidth = LOWORD(lp) + GetSystemMetrics(SM_CXDLGFRAME)*2;
+			MoveWindow(m_hMiniTool, m_sta.nMiniWidth - s_nToolWidth, 1, 240, 36, TRUE);
 			return FALSE;
 
 		case WM_GETMINMAXINFO:
-			((LPMINMAXINFO)lp)->ptMaxTrackSize.y = MINIPANEL_HEIGHT;
-			((LPMINMAXINFO)lp)->ptMinTrackSize.y = MINIPANEL_HEIGHT;
+			((LPMINMAXINFO)lp)->ptMaxTrackSize.y = m_nMiniHeight;
+			((LPMINMAXINFO)lp)->ptMinTrackSize.y = m_nMiniHeight;
 			((LPMINMAXINFO)lp)->ptMinTrackSize.x = s_nToolWidth + MINIPANEL_SEPARATOR;
 			return FALSE;
 
 		case WM_PAINT:
 			PAINTSTRUCT ps;
-			RECT rc;
 
 			hDC = BeginPaint(hDlg, &ps);
-			hOldFont = SelectObject(hDC, (HGDIOBJ)s_hFont);
+			hOldFont = SelectObject(hDC, (HGDIOBJ)m_hFont);
 			SetBkColor(hDC, GetSysColor(COLOR_BTNFACE));
 
 			// タイトル表示
 			rc.left = 0;
 			rc.top = 0;
-			rc.bottom = MINIPANEL_HEIGHT;
-			rc.right = nMiniWidth;
+			rc.bottom = m_nMiniHeight;
+			rc.right = m_sta.nMiniWidth;
 			FillRect(hDC, &rc, (HBRUSH)(COLOR_BTNFACE+1));
 			TextOut(hDC, m_nTitleDisplayPos, 6, m_szTag, lstrlen(m_szTag));
 
 			// 時間表示
-			if(nMiniTimeShow){
+			if(m_cfg.nMiniTimeShow){
 				UpdatePanelTime();
 
-				rc.left = nMiniWidth - s_nToolWidth - MINIPANEL_TIME_WIDTH - MINIPANEL_SEPARATOR;
+				rc.left = m_sta.nMiniWidth - s_nToolWidth - m_nTimeWidth - MINIPANEL_SEPARATOR;
 				FillRect(hDC, &rc, (HBRUSH)(COLOR_BTNFACE+1));
 				TextOut(hDC, rc.left + MINIPANEL_SEPARATOR, 6, m_szTime+1, lstrlen(m_szTime+1));
 			}
@@ -725,20 +763,19 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 		case WM_TIMER:
 			switch(wp){
 				case ID_SEEKTIMER:
-					HDC hDC;
 					SIZE size;
 
 					// 文字列幅取得
 					hDC = GetDC(hDlg);
-					hOldFont = SelectObject(hDC, (HGDIOBJ)s_hFont);
+					hOldFont = SelectObject(hDC, (HGDIOBJ)m_hFont);
 					GetTextExtentPoint32(hDC, m_szTag, lstrlen(m_szTag), &size);
 					SelectObject(hDC, hOldFont);
 					ReleaseDC(hDlg, hDC);
 
 					// 文字列位置決定
-					if(nMiniScroll && size.cx>=nMiniWidth - s_nToolWidth - (nMiniTimeShow?MINIPANEL_TIME_WIDTH:0) - MINIPANEL_SEPARATOR){
+					if(m_cfg.nMiniScroll && size.cx>=m_sta.nMiniWidth - s_nToolWidth - (m_cfg.nMiniTimeShow?m_nTimeWidth:0) - MINIPANEL_SEPARATOR){
 						if(size.cx+m_nTitleDisplayPos<=1){
-							m_nTitleDisplayPos = nMiniWidth - s_nToolWidth - (nMiniTimeShow?MINIPANEL_TIME_WIDTH:0) - MINIPANEL_SEPARATOR;/*4*/;	// スクロールリセット
+							m_nTitleDisplayPos = m_sta.nMiniWidth - s_nToolWidth - (m_cfg.nMiniTimeShow?m_nTimeWidth:0) - MINIPANEL_SEPARATOR;/*4*/;	// スクロールリセット
 						}else{
 							m_nTitleDisplayPos -= 3;	// スクロール
 						}
@@ -749,8 +786,8 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 					// 再描画
 					rc.left = 0;
 					rc.top = 0;
-					rc.bottom = MINIPANEL_HEIGHT;
-					rc.right = nMiniWidth - s_nToolWidth;
+					rc.bottom = m_nMiniHeight;
+					rc.right = m_sta.nMiniWidth - s_nToolWidth;
 					InvalidateRect(hDlg, &rc, FALSE);
 					return TRUE;
 
@@ -768,18 +805,15 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			return FALSE;
 
 		case WM_MOVE:
-			{
-				RECT rc;
-				GetWindowRect(hDlg, &rc);
-				nMiniPanel_x = rc.left;
-				nMiniPanel_y = rc.top;
-			}
+			GetWindowRect(hDlg, &rc);
+			m_sta.nMiniPanel_x = rc.left;
+			m_sta.nMiniPanel_y = rc.top;
 			return TRUE;
 	
 		case WM_DESTROY:
-			if (s_hFont){
-				DeleteObject(s_hFont);
-				s_hFont = 0;
+			if (m_hFont){
+				DeleteObject(m_hFont);
+				m_hFont = 0;
 			}
 			return FALSE;
 
@@ -788,7 +822,7 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 				case IDCANCEL:
 
 					KillTimer(hDlg, ID_SEEKTIMER);
-					nMiniPanelEnd = 0;
+					m_sta.nMiniPanelEnd = 0;
 					m_hMiniPanel = NULL;
 					m_hMiniTool = NULL;
 
@@ -814,11 +848,11 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 		/*-- こっからマウスイベント --*/
 
 		case WM_RBUTTONDOWN:
-			SetTimer(hDlg, ID_RBTNCLKTIMER, (nTrayClick[3]?GetDoubleClickTime():0), NULL);
+			SetTimer(hDlg, ID_RBTNCLKTIMER, (m_cfg.nTrayClick[3]?GetDoubleClickTime():0), NULL);
 			return FALSE;
 
 		case WM_MBUTTONDOWN:
-			SetTimer(hDlg, ID_MBTNCLKTIMER, (nTrayClick[5]?GetDoubleClickTime():0), NULL);
+			SetTimer(hDlg, ID_MBTNCLKTIMER, (m_cfg.nTrayClick[5]?GetDoubleClickTime():0), NULL);
 			return FALSE;;
 
 		case WM_RBUTTONDBLCLK:
@@ -886,8 +920,12 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			}else if (wp == WM_F4B24_INTERNAL_APPLY_SETTING_OLD || wp == WM_F4B24_IPC_APPLY_CONFIG){
 				LoadConfig();
 
-				SetWindowPos(hDlg, (nMiniTop?HWND_TOPMOST:HWND_NOTOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
-				if(nMiniToolShow){
+				UpdateFont(hDlg);
+
+				MoveWindow(hDlg, m_sta.nMiniPanel_x, m_sta.nMiniPanel_y, m_sta.nMiniWidth, m_nMiniHeight, TRUE);
+
+				SetWindowPos(hDlg, (m_cfg.nMiniTop?HWND_TOPMOST:HWND_NOTOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+				if(m_cfg.nMiniToolShow){
 					s_nToolWidth = GetToolbarTrueWidth(m_hMiniTool) + GetSystemMetrics(SM_CXDLGFRAME)*2;
 					ShowWindow(m_hMiniTool, SW_SHOWNA);
 				}else{
