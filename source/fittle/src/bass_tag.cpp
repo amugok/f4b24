@@ -288,10 +288,11 @@ static BOOL ID3V1_ReadTag(DWORD handle, TAGINFO *pTagInfo){
 static BOOL WMA_ReadTag(DWORD handle, TAGINFO *pTagInfo){
 	LPBYTE p = (LPBYTE)BASS_ChannelGetTags(handle, BASS_TAG_WMA);
 	while(p && *p){
-		Vorbis_ReadFrame(p, "Title : ", pTagInfo->szTitle, 256);
-		Vorbis_ReadFrame(p, "Author : ", pTagInfo->szArtist, 256);
-		Vorbis_ReadFrame(p, "Album : ", pTagInfo->szAlbum, 256);
-		Vorbis_ReadFrame(p, "WM/TrackNumber : ", pTagInfo->szTrack, 10);
+		Vorbis_ReadFrame(p, "Title=", pTagInfo->szTitle, 256);
+		Vorbis_ReadFrame(p, "Author=", pTagInfo->szArtist, 256);
+		Vorbis_ReadFrame(p, "WM/AlbumTitle=", pTagInfo->szAlbum, 256);
+		Vorbis_ReadFrame(p, "WM/Track=", pTagInfo->szTrack, 10);
+		Vorbis_ReadFrame(p, "WM/TrackNumber=", pTagInfo->szTrack, 10);
 		p += lstrlenA((LPCSTR)p) + 1;
 	}
 	if(*pTagInfo->szTitle || *pTagInfo->szArtist) return TRUE;
