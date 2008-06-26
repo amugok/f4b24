@@ -12,9 +12,14 @@ static unsigned int GetSyncSafeInt(LPBYTE b){
 	return (b[0]<<21) | (b[1]<<14) | (b[2]<<7) | (b[3]);
 }
 
-static unsigned int GetSyncSafeInt22(LPBYTE b){
-	return (b[0]<<14) | (b[1]<<7) | (b[2]);
+static unsigned int GetNonSyncSafeInt23(LPBYTE b){
+	return (b[0]<<24) | (b[1]<<16) | (b[2]<<8) | (b[3]);
 }
+
+static unsigned int GetNonSyncSafeInt22(LPBYTE b){
+	return (b[0]<<16) | (b[1]<<8) | (b[2]);
+}
+
 
 static BOOL IsBomUTF8(LPBYTE pText, int nTextSize){
 	return nTextSize >= 3 && pText[0] == 0xef && pText[1] == 0xbb && pText[2] == 0xbf;
@@ -27,7 +32,7 @@ static BOOL IsBomUTF16LE(LPBYTE pText, int nTextSize){
 }
 
 static LPVOID HAlloc(DWORD dwSize){
-	return HeapAlloc(GetProcessHeap(), 0, dwSize);
+	return HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwSize);
 }
 
 static void HFree(LPVOID lp){
@@ -101,36 +106,40 @@ static BOOL ID3_ReadFrameText(BYTE bType, LPBYTE pTextRaw, int nTextRawSize, LPT
 	return TRUE;
 }
 
-static BOOL ID3V23_ReadFrame(unsigned nFlag, LPBYTE pFrame, int nFrameSize, LPTSTR pszBuf, int nBufSize){
+static LPBYTE Unsync(LPBYTE pSrc, unsigned nSrcLen, unsigned nDstLmt, unsigned *pnDstLen) {
+	LPBYTE lpUnsync = (LPBYTE)HAlloc(nSrcLen ? nSrcLen : nDstLmt);
+	if (lpUnsync) {
+		unsigned i, j;
+		for (i = j = 0; (nSrcLen ? (i < nSrcLen) : (j < nDstLmt)); i++)
+		{
+			BYTE b = pSrc[i];
+			lpUnsync[j++] = b; 
+			if (b == 0xff && pSrc[i + 1] == 0) i++;
+		}
+		*pnDstLen = j;
+	}
+	return lpUnsync;
+}
+
+static BOOL ID3V23_ReadFrame(int nFlag, LPBYTE pRaw, unsigned nFrameSize, LPTSTR pszBuf, int nBufSize){
 	BOOL bRet = FALSE;
-	int nRawSize = nFrameSize;
-	LPBYTE pRaw = pFrame + 10;
+	unsigned nRawSize = nFrameSize;
 	if (nFlag & 1)
 	{
-		nRawSize = GetSyncSafeInt(pFrame + 10);
+		nRawSize -= 4;
 		pRaw += 4;
 	}
 	if (nFlag & 2){
-		LPBYTE lpUnsync = (LPBYTE)HAlloc(nRawSize);
+		unsigned nUnsynced;
+		LPBYTE lpUnsync = Unsync(pRaw + 1, nRawSize - 1, 0, &nUnsynced);
 		if (lpUnsync) {
-			int i, j;
-			for (i = j = 0; i < nRawSize - 1; i++)
-			{
-				BYTE b = pRaw[i + 1];
-				lpUnsync[j++] = b; 
-				if (b == 0xff) i++;
-			}
-			bRet = ID3_ReadFrameText(pRaw[0], lpUnsync, j, pszBuf, nBufSize);
+			bRet = ID3_ReadFrameText(pRaw[0], lpUnsync, nUnsynced, pszBuf, nBufSize);
 			HFree(lpUnsync);
 		}
 	} else {
 		bRet = ID3_ReadFrameText(pRaw[0], pRaw + 1, nRawSize - 1, pszBuf, nBufSize);
 	}
 	return bRet;
-}
-
-static BOOL ID3V22_ReadFrame(LPBYTE pFrame, int nFrameSize, LPTSTR pszBuf, int nBufSize){
-	return ID3_ReadFrameText(pFrame[6], pFrame + 6 + 1, nFrameSize - 1, pszBuf, nBufSize);
 }
 
 static BOOL ID3V1_ReadFrame(LPCSTR pFrame, int nFrameSize, LPTSTR pszBuf, int nBufSize){
@@ -188,50 +197,78 @@ static BOOL ID3V2_ReadTag(DWORD handle, TAGINFO *pTagInfo){
 	LPBYTE p = (LPBYTE)BASS_ChannelGetTags(handle, BASS_TAG_ID3V2);
 	if(p && p[0] == 'I' && p[1] == 'D' && p[2] == '3'){
 		char szFrameID[5];
-		int nFrameSize;
-		unsigned nTotal = 10;	// ヘッダサイズを足しておく
+		unsigned nFrameSize;
+		unsigned nTotal = 0;	// ヘッダサイズを足しておく
 		unsigned nTagSize = GetSyncSafeInt(p + 6);
 		unsigned nVersion = *(p + 3);
-		unsigned nFlag = 0;
+		unsigned nFlag = *(p + 5);
+		LPBYTE pUnsync = NULL;
+		if (nFlag & 0x80)
+			p = pUnsync = Unsync(p + 10, 0, nTagSize, &nTagSize);
+		else
+			p += 10;
+		if (!p) return FALSE;
+
 		// フレームを前から順に取得
 		if(nVersion >=3){	// バージョンの取得
+			if (nFlag & 0x40) {
+				/* 拡張ヘッダ */
+				nTotal += (nVersion == 3) ? (4 + GetNonSyncSafeInt23(p + nTotal)) : GetSyncSafeInt(p + nTotal);
+			}
 			while(nTotal<nTagSize){
+				int nFrameFlag = 0;
+				int nLenID;
 				// Ver.2.3以上
 				lstrcpynA(szFrameID, (LPCSTR)(p + nTotal), 5); // フレームIDの取得
-				nFrameSize = GetSyncSafeInt(p + nTotal + 4); // フレームサイズの取得
-				if(lstrlenA(szFrameID)!=4) break;
+				if (nVersion == 3)
+					nFrameSize = GetNonSyncSafeInt23(p + nTotal + 4); // フレームサイズの取得
+				else
+					nFrameSize = GetSyncSafeInt(p + nTotal + 4); // フレームサイズの取得
+				nLenID = lstrlenA(szFrameID);
+				if (nLenID > 0 && nLenID < 4 && nTotal > 4){
+					/* broken tag */
+					lstrcpynA(szFrameID, (LPCSTR)(p + nTotal - 4 + nLenID), 5); // フレームIDの取得
+					if (lstrlenA(szFrameID) == 4){
+						nTotal += - 4 + nLenID;
+						continue;
+					}
+				}
+				if(nLenID !=4) break;
 				if (nVersion == 4)
-					nFlag = p[nTotal+9] & 3;
+					nFrameFlag = p[nTotal+9] & 3;
 				if(!lstrcmpA(szFrameID, "TIT2"))
-					ID3V23_ReadFrame(nFlag, p + nTotal, nFrameSize, pTagInfo->szTitle, 256);
+					ID3V23_ReadFrame(nFrameFlag, p + nTotal + 10, nFrameSize, pTagInfo->szTitle, 256);
 				else if(!lstrcmpA(szFrameID, "TPE1"))
-					ID3V23_ReadFrame(nFlag, p + nTotal, nFrameSize, pTagInfo->szArtist, 256);
+					ID3V23_ReadFrame(nFrameFlag, p + nTotal + 10, nFrameSize, pTagInfo->szArtist, 256);
 				else if(!lstrcmpA(szFrameID, "TALB"))
-					ID3V23_ReadFrame(nFlag, p + nTotal, nFrameSize, pTagInfo->szAlbum, 256);
+					ID3V23_ReadFrame(nFrameFlag, p + nTotal + 10, nFrameSize, pTagInfo->szAlbum, 256);
 				else if(!lstrcmpA(szFrameID, "TRCK"))
-					ID3V23_ReadFrame(nFlag, p + nTotal, nFrameSize, pTagInfo->szTrack, 10);
+					ID3V23_ReadFrame(nFrameFlag, p + nTotal + 10, nFrameSize, pTagInfo->szTrack, 10);
 
 				nTotal += nFrameSize + 10;
 			}
 		}else{
 			while(nTotal<nTagSize){
+				int nFrameFlag = 0;
 				// Ver.2.2以下
 				lstrcpynA(szFrameID, (LPCSTR)(p + nTotal), 4); // フレームIDの取得
-				nFrameSize = GetSyncSafeInt22(p + nTotal + 3); // フレームサイズの取得
+				nFrameSize = GetNonSyncSafeInt22(p + nTotal + 3); // フレームサイズの取得
 				if(lstrlenA(szFrameID)!=3) break;
 
 				if(!lstrcmpA(szFrameID, "TP1"))
-					ID3V22_ReadFrame(p + nTotal, nFrameSize, pTagInfo->szArtist, 256);
+					ID3V23_ReadFrame(nFrameFlag, p + nTotal + 6, nFrameSize, pTagInfo->szArtist, 256);
 				else if(!lstrcmpA(szFrameID, "TT2"))
-					ID3V22_ReadFrame(p + nTotal, nFrameSize, pTagInfo->szTitle, 256);
+					ID3V23_ReadFrame(nFrameFlag, p + nTotal + 6, nFrameSize, pTagInfo->szTitle, 256);
 				else if(!lstrcmpA(szFrameID, "TAL"))
-					ID3V22_ReadFrame(p + nTotal, nFrameSize, pTagInfo->szAlbum, 256);
+					ID3V23_ReadFrame(nFrameFlag, p + nTotal + 6, nFrameSize, pTagInfo->szAlbum, 256);
 				else if(!lstrcmpA(szFrameID, "TRK"))
-					ID3V22_ReadFrame(p + nTotal, nFrameSize, pTagInfo->szTrack, 10);
+					ID3V23_ReadFrame(nFrameFlag, p + nTotal + 6, nFrameSize, pTagInfo->szTrack, 10);
 
 				nTotal += nFrameSize + 6;
 			}
 		}
+
+		if (pUnsync) HFree(pUnsync);
 	}
 	if(*pTagInfo->szTitle || *pTagInfo->szArtist) return TRUE;
 	return FALSE;

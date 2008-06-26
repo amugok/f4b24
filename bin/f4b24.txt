@@ -1,7 +1,7 @@
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test23
+              for BASS 2.4 test24
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
@@ -60,6 +60,9 @@ All rights reserved.
 	fittle.fcp    fittle.exe 設定プラグイン 要fconfig.exe又はfconfig.dll
 
 実験履歴
+	test24/test24u
+		ID3V2の非同期化フラグなどに対応
+
 	test23/test23u
 		外部要因でタイトルバーのユニコード文字が表示できなくなる問題にさらに対処
 
