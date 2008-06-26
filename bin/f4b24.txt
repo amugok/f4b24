@@ -1,7 +1,7 @@
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test21
+              for BASS 2.4 test22
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
@@ -26,6 +26,7 @@ All rights reserved.
 
 追加したプラグイン(公式でも利用可能)
 	minipane.dll ミニパネル
+	minipane.fcp  minipane.dll/minipaneu.dll 設定プラグイン
 	taskvol.dll  タスクバー上ホイールで音量を変えるプラグイン 強制終了時にエクスプローラごと落ちる問題に対処
 	xdelfile.dll ファイル削除機能無効化プラグイン
 
@@ -33,8 +34,12 @@ All rights reserved.
 	fconfig.exe  設定画面 fcpプラグインが無いと何もできない
 
 追加した専用プラグイン
+	addurl.dll    URLを追加 text13以降推奨
+	addurlu.dll   URLを追加 ユニコード対応 text13以降推奨
 	bookmark.dll  しおり 要test18以降
 	bookmarku.dll しおり ユニコード対応 要test18以降
+	fconfig.dll   設定画面 fcpプラグインが無いと何もできない 要test12以降
+	fconfigu.dll  設定画面 fcpプラグインが無いと何もできない ユニコード対応 要test12以降
 	minipaneu.dll ミニパネル ユニコード対応 要test17以降
 	cue.fap       cueシートプラグイン Ansi版専用 要test14以降
 	arj.fap       arj書庫プラグイン Ansi版専用 要統合アーカイバプロジェクト版unarj32j.dll
@@ -52,12 +57,13 @@ All rights reserved.
 	raru.fap      rar書庫プラグイン Unicode版専用 要RARLABオフィシャル版unrar.dll
 	taru.fap      tar書庫プラグイン Unicode版専用 ただしUnicode非対応 要統合アーカイバプロジェクト版tar32.dll
 	zipu.fap      zip書庫プラグイン Unicode版専用 ただしUnicode非対応 要統合アーカイバプロジェクト版unzip32.dll
-	fconfig.dll   設定画面 fcpプラグインが無いと何もできない 要test12以降
-	addurl.dll    URLを追加プラグイン text13以降推奨
 	fittle.fcp    fittle.exe 設定プラグイン 要fconfig.exe又はfconfig.dll
-	minipane.fcp  minipane.dll 設定プラグイン 要fconfig.exe又はfconfig.dll
 
 実験履歴
+	test22/test22u
+		Unicode非対応プラグインによってタイトルバーのユニコード文字が表示できなくなる問題に対処
+		ID3V2.4の非同期化フレームなどに対応
+
 	test21/test21u
 		次に再生する予定の曲をリストから削除すると不正なメモリアクセスを行う可能性があった問題を修正
 

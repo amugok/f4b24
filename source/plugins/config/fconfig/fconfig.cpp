@@ -141,19 +141,19 @@ static void HFree(void *pPtr){
 	HeapFree(GetProcessHeap(), 0, pPtr);
 }
 
-static LPCTSTR SkipSpace(LPCTSTR p){
-	while (*p == TEXT(' ')) p++;
+static LPCSTR SkipSpace(LPCSTR p){
+	while (*p == ' ') p++;
 	return p;
 }
 
-static LPCTSTR SkipToken(LPCTSTR p){
-	if (*p == TEXT('\"')){
+static LPCSTR SkipToken(LPCSTR p){
+	if (*p == '\"'){
 		p++;
-		while (*p && *p != TEXT('\"')) p++;
-		if (*p == TEXT('\"')) p++;
+		while (*p && *p != '\"') p++;
+		if (*p == '\"') p++;
 		return p;
 	}
-	while (*p && *p != TEXT(' ')) p++;
+	while (*p && *p != ' ') p++;
 	return p;
 }
 
@@ -196,7 +196,7 @@ static int CALLBACK PropSheetProc(HWND hwndDlg, UINT uMsg, LPARAM lParam){
 	return 0;
 }
 
-static int SheetSetup(PROPSHEETHEADER *ppsh, LPCTSTR lpszStartPath, int nStartPathLen){
+static int SheetSetup(PROPSHEETHEADER *ppsh, LPCSTR lpszStartPath, int nStartPathLen){
 	int nMaxPage = 0;
 	int nNumPage = 0;
 	int nStartPage = 0;
@@ -218,10 +218,10 @@ static int SheetSetup(PROPSHEETHEADER *ppsh, LPCTSTR lpszStartPath, int nStartPa
 				int nIndex = 0;
 				HPROPSHEETPAGE hpspAdd;
 				do{
-					TCHAR szPath[64];
+					char szPath[64];
 					hpspAdd = pCur->GetConfigPage(nIndex++, nLevel, szPath, 64);
 					if (hpspAdd && nNumPage < nMaxPage){
-						if (nStartPathLen > 0 && memcmp(szPath, lpszStartPath, nStartPathLen * sizeof(TCHAR)) == 0)
+						if (nStartPathLen > 0 && memcmp(szPath, lpszStartPath, nStartPathLen * sizeof(CHAR)) == 0)
 							nStartPage = nNumPage;
 						ppsh->phpage[nNumPage++] = hpspAdd;
 					}
@@ -248,14 +248,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	if (SM_ERROR != sms){
 
 		PROPSHEETHEADER psh;
-		LPCTSTR lpszCmdLine = GetCommandLine();
-		LPCTSTR lpArg1Top = SkipSpace(SkipToken(lpszCmdLine));
-		LPCTSTR lpArg1End = SkipToken(lpArg1Top);
+		LPCSTR lpszCmdLine = GetCommandLineA();
+		LPCSTR lpArg1Top = SkipSpace(SkipToken(lpszCmdLine));
+		LPCSTR lpArg1End = SkipToken(lpArg1Top);
 
 		int nNumPage;
 
-		if (*lpArg1Top == TEXT('\"')) lpArg1Top++;
-		if (lpArg1End > lpArg1Top && *(lpArg1End-1) == TEXT('\"')) lpArg1End--;
+		if (*lpArg1Top == '\"') lpArg1Top++;
+		if (lpArg1End > lpArg1Top && *(lpArg1End-1) == '\"') lpArg1End--;
 
 		InitCommonControls();
 		InitPlugins();
