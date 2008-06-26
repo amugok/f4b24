@@ -60,6 +60,9 @@ All rights reserved.
 	fittle.fcp    fittle.exe 設定プラグイン 要fconfig.exe又はfconfig.dll
 
 実験履歴
+	test23/test23u
+		外部要因でタイトルバーのユニコード文字が表示できなくなる問題にさらに対処
+
 	test22/test22u
 		Unicode非対応プラグインによってタイトルバーのユニコード文字が表示できなくなる問題に対処
 		ID3V2.4の非同期化フレームなどに対応

@@ -23,15 +23,16 @@
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "shlwapi.lib")
 #pragma comment(lib, "../../extra/bass24/bass.lib")
+#pragma comment(linker, "/OPT:NOWIN98")
 
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test22u")
+#define F4B24_VERSION_STRING TEXT("test23u")
 #else
-#define F4B24_VERSION_STRING TEXT("test22")
+#define F4B24_VERSION_STRING TEXT("test23")
 #endif
-#define F4B24_VERSION 22
+#define F4B24_VERSION 23
 #define F4B24_IF_VERSION 18
 #ifndef _DEBUG
 #define FITTLE_TITLE FITTLE_VERSION TEXT(" for BASS 2.4 ") F4B24_VERSION_STRING
@@ -534,9 +535,8 @@ static LRESULT CALLBACK UniWndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 	return CallWindowProc(mUniWndProcOld, hWnd, msg, wp, lp);
 }
 static void UniFix(HWND hWnd){
-	if (!IsWindowUnicode(hWnd)) {
-		mUniWndProcOld = (WNDPROC)SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)UniWndProc);
-	}
+	//if (!IsWindowUnicode(hWnd))
+	mUniWndProcOld = (WNDPROC)SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)UniWndProc);
 }
 #endif
 

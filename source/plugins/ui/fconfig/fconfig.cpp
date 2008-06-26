@@ -300,13 +300,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 		ShowSettingDialog(hWnd, lp);
 		return 0;
 	}
-	return (IsWindowUnicode(hWnd) ? CallWindowProcW : CallWindowProcA)(hOldProc, hWnd, msg, wp, lp);
+	return CallWindowProc(hOldProc, hWnd, msg, wp, lp);
 }
 
 /* ‹N“®Žž‚Éˆê“x‚¾‚¯ŒÄ‚Î‚ê‚Ü‚· */
 static BOOL OnInit(){
 	InitPlugins();
-	hOldProc = (WNDPROC)(IsWindowUnicode(fpi.hParent) ? SetWindowLongW : SetWindowLongA)(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
+	hOldProc = (WNDPROC)SetWindowLong(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
 	return TRUE;
 }
 

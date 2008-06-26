@@ -27,6 +27,7 @@
 #define IDM_VOLDOWN	40059
 
 static HMODULE hDLL = 0;
+static BOOL g_fDefProcUnicode = FALSE;
 static WNDPROC g_DefProc = NULL;
 static enum {
 	notinitialized,
@@ -61,7 +62,7 @@ static FITTLE_PLUGIN_INFO fpi = {
 static void UnsubclassWindow(void){
 	if (g_state == subclassed){
 		if (IsWindow(g_hTaskWnd)){
-			SetWindowLong(g_hTaskWnd, GWL_WNDPROC, IsBadCodePtr((FARPROC)g_DefProc) ? (LONG)GetClassLong(g_hTaskWnd, GCL_WNDPROC) : (LONG)g_DefProc);
+			(g_fDefProcUnicode ? SetWindowLongW : SetWindowLongA)(g_hTaskWnd, GWL_WNDPROC, IsBadCodePtr((FARPROC)g_DefProc) ? (LONG)(g_fDefProcUnicode ? GetClassLongW : GetClassLongA)(g_hTaskWnd, GCL_WNDPROC) : (LONG)g_DefProc);
 		}
 		g_state = uninstalled;
 	}
@@ -93,7 +94,7 @@ static LRESULT CALLBACK SubClassProc(HWND hWnd , UINT msg , WPARAM wp , LPARAM l
 			UnsubclassWindow();
 			return 0;
 	}
-	return CallWindowProc(IsBadCodePtr((FARPROC)g_DefProc) ? (WNDPROC)GetClassLong(hWnd, GCL_WNDPROC) : g_DefProc, hWnd, msg, wp , lp);
+	return (g_fDefProcUnicode ? CallWindowProcW : CallWindowProcA)(IsBadCodePtr((FARPROC)g_DefProc) ? (WNDPROC)(g_fDefProcUnicode ? GetClassLongW : GetClassLongA)(hWnd, GCL_WNDPROC): g_DefProc, hWnd, msg, wp , lp);
 }
 
 /* フックプロシージャ */
@@ -104,7 +105,8 @@ static LRESULT CALLBACK CallWndProc(int nCode, WPARAM wParam, LPARAM lParam)
 	if(nCode == HC_ACTION){
 		if(g_state == notinitialized && lpcs->hwnd == g_hTaskWnd){
 			g_state = subclassed;
-			g_DefProc = (WNDPROC)SetWindowLong(g_hTaskWnd, GWL_WNDPROC, (LONG)SubClassProc);
+			g_fDefProcUnicode = IsWindowUnicode(g_hTaskWnd);
+			g_DefProc = (WNDPROC)(g_fDefProcUnicode ? SetWindowLongW : SetWindowLongA)(g_hTaskWnd, GWL_WNDPROC, (LONG)SubClassProc);
 		}
 	}
 	return CallNextHookEx(g_hHook, nCode, wParam, lParam);
@@ -120,7 +122,7 @@ static BOOL OnInit(){
 	}
 
 	idThread = GetWindowThreadProcessId(g_hTaskWnd, NULL);
-	g_hHook = SetWindowsHookEx(WH_CALLWNDPROC, CallWndProc, fpi.hDllInst, idThread);
+	g_hHook = (IsWindowUnicode(g_hTaskWnd) ? SetWindowsHookExW : SetWindowsHookExA)(WH_CALLWNDPROC, CallWndProc, fpi.hDllInst, idThread);
 	if(g_hHook == NULL){
 		return FALSE;
 	}

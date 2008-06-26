@@ -48,6 +48,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 	return TRUE;
 }
 
+static BOOL bOldProc;
 static WNDPROC hOldProc;
 
 // サブクラス化したウィンドウプロシージャ
@@ -62,12 +63,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 		DeleteMenu((HMENU)wp, IDM_LIST_DELFILE, MF_BYCOMMAND);
 		break;
 	}
-	return (IsWindowUnicode(hWnd) ? CallWindowProcW : CallWindowProcA)(hOldProc, hWnd, msg, wp, lp);
+	return (bOldProc ? CallWindowProcW : CallWindowProcA)(hOldProc, hWnd, msg, wp, lp);
 }
 
 /* 起動時に一度だけ呼ばれます */
 static BOOL OnInit(){
-	hOldProc = (WNDPROC)(IsWindowUnicode(fpi.hParent) ? SetWindowLongW : SetWindowLongA)(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
+	bOldProc = IsWindowUnicode(fpi.hParent);
+	hOldProc = (WNDPROC)(bOldProc ? SetWindowLongW : SetWindowLongA)(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
 	return TRUE;
 }
 
