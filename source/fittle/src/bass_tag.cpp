@@ -47,7 +47,7 @@ static BOOL UTF8ToMultiByte(LPCSTR lpszSrc, int nSrcSize, LPSTR lpszDst, int nDs
 }
 
 #define XMIN(x,y) ((x>y)?y:x)
-static BOOL ID3V3_ReadFlameText(BYTE bType, LPBYTE pTextRaw, int nTextRawSize, LPTSTR pszBuf, int nBufSize){
+static BOOL ID3_ReadFrameText(BYTE bType, LPBYTE pTextRaw, int nTextRawSize, LPTSTR pszBuf, int nBufSize){
 	ZeroMemory(pszBuf, nBufSize * sizeof(TCHAR));
 	if ((bType == 3) || (bType != 1 && bType != 2 && IsBomUTF8(pTextRaw, nTextRawSize))){
 		/* UTF8 */
@@ -80,7 +80,7 @@ static BOOL ID3V3_ReadFlameText(BYTE bType, LPBYTE pTextRaw, int nTextRawSize, L
 					pa[i * 2 + 0] = pTextRaw[i * 2 + 1];
 					pa[i * 2 + 1] = pTextRaw[i * 2 + 0];
 				}
-				ID3V3_ReadFlameText(bType, pa, nTextRawSize, pszBuf, nBufSize);
+				ID3_ReadFrameText(bType, pa, nTextRawSize, pszBuf, nBufSize);
 				HFree(pa);
 			}
 		}
@@ -101,29 +101,53 @@ static BOOL ID3V3_ReadFlameText(BYTE bType, LPBYTE pTextRaw, int nTextRawSize, L
 	return TRUE;
 }
 
-static BOOL ID3V23_ReadFlame(LPBYTE pFlame, int nFlameSize, LPTSTR pszBuf, int nBufSize){
-	return ID3V3_ReadFlameText(pFlame[10], pFlame + 10 + 1, nFlameSize - 1, pszBuf, nBufSize);
+static BOOL ID3V23_ReadFrame(unsigned nFlag, LPBYTE pFrame, int nFrameSize, LPTSTR pszBuf, int nBufSize){
+	BOOL bRet = FALSE;
+	int nRawSize = nFrameSize;
+	LPBYTE pRaw = pFrame + 10;
+	if (nFlag & 1)
+	{
+		nRawSize = GetSyncSafeInt(pFrame + 10);
+		pRaw += 4;
+	}
+	if (nFlag & 2){
+		LPBYTE lpUnsync = (LPBYTE)HAlloc(nRawSize);
+		if (lpUnsync) {
+			int i, j;
+			for (i = j = 0; i < nRawSize - 1; i++)
+			{
+				BYTE b = pRaw[i + 1];
+				lpUnsync[j++] = b; 
+				if (b == 0xff) i++;
+			}
+			bRet = ID3_ReadFrameText(pRaw[0], lpUnsync, j, pszBuf, nBufSize);
+			HFree(lpUnsync);
+		}
+	} else {
+		bRet = ID3_ReadFrameText(pRaw[0], pRaw + 1, nRawSize - 1, pszBuf, nBufSize);
+	}
+	return bRet;
 }
 
-static BOOL ID3V22_ReadFlame(LPBYTE pFlame, int nFlameSize, LPTSTR pszBuf, int nBufSize){
-	return ID3V3_ReadFlameText(pFlame[6], pFlame + 6 + 1, nFlameSize - 1, pszBuf, nBufSize);
+static BOOL ID3V22_ReadFrame(LPBYTE pFrame, int nFrameSize, LPTSTR pszBuf, int nBufSize){
+	return ID3_ReadFrameText(pFrame[6], pFrame + 6 + 1, nFrameSize - 1, pszBuf, nBufSize);
 }
 
-static BOOL ID3V1_ReadFlame(LPCSTR pFlame, int nFlameSize, LPTSTR pszBuf, int nBufSize){
-	while (nFlameSize > 0 && pFlame[nFlameSize - 1] == ' ') nFlameSize--;
-	return ID3V3_ReadFlameText(0, (LPBYTE)pFlame, nFlameSize, pszBuf, nBufSize);
+static BOOL ID3V1_ReadFrame(LPCSTR pFrame, int nFrameSize, LPTSTR pszBuf, int nBufSize){
+	while (nFrameSize > 0 && pFrame[nFrameSize - 1] == ' ') nFrameSize--;
+	return ID3_ReadFrameText(0, (LPBYTE)pFrame, nFrameSize, pszBuf, nBufSize);
 }
 
-static BOOL Vorbis_ReadFlame(LPBYTE pFlame, LPCSTR pszFlameID, LPTSTR pszBuf, int nBufSize){
-	int nIDLength = lstrlenA(pszFlameID);
+static BOOL Vorbis_ReadFrame(LPBYTE pFrame, LPCSTR pszFrameID, LPTSTR pszBuf, int nBufSize){
+	int nIDLength = lstrlenA(pszFrameID);
 
-	if(StrCmpNIA((LPCSTR)pFlame, pszFlameID, nIDLength)) return FALSE;
+	if(StrCmpNIA((LPCSTR)pFrame, pszFrameID, nIDLength)) return FALSE;
 
 	ZeroMemory(pszBuf, nBufSize * sizeof(TCHAR));
 #ifdef UNICODE
-	MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)(pFlame + nIDLength), -1, pszBuf, nBufSize);
+	MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)(pFrame + nIDLength), -1, pszBuf, nBufSize);
 #else
-	UTF8ToMultiByte((LPCSTR)(pFlame + nIDLength), -1, pszBuf, nBufSize);
+	UTF8ToMultiByte((LPCSTR)(pFrame + nIDLength), -1, pszBuf, nBufSize);
 #endif
 	//OutputDebugString(pszBuf);
 	//OutputDebugString(TEXT("\n"));
@@ -131,16 +155,16 @@ static BOOL Vorbis_ReadFlame(LPBYTE pFlame, LPCSTR pszFlameID, LPTSTR pszBuf, in
 	return TRUE;
 }
 
-static BOOL Riff_ReadFlame(LPBYTE pFlame, LPCSTR pszFlameID, LPTSTR pszBuf, int nBufSize){
-	int nIDLength = lstrlenA(pszFlameID);
+static BOOL Riff_ReadFrame(LPBYTE pFrame, LPCSTR pszFrameID, LPTSTR pszBuf, int nBufSize){
+	int nIDLength = lstrlenA(pszFrameID);
 
-	if(StrCmpNIA((LPCSTR)pFlame, pszFlameID, nIDLength)) return FALSE;
+	if(StrCmpNIA((LPCSTR)pFrame, pszFrameID, nIDLength)) return FALSE;
 
 	ZeroMemory(pszBuf, nBufSize * sizeof(TCHAR));
 #ifdef UNICODE
-	MultiByteToWideChar(CP_ACP, 0, (LPCSTR)(pFlame + nIDLength), -1, pszBuf, nBufSize);
+	MultiByteToWideChar(CP_ACP, 0, (LPCSTR)(pFrame + nIDLength), -1, pszBuf, nBufSize);
 #else
-	lstrcpyn(pszBuf, (LPCSTR)(pFlame + nIDLength), nBufSize);
+	lstrcpyn(pszBuf, (LPCSTR)(pFrame + nIDLength), nBufSize);
 #endif
 	//OutputDebugString(pszBuf);
 	//OutputDebugString(TEXT("\n"));
@@ -151,9 +175,9 @@ static BOOL Riff_ReadFlame(LPBYTE pFlame, LPCSTR pszFlameID, LPTSTR pszBuf, int 
 static BOOL Riff_ReadTag(DWORD handle, TAGINFO *pTagInfo){
 	LPBYTE p = (LPBYTE)BASS_ChannelGetTags(handle, BASS_TAG_RIFF_INFO);
 	while(p && *p){
-		Riff_ReadFlame(p, "INAM=", pTagInfo->szTitle, 256);
-		Riff_ReadFlame(p, "IART=", pTagInfo->szArtist, 256);
-		Riff_ReadFlame(p, "IPRD=", pTagInfo->szAlbum, 256);
+		Riff_ReadFrame(p, "INAM=", pTagInfo->szTitle, 256);
+		Riff_ReadFrame(p, "IART=", pTagInfo->szArtist, 256);
+		Riff_ReadFrame(p, "IPRD=", pTagInfo->szAlbum, 256);
 		p += lstrlenA((LPCSTR)p) + 1;
 	}
 	if(*pTagInfo->szTitle || *pTagInfo->szArtist) return TRUE;
@@ -163,46 +187,49 @@ static BOOL Riff_ReadTag(DWORD handle, TAGINFO *pTagInfo){
 static BOOL ID3V2_ReadTag(DWORD handle, TAGINFO *pTagInfo){
 	LPBYTE p = (LPBYTE)BASS_ChannelGetTags(handle, BASS_TAG_ID3V2);
 	if(p && p[0] == 'I' && p[1] == 'D' && p[2] == '3'){
-		char szFlameID[5];
-		int nFlameSize;
+		char szFrameID[5];
+		int nFrameSize;
 		unsigned nTotal = 10;	// ヘッダサイズを足しておく
 		unsigned nTagSize = GetSyncSafeInt(p + 6);
+		unsigned nVersion = *(p + 3);
+		unsigned nFlag = 0;
 		// フレームを前から順に取得
-		if(*(p + 3)>=3){	// バージョンの取得
+		if(nVersion >=3){	// バージョンの取得
 			while(nTotal<nTagSize){
 				// Ver.2.3以上
-				lstrcpynA(szFlameID, (LPCSTR)(p + nTotal), 5); // フレームIDの取得
-				nFlameSize = GetSyncSafeInt(p + nTotal + 4); // フレームサイズの取得
-				if(lstrlenA(szFlameID)!=4) break;
+				lstrcpynA(szFrameID, (LPCSTR)(p + nTotal), 5); // フレームIDの取得
+				nFrameSize = GetSyncSafeInt(p + nTotal + 4); // フレームサイズの取得
+				if(lstrlenA(szFrameID)!=4) break;
+				if (nVersion == 4)
+					nFlag = p[nTotal+9] & 3;
+				if(!lstrcmpA(szFrameID, "TIT2"))
+					ID3V23_ReadFrame(nFlag, p + nTotal, nFrameSize, pTagInfo->szTitle, 256);
+				else if(!lstrcmpA(szFrameID, "TPE1"))
+					ID3V23_ReadFrame(nFlag, p + nTotal, nFrameSize, pTagInfo->szArtist, 256);
+				else if(!lstrcmpA(szFrameID, "TALB"))
+					ID3V23_ReadFrame(nFlag, p + nTotal, nFrameSize, pTagInfo->szAlbum, 256);
+				else if(!lstrcmpA(szFrameID, "TRCK"))
+					ID3V23_ReadFrame(nFlag, p + nTotal, nFrameSize, pTagInfo->szTrack, 10);
 
-				if(!lstrcmpA(szFlameID, "TIT2"))
-					ID3V23_ReadFlame(p + nTotal, nFlameSize, pTagInfo->szTitle, 256);
-				else if(!lstrcmpA(szFlameID, "TPE1"))
-					ID3V23_ReadFlame(p + nTotal, nFlameSize, pTagInfo->szArtist, 256);
-				else if(!lstrcmpA(szFlameID, "TALB"))
-					ID3V23_ReadFlame(p + nTotal, nFlameSize, pTagInfo->szAlbum, 256);
-				else if(!lstrcmpA(szFlameID, "TRCK"))
-					ID3V23_ReadFlame(p + nTotal, nFlameSize, pTagInfo->szTrack, 10);
-
-				nTotal += nFlameSize + 10;
+				nTotal += nFrameSize + 10;
 			}
 		}else{
 			while(nTotal<nTagSize){
 				// Ver.2.2以下
-				lstrcpynA(szFlameID, (LPCSTR)(p + nTotal), 4); // フレームIDの取得
-				nFlameSize = GetSyncSafeInt22(p + nTotal + 3); // フレームサイズの取得
-				if(lstrlenA(szFlameID)!=3) break;
+				lstrcpynA(szFrameID, (LPCSTR)(p + nTotal), 4); // フレームIDの取得
+				nFrameSize = GetSyncSafeInt22(p + nTotal + 3); // フレームサイズの取得
+				if(lstrlenA(szFrameID)!=3) break;
 
-				if(!lstrcmpA(szFlameID, "TP1"))
-					ID3V22_ReadFlame(p + nTotal, nFlameSize, pTagInfo->szArtist, 256);
-				else if(!lstrcmpA(szFlameID, "TT2"))
-					ID3V22_ReadFlame(p + nTotal, nFlameSize, pTagInfo->szTitle, 256);
-				else if(!lstrcmpA(szFlameID, "TAL"))
-					ID3V22_ReadFlame(p + nTotal, nFlameSize, pTagInfo->szAlbum, 256);
-				else if(!lstrcmpA(szFlameID, "TRK"))
-					ID3V22_ReadFlame(p + nTotal, nFlameSize, pTagInfo->szTrack, 10);
+				if(!lstrcmpA(szFrameID, "TP1"))
+					ID3V22_ReadFrame(p + nTotal, nFrameSize, pTagInfo->szArtist, 256);
+				else if(!lstrcmpA(szFrameID, "TT2"))
+					ID3V22_ReadFrame(p + nTotal, nFrameSize, pTagInfo->szTitle, 256);
+				else if(!lstrcmpA(szFrameID, "TAL"))
+					ID3V22_ReadFrame(p + nTotal, nFrameSize, pTagInfo->szAlbum, 256);
+				else if(!lstrcmpA(szFrameID, "TRK"))
+					ID3V22_ReadFrame(p + nTotal, nFrameSize, pTagInfo->szTrack, 10);
 
-				nTotal += nFlameSize + 6;
+				nTotal += nFrameSize + 6;
 			}
 		}
 	}
@@ -213,10 +240,10 @@ static BOOL ID3V2_ReadTag(DWORD handle, TAGINFO *pTagInfo){
 static BOOL ID3V1_ReadTag(DWORD handle, TAGINFO *pTagInfo){
 	ID3TAG *pID3Tag = (ID3TAG *)BASS_ChannelGetTags(handle, BASS_TAG_ID3);
 	if (!pID3Tag) return FALSE;
-	ID3V1_ReadFlame(pID3Tag->Title, 30, pTagInfo->szTitle, 256);
-	ID3V1_ReadFlame(pID3Tag->Artist, 30, pTagInfo->szArtist, 256);
-	ID3V1_ReadFlame(pID3Tag->Album, 30, pTagInfo->szAlbum, 256);
-	ID3V1_ReadFlame(pID3Tag->Track, 2, pTagInfo->szTrack, 10);
+	ID3V1_ReadFrame(pID3Tag->Title, 30, pTagInfo->szTitle, 256);
+	ID3V1_ReadFrame(pID3Tag->Artist, 30, pTagInfo->szArtist, 256);
+	ID3V1_ReadFrame(pID3Tag->Album, 30, pTagInfo->szAlbum, 256);
+	ID3V1_ReadFrame(pID3Tag->Track, 2, pTagInfo->szTrack, 10);
 	if(*pTagInfo->szTitle || *pTagInfo->szArtist) return TRUE;
 	return FALSE;
 }
@@ -224,10 +251,10 @@ static BOOL ID3V1_ReadTag(DWORD handle, TAGINFO *pTagInfo){
 static BOOL WMA_ReadTag(DWORD handle, TAGINFO *pTagInfo){
 	LPBYTE p = (LPBYTE)BASS_ChannelGetTags(handle, BASS_TAG_WMA);
 	while(p && *p){
-		Vorbis_ReadFlame(p, "Title : ", pTagInfo->szTitle, 256);
-		Vorbis_ReadFlame(p, "Author : ", pTagInfo->szArtist, 256);
-		Vorbis_ReadFlame(p, "Album : ", pTagInfo->szAlbum, 256);
-		Vorbis_ReadFlame(p, "WM/TrackNumber : ", pTagInfo->szTrack, 10);
+		Vorbis_ReadFrame(p, "Title : ", pTagInfo->szTitle, 256);
+		Vorbis_ReadFrame(p, "Author : ", pTagInfo->szArtist, 256);
+		Vorbis_ReadFrame(p, "Album : ", pTagInfo->szAlbum, 256);
+		Vorbis_ReadFrame(p, "WM/TrackNumber : ", pTagInfo->szTrack, 10);
 		p += lstrlenA((LPCSTR)p) + 1;
 	}
 	if(*pTagInfo->szTitle || *pTagInfo->szArtist) return TRUE;
@@ -236,11 +263,11 @@ static BOOL WMA_ReadTag(DWORD handle, TAGINFO *pTagInfo){
 
 static BOOL ReadTagSub(LPBYTE p, TAGINFO *pTagInfo){
 	while(p && *p){
-		Vorbis_ReadFlame(p, "TITLE=", pTagInfo->szTitle, 256);
-		Vorbis_ReadFlame(p, "ARTIST=", pTagInfo->szArtist, 256);
-		Vorbis_ReadFlame(p, "ALBUM=", pTagInfo->szAlbum, 256);
-		Vorbis_ReadFlame(p, "TRACKNUMBER=", pTagInfo->szTrack, 10);
-		Vorbis_ReadFlame(p, "TRACKN=", pTagInfo->szTrack, 10);
+		Vorbis_ReadFrame(p, "TITLE=", pTagInfo->szTitle, 256);
+		Vorbis_ReadFrame(p, "ARTIST=", pTagInfo->szArtist, 256);
+		Vorbis_ReadFrame(p, "ALBUM=", pTagInfo->szAlbum, 256);
+		Vorbis_ReadFrame(p, "TRACKNUMBER=", pTagInfo->szTrack, 10);
+		Vorbis_ReadFrame(p, "TRACKN=", pTagInfo->szTrack, 10);
 		p += lstrlenA((LPCSTR)p) + 1;
 	}
 	if(*pTagInfo->szTitle || *pTagInfo->szArtist) return TRUE;
