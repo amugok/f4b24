@@ -63,8 +63,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 }
 
 // 実行ファイルのパスを取得
-void GetModuleParentDir(char *szParPath){
-	char szPath[MAX_FITTLE_PATH];
+void GetModuleParentDir(LPTSTR szParPath){
+	TCHAR szPath[MAX_FITTLE_PATH];
 
 	GetModuleFileName(NULL, szPath, MAX_FITTLE_PATH);
 	GetLongPathName(szPath, szParPath, MAX_FITTLE_PATH); // 98以降
@@ -73,65 +73,64 @@ void GetModuleParentDir(char *szParPath){
 }
 
 // 整数型で設定ファイル書き込み
-static int WritePrivateProfileInt(char *szAppName, char *szKeyName, int nData, char *szINIPath){
-	char szTemp[100];
+static int WritePrivateProfileInt(LPCTSTR szAppName, LPCTSTR szKeyName, int nData, LPCTSTR szINIPath){
+	TCHAR szTemp[100];
 
-	wsprintf(szTemp, "%d", nData);
+	wsprintf(szTemp, TEXT("%d"), nData);
 	return WritePrivateProfileString(szAppName, szKeyName, szTemp, szINIPath);
 }
 
 // 設定を読込
 static void LoadConfig(){
-	char m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
+	TCHAR m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
 
 	// INIファイルの位置を取得
 	GetModuleParentDir(m_szINIPath);
-	lstrcat(m_szINIPath, "minipane.ini");
+	lstrcat(m_szINIPath, TEXT("minipane.ini"));
 
 	// クリック時の動作
-	m_cfg.nTrayClick[0] = GetPrivateProfileInt("MiniPanel", "Click0", 0, m_szINIPath);
-	m_cfg.nTrayClick[1] = GetPrivateProfileInt("MiniPanel", "Click1", 6, m_szINIPath);
-	m_cfg.nTrayClick[2] = GetPrivateProfileInt("MiniPanel", "Click2", 8, m_szINIPath);
-	m_cfg.nTrayClick[3] = GetPrivateProfileInt("MiniPanel", "Click3", 0, m_szINIPath);
-	m_cfg.nTrayClick[4] = GetPrivateProfileInt("MiniPanel", "Click4", 5, m_szINIPath);
-	m_cfg.nTrayClick[5] = GetPrivateProfileInt("MiniPanel", "Click5", 0, m_szINIPath);
+	m_cfg.nTrayClick[0] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click0"), 0, m_szINIPath);
+	m_cfg.nTrayClick[1] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click1"), 6, m_szINIPath);
+	m_cfg.nTrayClick[2] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click2"), 8, m_szINIPath);
+	m_cfg.nTrayClick[3] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click3"), 0, m_szINIPath);
+	m_cfg.nTrayClick[4] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click4"), 5, m_szINIPath);
+	m_cfg.nTrayClick[5] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click5"), 0, m_szINIPath);
 
 	// タグを反転
-	m_cfg.nTagReverse = GetPrivateProfileInt("MiniPanel", "TagReverse", 0, m_szINIPath);
+	m_cfg.nTagReverse = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("TagReverse"), 0, m_szINIPath);
 
-	m_cfg.nMiniTop = (int)GetPrivateProfileInt("MiniPanel", "TopMost", 1, m_szINIPath);
-	m_cfg.nMiniScroll = (int)GetPrivateProfileInt("MiniPanel", "Scroll", 1, m_szINIPath);
-	m_cfg.nMiniTimeShow = (int)GetPrivateProfileInt("MiniPanel", "TimeShow", 1, m_szINIPath);
-	m_cfg.nMiniToolShow = (int)GetPrivateProfileInt("MiniPanel", "ToolShow", 1, m_szINIPath);
+	m_cfg.nMiniTop = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("TopMost"), 1, m_szINIPath);
+	m_cfg.nMiniScroll = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Scroll"), 1, m_szINIPath);
+	m_cfg.nMiniTimeShow = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("TimeShow"), 1, m_szINIPath);
+	m_cfg.nMiniToolShow = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("ToolShow"), 1, m_szINIPath);
 
 	GetPrivateProfileString(TEXT("MiniPanel"), TEXT("FontName"), TEXT(""), m_cfg.szFontName, LF_FACESIZE, m_szINIPath);
 	m_cfg.nFontHeight = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("FontHeight"), 9, m_szINIPath);
-	m_cfg.nFontStyle = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("FontStyle"), 0, m_szINIPath);
-}
+	m_cfg.nFontStyle = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("FontStyle"), 0, m_szINIPath);}
 
 // 設定を保存
 static void SaveConfig(){
 	int i;
-	char szSec[10];
+	TCHAR szSec[10];
 
-	char m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
+	TCHAR m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
 
 	// INIファイルの位置を取得
 	GetModuleParentDir(m_szINIPath);
-	lstrcat(m_szINIPath, "minipane.ini");
+	lstrcat(m_szINIPath, TEXT("minipane.ini"));
 
 	// タスクトレイを保存
 	for(i=0;i<6;i++){
-		wsprintf(szSec, "Click%d", i);
-		WritePrivateProfileInt("MiniPanel", szSec, m_cfg.nTrayClick[i], m_szINIPath); //ホットキー
+		wsprintf(szSec, TEXT("Click%d"), i);
+		WritePrivateProfileInt(TEXT("MiniPanel"), szSec, m_cfg.nTrayClick[i], m_szINIPath); //ホットキー
 	}
 
-	WritePrivateProfileInt("MiniPanel", "TagReverse", m_cfg.nTagReverse, m_szINIPath);
+	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("TagReverse"), m_cfg.nTagReverse, m_szINIPath);
 
-	WritePrivateProfileInt("MiniPanel", "TopMost", m_cfg.nMiniTop, m_szINIPath);
-	WritePrivateProfileInt("MiniPanel", "Scroll", m_cfg.nMiniScroll, m_szINIPath);
-	WritePrivateProfileInt("MiniPanel", "TimeShow", m_cfg.nMiniTimeShow, m_szINIPath);
-	WritePrivateProfileInt("MiniPanel", "ToolShow", m_cfg.nMiniToolShow, m_szINIPath);
+	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("TopMost"), m_cfg.nMiniTop, m_szINIPath);
+	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("Scroll"), m_cfg.nMiniScroll, m_szINIPath);
+	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("TimeShow"), m_cfg.nMiniTimeShow, m_szINIPath);
+	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("ToolShow"), m_cfg.nMiniToolShow, m_szINIPath);
 
 	WritePrivateProfileString(TEXT("MiniPanel"), TEXT("FontName"), m_cfg.szFontName, m_szINIPath);
 	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("FontHeight"), m_cfg.nFontHeight, m_szINIPath);
@@ -148,16 +147,16 @@ static void ViewConfig(HWND hDlg){
 	SendDlgItemMessage(hDlg, IDC_CHECK4, BM_SETCHECK, (WPARAM)m_cfg.nMiniScroll, 0);
 	SendDlgItemMessage(hDlg, IDC_CHECK5, BM_SETCHECK, (WPARAM)m_cfg.nMiniToolShow, 0);
 	for(i=0;i<6;i++){
-		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)0, (LPARAM)"なし");
-		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)1, (LPARAM)"再生");
-		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)2, (LPARAM)"一時停止");
-		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)3, (LPARAM)"停止");
-		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)4, (LPARAM)"前の曲");
-		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)5, (LPARAM)"次の曲");
-		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)6, (LPARAM)"ウィンドウ表示/非表示");
-		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)7, (LPARAM)"終了");
-		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)8, (LPARAM)"メニュー表示");
-		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)9, (LPARAM)"再生/一時停止");
+		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)0, (LPARAM)TEXT("なし"));
+		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)1, (LPARAM)TEXT("再生"));
+		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)2, (LPARAM)TEXT("一時停止"));
+		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)3, (LPARAM)TEXT("停止"));
+		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)4, (LPARAM)TEXT("前の曲"));
+		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)5, (LPARAM)TEXT("次の曲"));
+		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)6, (LPARAM)TEXT("ウィンドウ表示/非表示"));
+		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)7, (LPARAM)TEXT("終了"));
+		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)8, (LPARAM)TEXT("メニュー表示"));
+		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)9, (LPARAM)TEXT("再生/一時停止"));
 		SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_SETCURSEL, (WPARAM)m_cfg.nTrayClick[i], (LPARAM)0);
 	}
 	lstrcpyn(m_csw.szFontName, m_cfg.szFontName, LF_FACESIZE);
@@ -197,7 +196,7 @@ static void ApplyConfig(HWND hDlg){
 }
 
 static void ApplyFittle(){
-	HWND hFittle = FindWindow("Fittle", NULL);
+	HWND hFittle = FindWindow(TEXT("Fittle"), NULL);
 	if (hFittle && IsWindow(hFittle)){
 		HWND hMiniPanel = (HWND)SendMessage(hFittle, WM_FITTLE, GET_MINIPANEL, 0);
 		if (hMiniPanel && IsWindow(hMiniPanel)){
@@ -277,7 +276,7 @@ static HPROPSHEETPAGE CreateConfigPage(){
 
 static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel, char *pszConfigPath, int nConfigPathSize){
 	if (nIndex == 0 && nLevel == 1){
-		lstrcpyn(pszConfigPath, "plugin/minipane", nConfigPathSize);
+		lstrcpynA(pszConfigPath, "plugin/minipane", nConfigPathSize);
 		return CreateConfigPage();
 	}
 	return 0;
@@ -306,7 +305,7 @@ void CALLBACK OldMode(HWND hWnd){
 		tci.pszText = szBuf;
 		tci.cchTextMax = 32;
 		if (TabCtrl_GetItem(hTab, i, &tci)){
-			if (lstrcmp(tci.pszText, "ミニパネル") == 0){
+			if (lstrcmp(tci.pszText, TEXT("ミニパネル")) == 0){
 				fFound = TRUE;
 			}
 		}

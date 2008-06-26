@@ -524,6 +524,22 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 }
 #endif
 
+#ifdef UNICODE
+/* サブクラス化による文字化け対策 */
+static WNDPROC mUniWndProcOld = 0;
+static LRESULT CALLBACK UniWndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
+	/* ANSI変換を抑止する */
+	if (msg == WM_SETTEXT || msg == WM_GETTEXT)
+		return DefWindowProcW(hWnd, msg, wp, lp);
+	return CallWindowProc(mUniWndProcOld, hWnd, msg, wp, lp);
+}
+static void UniFix(HWND hWnd){
+	if (!IsWindowUnicode(hWnd)) {
+		mUniWndProcOld = (WNDPROC)SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)UniWndProc);
+	}
+}
+#endif
+
 // ウィンドウプロシージャ
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 	static HWND s_hRebar = NULL;			// レバーハンドル
@@ -940,6 +956,13 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			InitPlugins(szLastPath, hWnd);
 
 			TIMECHECK("プラグインの初期化")
+
+#ifdef UNICODE
+			/* サブクラス化による文字化け対策 */
+			UniFix(hWnd);
+#endif
+
+			TIMECHECK("サブクラス化による文字化け対策")
 
 			if(bCmd){
 				PostMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_PLAY, 0), 0);
