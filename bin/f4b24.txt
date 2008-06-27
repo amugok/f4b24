@@ -1,7 +1,7 @@
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test24
+              for BASS 2.4 test25
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
@@ -60,6 +60,9 @@ All rights reserved.
 	fittle.fcp    fittle.exe 設定プラグイン 要fconfig.exe又はfconfig.dll
 
 実験履歴
+	test25/test25u
+		BASSWMA2.4の仕様変更に対応
+
 	test24/test24u
 		ID3V2の非同期化フラグなどに対応
 

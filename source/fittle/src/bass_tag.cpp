@@ -324,32 +324,33 @@ BOOL BASS_TAG_Read(DWORD handle, TAGINFO *pTagInfo){
 		case BASS_CTYPE_STREAM_WAV:
 		case BASS_CTYPE_STREAM_WAV_PCM:  
 		case BASS_CTYPE_STREAM_WAV_FLOAT:  
-/*		case BASS_CTYPE_STREAM_WAV_MP3:*/ /* removed in BASS 2.4 */
+		case BASS_CTYPE_STREAM_WAV_MP3: /* removed in BASS 2.4 */
 			return Riff_ReadTag(handle, pTagInfo);
 
 		case BASS_CTYPE_STREAM_MP1:
 		case BASS_CTYPE_STREAM_MP2:
 		case BASS_CTYPE_STREAM_MP3:
+		case BASS_CTYPE_STREAM_APE:
+		case BASS_CTYPE_STREAM_MPC:
 		case BASS_CTYPE_STREAM_TTA:
-			/* bass_ape.dll‚ð“ü‚ê‚Ä‚à“Ç‚ñ‚Å‚­‚ê‚È‚¢ */
-			if (ReadTagSub((LPBYTE)BASS_ChannelGetTags(handle, BASS_TAG_APE), pTagInfo)) return TRUE;
-			if (ID3V2_ReadTag(handle, pTagInfo)) return TRUE;
-			return ID3V1_ReadTag(handle, pTagInfo);
-
 		case BASS_CTYPE_STREAM_OFR:
 		case BASS_CTYPE_STREAM_WV:
 		case BASS_CTYPE_STREAM_WV_H:
 		case BASS_CTYPE_STREAM_WV_L:
 		case BASS_CTYPE_STREAM_WV_LH:
+		case BASS_CTYPE_STREAM_TAK:
 			/* bass_ape.dll‚ð“ü‚ê‚Ä‚à“Ç‚ñ‚Å‚­‚ê‚È‚¢ */
 			if (ReadTagSub((LPBYTE)BASS_ChannelGetTags(handle, BASS_TAG_APE), pTagInfo)) return TRUE;
+			if (ID3V2_ReadTag(handle, pTagInfo)) return TRUE;
 			return ID3V1_ReadTag(handle, pTagInfo);
 
 		case BASS_CTYPE_STREAM_WMA:
+		case BASS_CTYPE_STREAM_WMA_MP3:
 			return WMA_ReadTag(handle, pTagInfo);
 
 		case BASS_CTYPE_STREAM_OGG:	// Vorbis comment
 		case BASS_CTYPE_STREAM_FLAC:
+		case BASS_CTYPE_STREAM_FLAC_OGG:
 		case BASS_CTYPE_STREAM_SPX:
 			return ReadTagSub((LPBYTE)BASS_ChannelGetTags(handle, BASS_TAG_OGG), pTagInfo);
 
@@ -357,10 +358,6 @@ BOOL BASS_TAG_Read(DWORD handle, TAGINFO *pTagInfo){
 		case BASS_CTYPE_STREAM_ALAC:
 		case BASS_CTYPE_STREAM_AAC:
 			return ReadTagSub((LPBYTE)BASS_ChannelGetTags(handle, BASS_TAG_MP4), pTagInfo);
-
-		case BASS_CTYPE_STREAM_APE:
-		case BASS_CTYPE_STREAM_MPC:
-			return ReadTagSub((LPBYTE)BASS_ChannelGetTags(handle, BASS_TAG_APE), pTagInfo);
 
 		case BASS_CTYPE_STREAM_AC3:
 			return FALSE;
