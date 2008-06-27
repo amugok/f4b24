@@ -537,7 +537,11 @@ BOOL SavePlaylists(HWND hTab){
 	for(i=1;i<=nTabCount;i++){
 		nBuffSize += ListView_GetItemCount(GetListTab(hTab, i)->hList) + 2; //タイトル分で+1
 	}
+#ifdef UNICODE
+	nBuffSize = sizeof(TCHAR) + nBuffSize * (MAX_FITTLE_PATH + 2) * sizeof(TCHAR);
+#else
 	nBuffSize *= (MAX_FITTLE_PATH + 1) * sizeof(TCHAR);
+#endif
 
 	szBuff = (LPTSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, nBuffSize);
 	if(!szBuff){
@@ -546,17 +550,36 @@ BOOL SavePlaylists(HWND hTab){
 		return FALSE;
 	}
 
+#ifdef UNICODE
+	{
+		static const WCHAR szBOM[2] = { 0xfeff,0 };
+		nBuffPos = WriteBuff(szBuff, nBuffSize, nBuffPos, szBOM);
+	}
+#endif
+
 	for(i=1;i<=nTabCount;i++){
 		pListTab = GetListTab(hTab, i);
 		nBuffPos = WriteBuff(szBuff, nBuffSize, nBuffPos, pListTab->szTitle);
+#ifdef UNICODE
+		nBuffPos = WriteBuff(szBuff, nBuffSize, nBuffPos, TEXT("\r\n"));
+#else
 		nBuffPos = WriteBuff(szBuff, nBuffSize, nBuffPos, TEXT("\n"));
+#endif
 
 		for(pTmp = pListTab->pRoot;pTmp!=NULL;pTmp = pTmp->pNext){
 			nBuffPos = WriteBuff(szBuff, nBuffSize, nBuffPos, TEXT("\t"));	// ファイル識別子(\t)を挿入
 			nBuffPos = WriteBuff(szBuff, nBuffSize, nBuffPos, pTmp->szFilePath);
-			nBuffPos = WriteBuff(szBuff, nBuffSize, nBuffPos, TEXT("\n"));	// 改行コードを挿入
+#ifdef UNICODE
+			nBuffPos = WriteBuff(szBuff, nBuffSize, nBuffPos, TEXT("\r\n"));
+#else
+			nBuffPos = WriteBuff(szBuff, nBuffSize, nBuffPos, TEXT("\n"));
+#endif
 		}
+#ifdef UNICODE
+		nBuffPos = WriteBuff(szBuff, nBuffSize, nBuffPos, TEXT("\r\n"));
+#else
 		nBuffPos = WriteBuff(szBuff, nBuffSize, nBuffPos, TEXT("\n"));
+#endif
 	}
 
 	RemoveAllTabs(hTab, nTabCount);

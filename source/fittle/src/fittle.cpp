@@ -1977,6 +1977,9 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				case ID_TREE:
 					NMTREEVIEW *pnmtv;
 					switch(pnmhdr->code){
+//						case TVN_SINGLEEXPAND:
+//							return 0/*TVNRET_DEFAULT*/;
+
 						case TVN_ITEMEXPANDED: // ï\é¶à íuí≤êÆ
 							MyScroll(m_hTree);
 							break;
