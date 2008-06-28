@@ -470,8 +470,7 @@ BOOL LoadPlaylists(HWND hTab){
 				szTempPath[i++] = *p;
 			}
 			szTempPath[i] = TEXT('\0');
-			if(!g_cfg.nExistCheck || FILE_EXIST(szTempPath) || IsArchivePath(szTempPath) || IsURLPath(szTempPath))
-			{
+			if(!g_cfg.nExistCheck || FILE_EXIST(szTempPath) || IsArchivePath(szTempPath) || IsURLPath(szTempPath)){
 				if(g_cfg.nTimeInList){
 					GetTimeAndSize(szTempPath, szSize, szTime);
 				}
@@ -500,8 +499,7 @@ static void RemoveAllTabs(HWND hTab, int nTabCount){
 
 static int WriteBuff(LPTSTR szBuff, int nBuffSize, int nBuffPos, LPCTSTR pData){
 	int l = lstrlen(pData);
-	if (nBuffPos + l <= nBuffSize)
-	{
+	if (nBuffPos + l <= nBuffSize){
 		CopyMemory(szBuff + nBuffPos, pData, l * sizeof(TCHAR));
 		nBuffPos += l;
 	}
@@ -551,10 +549,7 @@ BOOL SavePlaylists(HWND hTab){
 	}
 
 #ifdef UNICODE
-	{
-		static const WCHAR szBOM[2] = { 0xfeff,0 };
-		nBuffPos = WriteBuff(szBuff, nBuffSize, nBuffPos, szBOM);
-	}
+	nBuffPos = WriteBuff(szBuff, nBuffSize, nBuffPos, TEXT("\xfeff"));
 #endif
 
 	for(i=1;i<=nTabCount;i++){
@@ -613,8 +608,7 @@ BOOL CALLBACK TabNameDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 
 		case WM_COMMAND:
 			TCHAR szTemp[MAX_FITTLE_PATH];
-			switch(LOWORD(wp))
-			{
+			switch(LOWORD(wp)){
 				case IDOK:	// Ý’è•Û‘¶
 					GetWindowText(GetDlgItem(hDlg, IDC_EDIT1), szTemp, MAX_FITTLE_PATH);
 					if(lstrlen(szTemp)==0) return TRUE;

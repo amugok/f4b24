@@ -15,15 +15,19 @@
 #include "archive.h"
 #include "mt19937ar.h"
 #include "plugins.h"
-#include "dsp.h"
 #include "plugin.h"
 #include "f4b24.h"
 
 // ライブラリをリンク
+#if defined(_MSC_VER)
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "shlwapi.lib")
 #pragma comment(lib, "../../extra/bass24/bass.lib")
+#endif
+#if defined(_MSC_VER) && !defined(_DEBUG)
+#pragma comment(linker,"/MERGE:.rdata=.text")
 #pragma comment(linker, "/OPT:NOWIN98")
+#endif
 
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
@@ -33,7 +37,7 @@
 #define F4B24_VERSION_STRING TEXT("test25")
 #endif
 #define F4B24_VERSION 25
-#define F4B24_IF_VERSION 18
+#define F4B24_IF_VERSION 25
 #ifndef _DEBUG
 #define FITTLE_TITLE FITTLE_VERSION TEXT(" for BASS 2.4 ") F4B24_VERSION_STRING
 #else
@@ -174,16 +178,15 @@ static HSTREAM m_hChanOut = NULL;	// ストリームハンドル
 static HTREEITEM m_hHitTree = NULL;	// ツリーのヒットアイテム
 static HMENU m_hMainMenu = NULL;	// メインメニューハンドル
 
+// 起動引数
+static int XARGC = 0;
+static LPTSTR *XARGV = 0;
 
 // グローバル変数
 struct CONFIG g_cfg = {0};			// 設定構造体
 CHANNELINFO g_cInfo[2] = {0};		// チャンネル情報
-BOOL g_bNow = FALSE;				// アクティブなチャンネル0 or 1
+BOOL g_bNow = 0;				// アクティブなチャンネル0 or 1
 struct FILEINFO *g_pNextFile = NULL;	// 再生曲
-
-static HMODULE XARGD = 0;
-static int XARGC = 0;
-static LPTSTR *XARGV = 0;
 
 typedef struct StringList {
 	struct StringList *pNext;
@@ -291,6 +294,34 @@ static void lstrcpynWt(LPTSTR lpDst, LPCWSTR lpSrc, int nDstMax){
 #endif
 }
 
+/* コマンドラインパラメータの展開 */
+static HMODULE ExpandArgs(int *pARGC, LPTSTR **pARGV){
+#ifdef UNICODE
+	*pARGC = 1;
+	*pARGV = CommandLineToArgvW(GetCommandLine(), pARGC);
+	return NULL;
+#elif defined(_MSC_VER)
+	*pARGC = __argc;
+	*pARGV = __argv;
+	return NULL;
+#else
+	/* Visual C++以外の場合MSVCRT.DLLに引数を解析させる */
+	typedef struct { int newmode; } GMASTARTUPINFO;
+	typedef void (__cdecl *LPFNGETMAINARGS) (int *pargc, char ***pargv, char ***penvp, int dowildcard, GMASTARTUPINFO * startinfo);
+	HMODULE h = LoadLibrary("MSVCRT.DLL");
+	*pARGC = 1;
+	if (h){
+		LPFNGETMAINARGS pfngma = (LPFNGETMAINARGS)GetProcAddress(h, "__getmainargs");
+		char **xenvp;
+		GMASTARTUPINFO si = {0};
+		pfngma(pARGC, pARGV, &xenvp, 1, &si);
+		*pARGC = *pARGC;
+		*pARGV = *pARGV;
+	}
+	return h;
+#endif
+}
+
 #ifndef _DEBUG
 /*  既に実行中のFittleにパラメータを送信する */
 static void SendCopyData(HWND hFittle, int iType, LPTSTR lpszString){
@@ -322,52 +353,19 @@ static void SendCopyData(HWND hFittle, int iType, LPTSTR lpszString){
 	SendMessage(hFittle, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
 #endif
 }
-#endif
 
-int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLine*/, int nCmdShow){
-	WNDCLASSEX wc;
-	HWND hWnd;
-	HACCEL hAccel;
-	MSG msg;
-	WINDOWPLACEMENT wpl = {0};
-	TCHAR szClassName[] = TEXT("Fittle");	// ウィンドウクラス
-
-	DWORD dTime;
-	dTime = GetTickCount();
-
-#ifdef UNICODE
-	XARGC = 1;
-	XARGV = CommandLineToArgvW(GetCommandLine(), &XARGC);
-#elif defined(_MSC_VER)
-	XARGC = __argc;
-	XARGV = __argv;
-#else
-	{
-		/* Visual C++以外の場合MSVCRT.DLLに引数を解析させる */
-		typedef struct { int newmode; } GMASTARTUPINFO;
-		typedef void (__cdecl *LPFNGETMAINARGS) (int *pargc, char ***pargv, char ***penvp, int dowildcard, GMASTARTUPINFO * startinfo);
-		XARGC = 1;
-		XARGD = LoadLibrary("MSVCRT.DLL");
-		if (XARGD) {
-			LPFNGETMAINARGS pfngma = (LPFNGETMAINARGS)GetProcAddress(XARGD, "__getmainargs");
-			int xargc;
-			char **xargv;
-			char **xenvp;
-			GMASTARTUPINFO si = {0};
-			pfngma(&xargc, &xargv, &xenvp, 1, &si);
-			XARGC = xargc;
-			XARGV = xargv;
-		}
-	}
-#endif
-
-#ifndef _DEBUG	// 多重起動の防止
+// 多重起動の防止
+static LRESULT CheckMultiInstance(BOOL *pbMulti){
 	HANDLE hMutex;
 	HWND hFittle;
 	int i;
+
+	*pbMulti = FALSE;
 	hMutex = CreateMutex(NULL, TRUE, TEXT("Mutex of Fittle"));
 
 	if(GetLastError()==ERROR_ALREADY_EXISTS){
+		*pbMulti = TRUE;
+
 		hFittle = FindWindow(TEXT("Fittle"), NULL);
 		// コマンドラインがあれば本体に送信
 		if(XARGC>1){
@@ -411,7 +409,18 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 		SetForegroundWindow(hFittle);
 		return 0;
 	}
+	return 0;
+}
 #endif
+
+static HWND Initialze(HINSTANCE hCurInst, int nCmdShow){
+	HWND hWnd;
+	WNDCLASSEX wc;
+	WINDOWPLACEMENT wpl = {0};
+	TCHAR szClassName[] = TEXT("Fittle");	// ウィンドウクラス
+
+	DWORD dTime = GetTickCount();
+	TCHAR szBuff[100];
 
 	// BASSのバージョン確認
 	if(HIWORD(BASS_GetVersion())!=BASSVERSION){
@@ -473,24 +482,43 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 
 	// ミニパネルの復元
 	if(g_cfg.nMiniPanelEnd){
-		if(nCmdShow!=SW_SHOWNORMAL) ShowWindow(hWnd, nCmdShow);	// 最大化等のウィンドウ状態を適応
+		if(nCmdShow!=SW_SHOWNORMAL)
+			ShowWindow(hWnd, nCmdShow);	// 最大化等のウィンドウ状態を適応
 		PostMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_MINIPANEL, 0), 0);
 	}else{
 		ShowWindow(hWnd, nCmdShow);	// 表示
 	}
 
-	// アクセラレーターキーを取得
-	hAccel = LoadAccelerators(hCurInst, TEXT("MYACCEL"));
-
-	TCHAR szBuff[100];
 	GetWindowText(m_hStatus, szBuff, 100);
 	if(lstrlen(szBuff)==0){
 		wsprintf(szBuff, TEXT("Startup time: %d ms\n"), GetTickCount() - dTime);
 		SetWindowText(m_hStatus, szBuff);
 	}
+	return hWnd;
+}
 
-	//メッセージループ
-	while(GetMessage(&msg, NULL, 0, 0)){
+int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLine*/, int nCmdShow){
+	HWND hWnd;
+	MSG msg;
+	HACCEL hAccel;
+	HMODULE XARGD = ExpandArgs(&XARGC, &XARGV);
+
+#ifndef _DEBUG
+	BOOL bMulti = FALSE;
+	LRESULT lRet = CheckMultiInstance(&bMulti);
+	// 多重起動の防止
+	if (bMulti) return lRet;
+#endif
+
+	// 初期化
+	hWnd = Initialze(hCurInst, nCmdShow);
+	if (!hWnd) return 0;
+
+	// アクセラレーターキーを取得
+	hAccel = LoadAccelerators(hCurInst, TEXT("MYACCEL"));
+
+	// メッセージループ
+	while(GetMessage(&msg, NULL, 0, 0) > 0){
 		if(!TranslateAccelerator(hWnd, hAccel, &msg)){	// 通常よりアクセラレータキーの優先度を高くしてます
 			HWND m_hMiniPanel = (HWND)SendMessage(hWnd, WM_FITTLE, GET_MINIPANEL, 0);
 			if(!m_hMiniPanel || !IsDialogMessage(m_hMiniPanel, &msg)){
@@ -500,11 +528,12 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 		}
 	}
 
+	// 必要はないがコマンドライン展開の後始末
 #ifdef UNICODE
 	if (XARGV) GlobalFree(XARGV);
 #elif defined(_MSC_VER)
 #else
-	if (XARGD) FeeLibrary(XARGD);
+	if (XARGD) FreeLibrary(XARGD);
 #endif
 
 	return (int)msg.wParam;
@@ -577,10 +606,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			}
 
 			TIMECHECK("BASS初期化")
-
-			InitBassWaDsp(hWnd);
-
-			TIMECHECK("BASSWADSP初期化")
 
 			// 優先度
 			if(g_cfg.nHighTask){
@@ -952,7 +977,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			TIMECHECK("コマンドラインの処理")
 
 			// プラグインを呼び出す
-			//GetModuleParentDir(szLastPath);
 			InitPlugins(szLastPath, hWnd);
 
 			TIMECHECK("プラグインの初期化")
@@ -1012,9 +1036,9 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				}
 				TIMECHECK("レジューム")
 			}
-			break;
-
 			TIMECHECK("ウインドウ作成終了")
+
+			break;
 
 		case WM_SETFOCUS:
 			if(GetCurListTab(m_hTab)) SetFocus(GetCurListTab(m_hTab)->hList);
@@ -1047,7 +1071,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 			UnRegHotKey(hWnd);
 			UnhookWindowsHookEx(m_hHook);
-			FreeBassWaDsp();
 			BASS_Free(); // Bassの開放
 			
 			PostQuitMessage(0);
@@ -1977,9 +2000,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				case ID_TREE:
 					NMTREEVIEW *pnmtv;
 					switch(pnmhdr->code){
-//						case TVN_SINGLEEXPAND:
-//							return 0/*TVNRET_DEFAULT*/;
-
 						case TVN_ITEMEXPANDED: // 表示位置調整
 							MyScroll(m_hTree);
 							break;
@@ -2274,6 +2294,9 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				break;
 			case WM_F4B24_IPC_GET_PLAYING_ALBUM:
 				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)m_taginfo.szAlbum);
+				break;
+			case WM_F4B24_IPC_GET_PLAYING_TRACK:
+				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)m_taginfo.szTrack);
 				break;
 
 			case WM_F4B24_IPC_SETTING:
@@ -2701,6 +2724,7 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 #endif
 												BASS_STREAM_DECODE | m_bFLoat*BASS_SAMPLE_FLOAT);
 	if(g_cInfo[bFlag].hChan){
+		SendMessage(GetParent(m_hStatus), WM_F4B24_IPC, WM_F4B24_HOOK_CREATE_DECODE_STREAM, (LPARAM)g_cInfo[bFlag].hChan);
 		if(szStart[0]){
 			qStart = GetByteFromSecStr(g_cInfo[bFlag].hChan, szStart);
 			qEnd = GetByteFromSecStr(g_cInfo[bFlag].hChan, szEnd);
@@ -2718,17 +2742,17 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 		}
 		return TRUE;
 	}else{
-		BASS_SetConfig(BASS_CONFIG_NET_TIMEOUT, 60000); // 5secは短いので60secにする
 #ifdef UNICODE
-		{
-			CHAR szAnsi[MAX_FITTLE_PATH];
-			WideCharToMultiByte(CP_ACP, 0, szFilePath, -1, szAnsi, MAX_FITTLE_PATH, NULL, NULL);
-			g_cInfo[bFlag].hChan = BASS_StreamCreateURL(szAnsi, 0, BASS_STREAM_BLOCK | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT * m_bFLoat, NULL, 0);
-		}
+		CHAR szAnsi[MAX_FITTLE_PATH];
+		WideCharToMultiByte(CP_ACP, 0, szFilePath, -1, szAnsi, MAX_FITTLE_PATH, NULL, NULL);
+		BASS_SetConfig(BASS_CONFIG_NET_TIMEOUT, 60000); // 5secは短いので60secにする
+		g_cInfo[bFlag].hChan = BASS_StreamCreateURL(szAnsi, 0, BASS_STREAM_BLOCK | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT * m_bFLoat, NULL, 0);
 #else
+		BASS_SetConfig(BASS_CONFIG_NET_TIMEOUT, 60000); // 5secは短いので60secにする
 		g_cInfo[bFlag].hChan = BASS_StreamCreateURL(szFilePath, 0, BASS_STREAM_BLOCK | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT * m_bFLoat, NULL, 0);
 #endif
 		if(g_cInfo[bFlag].hChan){
+			SendMessage(GetParent(m_hStatus), WM_F4B24_IPC, WM_F4B24_HOOK_CREATE_DECODE_STREAM, (LPARAM)g_cInfo[bFlag].hChan);
 			g_cInfo[bFlag].qDuration = BASS_ChannelGetLength(g_cInfo[bFlag].hChan, BASS_POS_BYTE);
 			if(g_cInfo[bFlag].qDuration<0){
 				g_cInfo[bFlag].qDuration = 0;
@@ -2774,11 +2798,10 @@ static HSTREAM CreateMainStream(BASS_CHANNELINFO *info){
 	HSTREAM hRet;
 	hRet = BASS_StreamCreate(info->freq, info->chans, info->flags & ~BASS_STREAM_DECODE, &MainStreamProc, 0);
 
+	SendMessage(GetParent(m_hStatus), WM_F4B24_IPC, WM_F4B24_HOOK_CREATE_STREAM, (LPARAM)hRet);
+
 	BASS_ChannelSetAttribute(hRet, BASS_ATTRIB_VOL, SendMessage(m_hVolume, TBM_GETPOS, 0, 0) / (float)SLIDER_DIVIDED);
 	BASS_ChannelPlay(hRet, FALSE);
-
-	// WINAMP DSPプラグインを有効にする
-	SetBassWaDsp(hRet);
 
 	return hRet;
 }
@@ -2900,7 +2923,7 @@ static void OnChangeTrack(){
 	lstrcpyntA(m_taginfoA.szTitle, m_taginfo.szTitle, 256);
 	lstrcpyntA(m_taginfoA.szArtist, m_taginfo.szArtist, 256);
 	lstrcpyntA(m_taginfoA.szAlbum, m_taginfo.szAlbum, 256);
-	lstrcpyntA(m_taginfoA.szTrack, m_taginfo.szTrack, 1);
+	lstrcpyntA(m_taginfoA.szTrack, m_taginfo.szTrack, 10);
 #endif
 
 	//タイトルバーの処理

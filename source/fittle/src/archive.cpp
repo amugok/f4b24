@@ -21,8 +21,7 @@ static BOOL RegisterArchivePlugin(FARPROC lpfnProc, HWND hwndMain, HMODULE hmodP
 		if (pNewPlugins){
 			ARCHIVE_PLUGIN_INFO *pNext = pNewPlugins;
 			do{
-				if (pNext->nAPDKVer >= 1)
-				{
+				if (pNext->nAPDKVer >= 1){
 					pNext->hwndMain = hwndMain;
 					pNext->hmodPlugin = hmodPlugin;
 				}
@@ -59,8 +58,7 @@ ARCHIVE_PLUGIN_INFO *GetAPlugin(LPTSTR szFilePath){
 		if((p = PathFindExtension(szFilePath)) != NULL && *p){
 			ARCHIVE_PLUGIN_INFO *pPlugin = pTop;
 			p++;
-			while (pPlugin)
-			{
+			while (pPlugin){
 				if (pPlugin->IsArchiveExt(p)) return pPlugin;
 				pPlugin = pPlugin->pNext;
 			}
@@ -70,15 +68,13 @@ ARCHIVE_PLUGIN_INFO *GetAPlugin(LPTSTR szFilePath){
 }
 
 /* アーカイブかどうか判断 */
-BOOL IsArchive(LPTSTR szFilePath)
-{
+BOOL IsArchive(LPTSTR szFilePath){
 	return GetAPlugin(szFilePath) != NULL;
 }
 
 static LPTSTR CheckArchivePath(LPTSTR pszFilePath){
 	ARCHIVE_PLUGIN_INFO *pPlugin = pTop;
-	while (pPlugin)
-	{
+	while (pPlugin){
 		LPTSTR pRet = pPlugin->CheckArchivePath(pszFilePath);
 		if (pRet) return pRet;
 		pPlugin = pPlugin->pNext;
@@ -185,8 +181,7 @@ BOOL InitArchive(LPTSTR pszPath, HWND hWnd){
 #else
 				FARPROC pfnAPlugin = GetProcAddress(hDll, "GetAPluginInfo");
 #endif
-				if (!pfnAPlugin || !RegisterArchivePlugin(pfnAPlugin, hWnd, hDll))
-				{
+				if (!pfnAPlugin || !RegisterArchivePlugin(pfnAPlugin, hWnd, hDll)){
 					FreeLibrary(hDll);
 				}
 			}

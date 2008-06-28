@@ -58,8 +58,7 @@ static unsigned long mt[N]; /* the array for the state vector  */
 static int mti=N+1; /* mti==N+1 means mt[N] is not initialized */
 
 /* initializes mt[N] with a seed */
-void init_genrand(unsigned long s)
-{
+void init_genrand(unsigned long s) {
     mt[0]= s & 0xffffffffUL;
     for (mti=1; mti<N; mti++) {
         mt[mti] = 
@@ -103,8 +102,7 @@ void init_genrand(unsigned long s)
 //}
 
 /* generates a random number on [0,0xffffffff]-interval */
-unsigned long genrand_int32(void)
-{
+unsigned long genrand_int32(void) {
     unsigned long y;
     static unsigned long mag01[2]={0x0UL, MATRIX_A};
     /* mag01[x] = x * MATRIX_A  for x=0,1 */

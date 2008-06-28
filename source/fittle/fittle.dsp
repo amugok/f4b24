@@ -158,10 +158,6 @@ SOURCE=.\src\bass_tag.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\src\dsp.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\src\finddlg.cpp
 # End Source File
 # Begin Source File
@@ -207,10 +203,6 @@ SOURCE=.\src\archive.h
 # Begin Source File
 
 SOURCE=.\src\bass_tag.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\src\dsp.h
 # End Source File
 # Begin Source File
 

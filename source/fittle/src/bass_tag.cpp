@@ -56,7 +56,7 @@ static BOOL ID3_ReadFrameText(BYTE bType, LPBYTE pTextRaw, int nTextRawSize, LPT
 	ZeroMemory(pszBuf, nBufSize * sizeof(TCHAR));
 	if ((bType == 3) || (bType != 1 && bType != 2 && IsBomUTF8(pTextRaw, nTextRawSize))){
 		/* UTF8 */
-		if (IsBomUTF8(pTextRaw, nTextRawSize)) {
+		if (IsBomUTF8(pTextRaw, nTextRawSize)){
 			pTextRaw += 3;
 			nTextRawSize -= 3;
 		}
@@ -110,8 +110,7 @@ static LPBYTE Unsync(LPBYTE pSrc, unsigned nSrcLen, unsigned nDstLmt, unsigned *
 	LPBYTE lpUnsync = (LPBYTE)HAlloc(nSrcLen ? nSrcLen : nDstLmt);
 	if (lpUnsync) {
 		unsigned i, j;
-		for (i = j = 0; (nSrcLen ? (i < nSrcLen) : (j < nDstLmt)); i++)
-		{
+		for (i = j = 0; (nSrcLen ? (i < nSrcLen) : (j < nDstLmt)); i++){
 			BYTE b = pSrc[i];
 			lpUnsync[j++] = b; 
 			if (b == 0xff && pSrc[i + 1] == 0) i++;
@@ -124,8 +123,7 @@ static LPBYTE Unsync(LPBYTE pSrc, unsigned nSrcLen, unsigned nDstLmt, unsigned *
 static BOOL ID3V23_ReadFrame(int nFlag, LPBYTE pRaw, unsigned nFrameSize, LPTSTR pszBuf, int nBufSize){
 	BOOL bRet = FALSE;
 	unsigned nRawSize = nFrameSize;
-	if (nFlag & 1)
-	{
+	if (nFlag & 1){
 		nRawSize -= 4;
 		pRaw += 4;
 	}

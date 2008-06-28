@@ -29,8 +29,7 @@ BOOL CALLBACK FindDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 	//NMHDR *nm = (NMHDR *)lp;
 	int nIndex;
 
-	switch (msg)
-	{
+	switch (msg){
 		case WM_INITDIALOG:	// ‰Šú‰»
 			hList = GetDlgItem(hDlg, IDC_LIST1);
 			hEdit = GetDlgItem(hDlg, IDC_EDIT1);
@@ -53,8 +52,7 @@ BOOL CALLBACK FindDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 				return TRUE;
 			}
 			//Dialog
-			switch(LOWORD(wp))
-			{
+			switch(LOWORD(wp)){
 				case IDOK:
 					nIndex = GetIndexFromPtr(pRoot, (struct FILEINFO *)SendMessage(hList, LB_GETITEMDATA, SendMessage(hList, LB_GETCURSEL, 0, 0), 0));
 					EndDialog(hDlg, nIndex);
@@ -100,8 +98,7 @@ BOOL CALLBACK FindDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 }
 
 LRESULT CALLBACK NewEditProc(HWND hEB, UINT msg, WPARAM wp, LPARAM lp){
-	switch(msg)
-	{
+	switch(msg){
 		case WM_GETDLGCODE:
 			return DLGC_WANTARROWS | DLGC_WANTCHARS;
 		case WM_KEYDOWN:
@@ -125,10 +122,8 @@ int TraverseList2(HWND hLB, struct FILEINFO *ptr, LPTSTR szPart){
 	ShowWindow(hLB, SW_HIDE);
 
 	SendMessage(hLB, LB_RESETCONTENT, 0, 0);
-	for(;ptr;ptr = ptr->pNext)
-	{
-		if(!szPart || StrStrI(ptr->szFilePath, szPart))
-		{
+	for(;ptr;ptr = ptr->pNext){
+		if(!szPart || StrStrI(ptr->szFilePath, szPart)){
 			SendMessage(hLB, LB_ADDSTRING, 0, (LPARAM)GetFileName(ptr->szFilePath));
 			SendMessage(hLB, LB_SETITEMDATA, i++, (LPARAM)ptr);
 		}
@@ -143,10 +138,8 @@ int TraverseList2(HWND hLB, struct FILEINFO *ptr, LPTSTR szPart){
 
 void ToPlayList(struct FILEINFO **pTo, struct FILEINFO *pFrom, LPTSTR pszPart){
 	struct FILEINFO **pTale = pTo;
-	for(;pFrom;pFrom = pFrom->pNext)
-	{
-		if(!*pszPart || StrStrI(pFrom->szFilePath, pszPart))
-		{
+	for(;pFrom;pFrom = pFrom->pNext){
+		if(!*pszPart || StrStrI(pFrom->szFilePath, pszPart)){
 			pTale = AddList(pTale, pFrom->szFilePath, pFrom->szSize, pFrom->szTime);
 		}
 	}
