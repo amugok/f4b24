@@ -308,6 +308,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 /* ‹N“®Žž‚Éˆê“x‚¾‚¯ŒÄ‚Î‚ê‚Ü‚· */
 static BOOL OnInit(){
 	fIsUnicode = ((GetVersion() & 0x80000000) == 0) || IsWindowUnicode(fpi.hParent);
+	InitPlugins();
 	hOldProc = (WNDPROC)(fIsUnicode ? SetWindowLongW : SetWindowLongA)(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
 	return TRUE;
 }

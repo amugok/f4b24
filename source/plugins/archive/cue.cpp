@@ -1,6 +1,10 @@
+#define APDK_VER 3
 #include "../../fittle/src/aplugin.h"
+#include "../../fittle/src/f4b24.h"
 #include <shlwapi.h>
 #include <time.h>
+#include <math.h>
+#include <stdio.h>
 
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")
@@ -15,7 +19,7 @@
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/MERGE:.rdata=.text")
-#pragma comment(linker,"/ENTRY:DllMain")
+//#pragma comment(linker,"/ENTRY:DllMain")
 #pragma comment(linker,"/OPT:NOWIN98")
 #endif
 
@@ -40,6 +44,45 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 	return TRUE;
 }
 
+static BOOL CALLBACK IsArchiveExt(LPTSTR pszExt);
+static LPTSTR CALLBACK CheckArchivePath(LPTSTR pszFilePath);
+static BOOL CALLBACK EnumArchive(LPTSTR pszFilePath, LPFNARCHIVEENUMPROC lpfnProc, void *pData);
+static BOOL CALLBACK ExtractArchive(LPTSTR pszArchivePath, LPTSTR pszFileName, void **ppBuf, DWORD *pSize);
+static BOOL CALLBACK EnumArchive2(LPTSTR pszFilePath, LPFNADDLISTPROC lpfnAddListProc, LPFNCHECKFILETYPEPROC lpfnCheckProc, void *pData);
+static BOOL CALLBACK ResolveIndirect(LPTSTR pszArchivePath, LPTSTR pszTrackPart, LPTSTR pszStart, LPTSTR pszEnd);
+static BOOL CALLBACK GetBasicTag(LPTSTR pszArchivePath, LPTSTR pszTrackPart, LPTSTR pszTrack, LPTSTR pszTitle, LPTSTR pszAlbum, LPTSTR pszArtist);
+static BOOL CALLBACK GetItemType(LPTSTR pszArchivePath, LPTSTR pszTrackPart, LPTSTR pBuf, int nBufMax);
+static LPTSTR CALLBACK GetItemFileName(LPTSTR pszArchivePath, LPTSTR pszTrackPart);
+static BOOL CALLBACK GetGain(LPTSTR pszArchivePath, LPTSTR pszTrackPart, float *pGain, DWORD hBass);
+
+static ARCHIVE_PLUGIN_INFO apinfo = {
+	0,
+	APDK_VER,
+	IsArchiveExt,
+	CheckArchivePath,
+	EnumArchive,
+	ExtractArchive,
+	0,
+	0,
+	EnumArchive2,
+	ResolveIndirect,
+	GetBasicTag,
+	GetItemType,
+	GetItemFileName,
+	GetGain
+};
+
+static BOOL InitArchive(){	
+	return TRUE;
+}
+
+#ifdef __cplusplus
+extern "C"
+#endif
+ARCHIVE_PLUGIN_INFO * CALLBACK GetAPluginInfo(void){
+	return InitArchive() ? &apinfo : 0;
+}
+
 static BOOL CALLBACK IsArchiveExt(LPTSTR pszExt){
 	if(lstrcmpi(pszExt, TEXT("cue"))==0){
 		return TRUE;
@@ -62,8 +105,6 @@ static BOOL CALLBACK ExtractArchive(LPTSTR pszArchivePath, LPTSTR pszFileName, v
 	return FALSE;
 }
 
-
-
 static int XATOI(LPCTSTR p){
 	int r = 0;
 	while (*p == TEXT(' ') || *p == TEXT('\t')) p++;
@@ -72,6 +113,30 @@ static int XATOI(LPCTSTR p){
 		p++;
 	}
 	return r;
+}
+
+static float XATOF(LPCTSTR p){
+	float s = 1;
+	float f = 0;
+	while (*p == TEXT(' ') || *p == TEXT('\t')) p++;
+	if (*p == '-') {
+		s = -1;
+		p++;
+	}
+	while (*p >= TEXT('0') && *p <= TEXT('9')){
+		f = f * 10 + (*p - TEXT('0'));
+		p++;
+	}
+	if (*p == '.'){
+		float b = 1;
+		p++;
+		while (*p >= TEXT('0') && *p <= TEXT('9')){
+			b *= 10;
+			f += (*p - TEXT('0')) / b;
+			p++;
+		}
+	}
+	return f * s;
 }
 
 // Detect CUE-Sheet Charset
@@ -396,30 +461,73 @@ static LPTSTR  CALLBACK GetItemFileName(LPTSTR pszArchivePath, LPTSTR pszTrackPa
 	return pszTrackPart;
 }
 
+static BOOL CALLBACK GetGain(LPTSTR pszArchivePath, LPTSTR pszTrackPart, float *pGain, DWORD hBass){
+	HANDLE hFile;
+	TCHAR szLine[MAX_FITTLE_PATH] = {0};
+	TCHAR szToken[MAX_FITTLE_PATH] = {0};
+	int nCurrent = -1;
+	CueCharset charset = CUECHAR_NA;
+	int nIndex = XATOI(pszTrackPart);
 
-static ARCHIVE_PLUGIN_INFO apinfo = {
-	0,
-	2,
-	IsArchiveExt,
-	CheckArchivePath,
-	EnumArchive,
-	ExtractArchive,
-	0,
-	0,
-	EnumArchive2,
-	ResolveIndirect,
-	GetBasicTag,
-	GetItemType,
-	GetItemFileName
-};
+	float album_gain = 0;
+	float album_peak = 1;
+	float track_gain = 0;
+	float track_peak = 1;
+	float volume = 1;
 
-static BOOL InitArchive(){	
+	int nGainMode = SendMessage(apinfo.hwndMain, WM_F4B24_IPC, WM_F4B24_IPC_GET_REPLAYGAIN_MODE, 0);
+
+	// オープン
+	hFile = CreateFile(pszArchivePath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if(hFile==INVALID_HANDLE_VALUE) return FALSE;
+	charset = DetectCharset(hFile);
+
+	// 一行ずつ処理
+	while(ReadLine(hFile, szLine, MAX_FITTLE_PATH,charset) > 0){
+		LPTSTR p = GetWord(szLine, szToken, MAX_FITTLE_PATH);
+		if(!lstrcmp(szToken, TEXT("TRACK"))){
+			GetWord(p, szToken, MAX_FITTLE_PATH);
+			nCurrent = XATOI(szToken);
+		}else if(!lstrcmp(szToken, TEXT("REM"))){
+			p = GetWord(p, szToken, MAX_FITTLE_PATH);
+			if(!lstrcmp(szToken, TEXT("REPLAYGAIN_ALBUM_GAIN"))){
+				p = GetWord(p, szToken, MAX_FITTLE_PATH);
+				track_gain = album_gain = XATOF(szToken);
+			}else if(!lstrcmp(szToken, TEXT("REPLAYGAIN_ALBUM_PEAK"))){
+				p = GetWord(p, szToken, MAX_FITTLE_PATH);
+				track_peak = album_peak = XATOF(szToken);
+			}else if(!lstrcmp(szToken, TEXT("REPLAYGAIN_TRACK_GAIN"))){
+				if(nIndex==nCurrent){
+					p = GetWord(p, szToken, MAX_FITTLE_PATH);
+					track_gain = XATOF(szToken);
+				}
+			}else if(!lstrcmp(szToken, TEXT("REPLAYGAIN_TRACK_PEAK"))){
+				if(nIndex==nCurrent){
+					p = GetWord(p, szToken, MAX_FITTLE_PATH);
+					track_peak = XATOF(szToken);
+				}
+			}
+		}
+	}
+
+	switch (nGainMode){
+	case 1:
+		volume = pow(2, album_gain / 6);
+		break;
+	case 2:
+		volume = 1 / album_peak;
+		break;
+	case 3:
+		volume = pow(2, track_gain / 6);
+		break;
+	case 4:
+		volume = 1 / track_peak;
+		break;
+	}
+	
+	// クローズ
+	CloseHandle(hFile);
+
+	*pGain = volume;
 	return TRUE;
-}
-
-#ifdef __cplusplus
-extern "C"
-#endif
-ARCHIVE_PLUGIN_INFO * CALLBACK GetAPluginInfo(void){
-	return InitArchive() ? &apinfo : 0;
 }

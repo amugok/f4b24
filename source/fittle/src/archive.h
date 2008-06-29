@@ -20,5 +20,6 @@ HICON GetArchiveItemIcon(LPTSTR);
 int GetArchiveIconIndex(LPTSTR);
 BOOL GetArchiveItemType(LPTSTR, LPTSTR, int);
 LPTSTR GetArchiveItemFileName(LPTSTR);
+BOOL GetArchiveGain(LPTSTR pszPath, float *pGain, DWORD hBass);
 
 #endif

@@ -29,6 +29,7 @@ typedef void (WINAPI *LPBASS_WADSP_Init)(HWND hwndMain);
 typedef HWADSP (WINAPI *LPBASS_WADSP_Load)(const void *dspfile, int x, int y, int width, int height, WINAMPWINPROC *proc);
 typedef void (WINAPI *LPBASS_WADSP_Start)(HWADSP plugin, DWORD module, DWORD hchan);
 typedef int (WINAPI *LPBASS_WADSP_ChannelSetDSP)(HWADSP plugin, DWORD hchan, int priority);
+typedef int (WINAPI *LPBASS_WADSP_ChannelRemoveDSP)(HWADSP plugin);
 typedef void (WINAPI *LPBASS_WADSP_Stop)(HWADSP plugin);
 typedef void (WINAPI *LPBASS_WADSP_Free)(void);
 typedef void (WINAPI *LPBASS_WADSP_Config)(HWADSP plugin);
@@ -43,22 +44,24 @@ static LPBASS_WADSP_Init BASS_WADSP_Init = NULL;
 static LPBASS_WADSP_Load BASS_WADSP_Load = NULL;
 static LPBASS_WADSP_Start BASS_WADSP_Start = NULL;
 static LPBASS_WADSP_ChannelSetDSP BASS_WADSP_ChannelSetDSP = NULL;
+static LPBASS_WADSP_ChannelRemoveDSP BASS_WADSP_ChannelRemoveDSP = NULL;
 static LPBASS_WADSP_Stop BASS_WADSP_Stop = NULL;
 static LPBASS_WADSP_Free BASS_WADSP_Free = NULL;
 static LPBASS_WADSP_Config BASS_WADSP_Config = NULL;
 static LPBASS_WADSP_GetName BASS_WADSP_GetName = NULL;
 
 #define FUNC_PREFIXA "BASS_WADSP_"
-static const CHAR szDllNameA[] = "bass_wadsp.dll";
-static const WCHAR szDllNameW[] =L"bass_wadsp.dll";
-static const struct IMPORT_FUNC_TABLE {
-	LPCSTR lpszFuncName;
+static /*const*/ CHAR szDllNameA[] = "bass_wadsp.dll";
+static /*const*/ WCHAR szDllNameW[] =L"bass_wadsp.dll";
+static /*const*/ struct IMPORT_FUNC_TABLE {
+	LPSTR lpszFuncName;
 	FARPROC * ppFunc;
 } functbl[] = {
 	{ FUNC_PREFIXA "Init", (FARPROC *)&BASS_WADSP_Init },
 	{ FUNC_PREFIXA "Load", (FARPROC *)&BASS_WADSP_Load },
 	{ FUNC_PREFIXA "Start", (FARPROC *)&BASS_WADSP_Start },
 	{ FUNC_PREFIXA "ChannelSetDSP", (FARPROC *)&BASS_WADSP_ChannelSetDSP },
+	{ FUNC_PREFIXA "ChannelRemoveDSP", (FARPROC *)&BASS_WADSP_ChannelRemoveDSP },
 	{ FUNC_PREFIXA "Stop", (FARPROC *)&BASS_WADSP_Stop },
 	{ FUNC_PREFIXA "Free", (FARPROC *)&BASS_WADSP_Free },
 	{ FUNC_PREFIXA "Config", (FARPROC *)&BASS_WADSP_Config },
@@ -70,6 +73,9 @@ static HMODULE hWaDsp = NULL;
 static WADSPNODE *pDspListTop = NULL;
 static int nCount = 0;
 
+static ATOM F4B24_WADSP_INVOKE_CONFIG = 0;
+static ATOM F4B24_WADSP_GET_LIST = 0;
+
 static HMODULE hDLL = 0;
 static BOOL fIsUnicode = FALSE;
 static WNDPROC hOldProc = 0;
@@ -79,9 +85,6 @@ static void OnQuit();
 static void OnTrackChange();
 static void OnStatusChange();
 static void OnConfig();
-
-static ATOM F4B24_WADSP_INVOKE_CONFIG = 0;
-static ATOM F4B24_WADSP_GET_LIST = 0;
 
 static FITTLE_PLUGIN_INFO fpi = {
 	PDK_VER,
@@ -178,11 +181,15 @@ static BOOL InitBassWaDsp(HWND hWnd){
 	return TRUE;
 }
 
-static BOOL SetBassWaDsp(DWORD hChan){
+static BOOL SetBassWaDsp(DWORD hChan, BOOL fSw){
 	WADSPNODE *pDsp = pDspListTop;
 	while (pDsp){
 		WADSPNODE *pNext = pDsp->pNext;
-		BASS_WADSP_ChannelSetDSP(pDsp->h, hChan, 0);
+		if (fSw) {
+			BASS_WADSP_ChannelSetDSP(pDsp->h, hChan, 0);
+		} else {
+			BASS_WADSP_ChannelRemoveDSP(pDsp->h);
+		}
 		pDsp = pNext;
 	}
 	return TRUE;
@@ -205,7 +212,9 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 	switch(msg){
 	case WM_F4B24_IPC:
 		if (wp == WM_F4B24_HOOK_CREATE_STREAM) {
-			SetBassWaDsp((DWORD)lp);
+			SetBassWaDsp((DWORD)lp, TRUE);
+		} else if (wp == WM_F4B24_HOOK_FREE_STREAM) {
+			SetBassWaDsp((DWORD)lp, FALSE);
 		} else if (F4B24_WADSP_INVOKE_CONFIG && wp == F4B24_WADSP_INVOKE_CONFIG){
 			int i;
 			WADSPNODE *pDsp = pDspListTop;

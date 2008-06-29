@@ -2273,6 +2273,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			case WM_F4B24_IPC_UPDATE_DRIVELIST:
 				SetDrivesToCombo(m_hCombo);
 				break;
+			case WM_F4B24_IPC_GET_REPLAYGAIN_MODE:
+				return g_cfg.nReplayGainMode;
 
 			case WM_F4B24_IPC_GET_VERSION_STRING:
 				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)FITTLE_VERSION);
@@ -2321,6 +2323,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					SendMessage((HWND)lp, WM_GETTEXT, (WPARAM)MAX_FITTLE_PATH, (LPARAM)m_szTreePath);
 					SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_FILEREVIEW, 0), 0);
 				}
+				break;
+
+			case WM_F4B24_HOOK_REPLAY_GAIN:
+				return 0;
 			}
 			break;
 
@@ -2483,6 +2489,8 @@ static void LoadConfig(){
 	g_cfg.nOut32bit = GetPrivateProfileInt(TEXT("Main"), TEXT("Out32bit"), 0, m_szINIPath);
 	// 停止時にフェードアウトする
 	g_cfg.nFadeOut = GetPrivateProfileInt(TEXT("Main"), TEXT("FadeOut"), 1, m_szINIPath);
+	// ReplayGainの適用方法
+	g_cfg.nReplayGainMode = GetPrivateProfileInt(TEXT("Main"), TEXT("ReplayGainMode"), 1, m_szINIPath);
 	// スタートアップフォルダ読み込み
 	GetPrivateProfileString(TEXT("Main"), TEXT("StartPath"), TEXT(""), g_cfg.szStartPath, MAX_FITTLE_PATH, m_szINIPath);
 	// ファイラのパス
@@ -2716,6 +2724,7 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 		g_cInfo[bFlag].qDuration = 0;
 	}
 
+	g_cInfo[bFlag].sGain = 1;
 	g_cInfo[bFlag].hChan = BASS_StreamCreateFile((BOOL)g_cInfo[bFlag].pBuff,
 												(g_cInfo[bFlag].pBuff?(void *)g_cInfo[bFlag].pBuff:(void *)szFilePath),
 												0, (DWORD)g_cInfo[bFlag].qDuration,
@@ -2724,6 +2733,10 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 #endif
 												BASS_STREAM_DECODE | m_bFLoat*BASS_SAMPLE_FLOAT);
 	if(g_cInfo[bFlag].hChan){
+		if(!IsArchivePath(pInfo->szFilePath) || !GetArchiveGain(pInfo->szFilePath, &g_cInfo[bFlag].sGain, g_cInfo[bFlag].hChan)){
+			DWORD dwGain = SendMessage(GetParent(m_hStatus), WM_F4B24_IPC, WM_F4B24_HOOK_REPLAY_GAIN, (LPARAM)g_cInfo[bFlag].hChan);
+			g_cInfo[bFlag].sGain = dwGain ? *(float *)&dwGain : (float)1;
+		}
 		SendMessage(GetParent(m_hStatus), WM_F4B24_IPC, WM_F4B24_HOOK_CREATE_DECODE_STREAM, (LPARAM)g_cInfo[bFlag].hChan);
 		if(szStart[0]){
 			qStart = GetByteFromSecStr(g_cInfo[bFlag].hChan, szStart);
@@ -2752,6 +2765,8 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 		g_cInfo[bFlag].hChan = BASS_StreamCreateURL(szFilePath, 0, BASS_STREAM_BLOCK | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT * m_bFLoat, NULL, 0);
 #endif
 		if(g_cInfo[bFlag].hChan){
+			DWORD dwGain = SendMessage(GetParent(m_hStatus), WM_F4B24_IPC, WM_F4B24_HOOK_REPLAY_GAIN, (LPARAM)g_cInfo[bFlag].hChan);
+			g_cInfo[bFlag].sGain = dwGain ? *(float *)&dwGain : (float)1;
 			SendMessage(GetParent(m_hStatus), WM_F4B24_IPC, WM_F4B24_HOOK_CREATE_DECODE_STREAM, (LPARAM)g_cInfo[bFlag].hChan);
 			g_cInfo[bFlag].qDuration = BASS_ChannelGetLength(g_cInfo[bFlag].hChan, BASS_POS_BYTE);
 			if(g_cInfo[bFlag].qDuration<0){
@@ -2793,6 +2808,10 @@ static DWORD CALLBACK MainStreamProc(HSTREAM /*handle*/, void *buf, DWORD len, v
 	return r;
 }
 
+static void SetVolumeAndGain(HSTREAM h, DWORD dwVol){
+	BASS_ChannelSetAttribute(h, BASS_ATTRIB_VOL, g_cInfo[g_bNow].sGain * dwVol / (float)SLIDER_DIVIDED);
+}
+
 // メインストリームを作成
 static HSTREAM CreateMainStream(BASS_CHANNELINFO *info){
 	HSTREAM hRet;
@@ -2800,7 +2819,7 @@ static HSTREAM CreateMainStream(BASS_CHANNELINFO *info){
 
 	SendMessage(GetParent(m_hStatus), WM_F4B24_IPC, WM_F4B24_HOOK_CREATE_STREAM, (LPARAM)hRet);
 
-	BASS_ChannelSetAttribute(hRet, BASS_ATTRIB_VOL, SendMessage(m_hVolume, TBM_GETPOS, 0, 0) / (float)SLIDER_DIVIDED);
+	SetVolumeAndGain(hRet, SendMessage(m_hVolume, TBM_GETPOS, 0, 0));
 	BASS_ChannelPlay(hRet, FALSE);
 
 	return hRet;
@@ -2876,6 +2895,8 @@ static void OnChangeTrack(){
 	if(m_nGaplessState==GS_NEWFREQ){
 		BASS_ChannelStop(m_hChanOut);
 		m_hChanOut = CreateMainStream(&info);
+	}else{
+		SetVolumeAndGain(m_hChanOut, SendMessage(m_hVolume, TBM_GETPOS, 0, 0));
 	}
 
 	// 切り替わったファイルのインデックスを取得
@@ -3118,7 +3139,7 @@ static BOOL _BASS_ChannelSetPosition(DWORD handle, int nPos){
 	bRet = BASS_ChannelSetPosition(handle, qPos, BASS_POS_BYTE);
 
 	if(g_cfg.nFadeOut){
-		BASS_ChannelSetAttribute(m_hChanOut, BASS_ATTRIB_VOL, SendMessage(m_hVolume, TBM_GETPOS, 0, 0) / (float)SLIDER_DIVIDED);
+		SetVolumeAndGain(m_hChanOut, SendMessage(m_hVolume, TBM_GETPOS, 0, 0));
 	}
 	BASS_ChannelPlay(m_hChanOut, FALSE);
 	if(dwMode != BASS_ChannelIsActive(m_hChanOut)){
@@ -3192,7 +3213,9 @@ static int StopOutputStream(HWND hWnd){
 	// ストリームを削除
 	KillTimer(hWnd, ID_SEEKTIMER);
 	BASS_ChannelStop(m_hChanOut);
+	SendMessage(hWnd, WM_F4B24_IPC, WM_F4B24_HOOK_FREE_STREAM, (LPARAM)m_hChanOut);
 	BASS_StreamFree(m_hChanOut);
+	m_hChanOut = 0;
 
 	if(g_cInfo[!g_bNow].hChan){
 		FreeChannelInfo(!g_bNow);
@@ -3691,7 +3714,7 @@ static LRESULT CALLBACK NewSliderProc(HWND hSB, UINT msg, WPARAM wp, LPARAM lp){
 					(LPARAM)(DWORD)MAKELONG(pt.x,  pt.y + 20));	// スライダの20Pixel下に表示
 
 				if(hSB==m_hVolume){
-					BASS_ChannelSetAttribute(m_hChanOut, BASS_ATTRIB_VOL, nPos / (float)SLIDER_DIVIDED);
+					SetVolumeAndGain(m_hChanOut, nPos);
 				}
 
 			}
@@ -3726,7 +3749,7 @@ static LRESULT CALLBACK NewSliderProc(HWND hSB, UINT msg, WPARAM wp, LPARAM lp){
 
 		case TBM_SETPOS:
 			if(hSB==m_hVolume){
-				BASS_ChannelSetAttribute(m_hChanOut, BASS_ATTRIB_VOL,lp / (float)SLIDER_DIVIDED);
+				SetVolumeAndGain(m_hChanOut, lp);
 			}
 			break;
 

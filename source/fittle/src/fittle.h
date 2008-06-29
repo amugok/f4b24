@@ -82,6 +82,7 @@ typedef struct {
 	QWORD qStart;				// 再生開始位置
 	QWORD qDuration;			// 再生終了位置
 	LPBYTE pBuff;				// メモリバッファ
+	float sGain;
 } CHANNELINFO;
 
 struct CONFIG{
@@ -114,6 +115,7 @@ struct CONFIG{
 	int nTabHide;				// タブが一つの時はタブを隠す
 	int nOut32bit;				// 32bit(float)で出力する
 	int nFadeOut;				// 停止時にフェードアウトする
+	int nReplayGainMode;		// ReplayGainの適用方法
 
 	TCHAR szStartPath[MAX_FITTLE_PATH];	// スタートアップパス
 	TCHAR szFilerPath[MAX_FITTLE_PATH];	// ファイラのパス

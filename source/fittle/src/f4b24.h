@@ -7,6 +7,7 @@
 #define WM_F4B24_IPC_GET_IF_VERSION 101			/* test12 or later */
 #define WM_F4B24_IPC_APPLY_CONFIG 102			/* test12 or later */
 #define WM_F4B24_IPC_UPDATE_DRIVELIST 103		/* test18 or later */
+#define WM_F4B24_IPC_GET_REPLAYGAIN_MODE 104	/* test25 or later */
 
 /* WPARAM:function code LPARAM:HWND */
 #define WM_F4B24_IPC_GET_VERSION_STRING 200		/* test12 or later */
@@ -41,4 +42,6 @@
 
 /* WPARAM:function code LPARAM:BASS stream handle */
 #define WM_F4B24_HOOK_CREATE_STREAM 500			/* test25 or later */
-#define WM_F4B24_HOOK_CREATE_DECODE_STREAM 501	/* test25 or later */
+#define WM_F4B24_HOOK_FREE_STREAM 501			/* test25 or later */
+#define WM_F4B24_HOOK_REPLAY_GAIN 502			/* test25 or later */
+#define WM_F4B24_HOOK_CREATE_DECODE_STREAM 503	/* test25 or later */

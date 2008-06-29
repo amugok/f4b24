@@ -9,6 +9,7 @@
 #include "archive.h"
 #include "list.h"
 #include "func.h"
+#define APDK_VER 3
 #include "aplugin.h"
 
 static ARCHIVE_PLUGIN_INFO *pTop = NULL;
@@ -242,4 +243,14 @@ LPTSTR GetArchiveItemFileName(LPTSTR pszPath){
 		return 0;
 	}
 	return pPlugin->GetItemFileName(szArchivePath, p);
+}
+
+BOOL GetArchiveGain(LPTSTR pszPath, float *pGain, DWORD hBass){
+	TCHAR szArchivePath[MAX_FITTLE_PATH];
+	LPTSTR p = GetArchivePath(szArchivePath, pszPath, MAX_FITTLE_PATH);
+	ARCHIVE_PLUGIN_INFO *pPlugin = p ? GetAPlugin(szArchivePath) : 0;
+	if (!pPlugin || pPlugin->nAPDKVer < 3 || !pPlugin->GetGain){
+		return FALSE;
+	}
+	return pPlugin->GetGain(szArchivePath, p, pGain, hBass);
 }
