@@ -13,16 +13,12 @@ All rights reserved.
 改変の方針
 	改変点も含めソースを公開する
 	基本的には本体に機能を追加しない
-	本体から分離可能な機能は暇があれば削除する
+	本体から分離可能な機能があれば削除する
 	削除した機能は何らかの方法で補う
 
 主な変更点
 	bass 2.4専用
-	zip書庫機能を削除
-	ミニパネルを削除
-	設定を削除
-	CUEシート読み込み機能を削除
-	しおりを削除
+	zip書庫機能、ミニパネル、設定、URLを追加、CUEシート読み込み機能、しおり、WinampDSPプラグイン対応機能を削除
 
 追加したプラグイン(公式でも利用可能)
 	minipane.dll    ミニパネル
@@ -35,14 +31,14 @@ All rights reserved.
 
 追加した専用プラグイン
 	addurl.dll      URLを追加 Ansi/Unicode両対応 text13以降推奨
-	addurlu.dll     廃止 addurlに統合
+	addurlu.dll     廃止 addurl.dllに統合
 	bookmark.dll    しおり 要test18以降
 	bookmarku.dll   しおり Unicode対応 要test18以降
 	fconfig.dll     設定画面 fcpプラグインが無いと何もできない Ansi/Unicode両対応 要test12以降
 	fconfigu.dll    廃止 fconfig.dllに統合
 	minipaneu.dll   ミニパネル Unicode対応 要test17以降
-	replaygain.dll  ReplayGain 要test25以降
-	replaygainu.dll ReplayGain Unicode対応 要test25以降
+	replaygain.dll  ReplayGain Ansi/Unicode両対応 要test25以降
+	replaygainu.dll 廃止 replaygain.dllに統合
 	wadsp.dll       WinampDSPプラグイン対応 Ansi/Unicode両対応 要test25以降 要bass_wadsp.dll
 	wadsp.fcp       wadsp.dll 設定
 	cue.fap         cueシート対応 Ansi版専用 要test14以降

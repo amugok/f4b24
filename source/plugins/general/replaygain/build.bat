@@ -23,6 +23,5 @@ goto exitcmd
 :buildall
 
 call %0 replaygain /MD
-call %0 replaygainu /MD
 
 :exitcmd
