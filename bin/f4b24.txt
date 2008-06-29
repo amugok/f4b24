@@ -35,11 +35,11 @@ All rights reserved.
 
 追加した専用プラグイン
 	addurl.dll    URLを追加 Ansi/Unicode両対応 text13以降推奨
-	addurlu.dll   廃止
+	addurlu.dll   廃止 addurlに統合
 	bookmark.dll  しおり 要test18以降
 	bookmarku.dll しおり ユニコード対応 要test18以降
-	fconfig.dll   設定画面 fcpプラグインが無いと何もできない 要test12以降
-	fconfigu.dll  設定画面 fcpプラグインが無いと何もできない ユニコード対応 要test12以降
+	fconfig.dll   設定画面 fcpプラグインが無いと何もできない Ansi/Unicode両対応 要test12以降
+	fconfigu.dll  廃止 fconfig.dllに統合
 	minipaneu.dll ミニパネル ユニコード対応 要test17以降
 	wadsp.dll     WinampDSPプラグイン対応 Ansi/Unicode両対応 要test25以降 要bass_wadsp.dll
 	wadsp.fcp     wadsp.dll 設定

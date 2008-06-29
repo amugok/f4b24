@@ -52,6 +52,7 @@ static SHARED_MEMORY *psm = NULL;
 /* プラグインリスト */
 static CONFIG_PLUGIN_INFO *pTop = NULL;
 
+static BOOL fIsUnicode = FALSE;
 static WNDPROC hOldProc = 0;
 
 static HMODULE hDLL = 0;
@@ -123,20 +124,39 @@ static BOOL RegisterPlugin(FARPROC lpfnProc){
 	return FALSE;
 }
 
-static BOOL LoadPlugins(LPCTSTR pszPath){
-	TCHAR szPathW[MAX_PATH];
-	TCHAR szDllPath[MAX_PATH];
+static void InitPlugins(){
 	HANDLE hFind;
-	WIN32_FIND_DATA wfd = {0};
+	union {
+		CHAR A[MAX_PATH];
+		WCHAR W[MAX_PATH];
+	} szDir, szPath;
+	union {
+		WIN32_FIND_DATAA A;
+		WIN32_FIND_DATAW W;
+	} wfd;
 
-	wsprintf(szPathW, TEXT("%s*.fcp"), pszPath);
+	if (fIsUnicode) {
+		GetModuleFileNameW(NULL, szDir.W, MAX_FITTLE_PATH);
+		*PathFindFileNameW(szDir.W) = L'\0';
+		PathCombineW(szPath.W, szDir.W, L"*.fcp");
+		hFind = FindFirstFileW(szPath.W, &wfd.W);
+	} else {
+		GetModuleFileNameA(NULL, szDir.A, MAX_FITTLE_PATH);
+		*PathFindFileNameA(szDir.A) = '\0';
+		PathCombineA(szPath.A, szDir.A, "*.fcp");
+		hFind = FindFirstFileA(szPath.A, &wfd.A);
+	}
 
-	hFind = FindFirstFile(szPathW, &wfd);
 	if(hFind!=INVALID_HANDLE_VALUE){
 		do{
 			HINSTANCE hDll;
-			wsprintf(szDllPath, TEXT("%s%s"), pszPath, wfd.cFileName);
-			hDll = LoadLibrary(szDllPath);
+			if (fIsUnicode){
+				PathCombineW(szPath.W, szDir.W, wfd.W.cFileName);
+				hDll = LoadLibraryW(szPath.W);
+			}else{
+				PathCombineA(szPath.A, szDir.A, wfd.A.cFileName);
+				hDll = LoadLibraryA(szPath.A);
+			}
 			if(hDll){
 				FARPROC pfnCPlugin = GetProcAddress(hDll, "GetCPluginInfo");
 				if (!pfnCPlugin || !RegisterPlugin(pfnCPlugin))
@@ -144,27 +164,9 @@ static BOOL LoadPlugins(LPCTSTR pszPath){
 					FreeLibrary(hDll);
 				}
 			}
-		}while(FindNextFile(hFind, &wfd));
+		}while(fIsUnicode ? FindNextFileW(hFind, &wfd.W) : FindNextFileA(hFind, &wfd.A));
 		FindClose(hFind);
 	}
-
-	return TRUE;
-}
-
-
-static void GetModuleParentDir(LPTSTR szParPath){
-	TCHAR szPath[MAX_FITTLE_PATH];
-
-	GetModuleFileName(NULL, szPath, MAX_FITTLE_PATH);
-	GetLongPathName(szPath, szParPath, MAX_FITTLE_PATH); // 98以降
-	*PathFindFileName(szParPath) = '\0';
-	return;
-}
-
-static void InitPlugins(){
-	TCHAR szPluginPath[MAX_FITTLE_PATH];
-	GetModuleParentDir(szPluginPath);
-	LoadPlugins(szPluginPath);
 }
 
 static void *HAlloc(DWORD dwSize){
@@ -300,13 +302,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 		ShowSettingDialog(hWnd, lp);
 		return 0;
 	}
-	return CallWindowProc(hOldProc, hWnd, msg, wp, lp);
+	return (fIsUnicode ? CallWindowProcW : CallWindowProcA)(hOldProc, hWnd, msg, wp, lp);
 }
 
 /* 起動時に一度だけ呼ばれます */
 static BOOL OnInit(){
-	InitPlugins();
-	hOldProc = (WNDPROC)SetWindowLong(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
+	fIsUnicode = ((GetVersion() & 0x80000000) == 0) || IsWindowUnicode(fpi.hParent);
+	hOldProc = (WNDPROC)(fIsUnicode ? SetWindowLongW : SetWindowLongA)(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
 	return TRUE;
 }
 

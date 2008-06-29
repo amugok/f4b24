@@ -118,11 +118,7 @@ static BOOL InitBassWaDsp(HWND hWnd){
 	union{
 		CHAR A[MAX_PATH];
 		WCHAR W[MAX_PATH];
-	} szDir;
-	union{
-		CHAR A[MAX_PATH];
-		WCHAR W[MAX_PATH];
-	} szPath;
+	} szDir, szPath;
 	union{
 		WIN32_FIND_DATAA A;
 		WIN32_FIND_DATAW W;
