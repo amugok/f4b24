@@ -1392,13 +1392,14 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					DeleteAllList(&(GetListTab(m_hTab, 0)->pRoot));
 					lstrcpyn(szNowDir, m_szTreePath, MAX_FITTLE_PATH);
 					SetCursor(LoadCursor(NULL, IDC_WAIT));  // 砂時計カーソルにする
-					if(IsPlayList(szNowDir)){
-						ReadM3UFile(&(GetListTab(m_hTab, 0)->pRoot), szNowDir);
-					}else if(IsArchive(szNowDir)){
-						ReadArchive(&(GetListTab(m_hTab, 0)->pRoot), szNowDir);
-					}else{
+					if (PathIsDirectory(szNowDir)){
 						SearchFolder(&(GetListTab(m_hTab, 0)->pRoot), szNowDir, TRUE);
 						MergeSort(&(GetListTab(m_hTab, 0)->pRoot), GetListTab(m_hTab, 0)->nSortState);
+					}else if(IsPlayListFast(szNowDir)){
+						ReadM3UFile(&(GetListTab(m_hTab, 0)->pRoot), szNowDir);
+					}else if(IsArchiveFast(szNowDir)){
+						ReadArchive(&(GetListTab(m_hTab, 0)->pRoot), szNowDir);
+					}else{
 					}
 					TraverseList(GetListTab(m_hTab, 0));
 					SetCursor(LoadCursor(NULL, IDC_ARROW)); // 矢印カーソルに戻す

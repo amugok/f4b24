@@ -14,6 +14,7 @@ BOOL InitArchive(LPTSTR pszPath, HWND hWnd);
 BOOL ReadArchive(struct FILEINFO **, LPTSTR);
 BOOL AnalyzeArchivePath(CHANNELINFO *, LPTSTR, LPTSTR, LPTSTR);
 BOOL IsArchive(LPTSTR);
+BOOL IsArchiveFast(LPTSTR);
 BOOL IsArchivePath(LPTSTR);
 BOOL GetArchiveTagInfo(LPTSTR, TAGINFO *);
 HICON GetArchiveItemIcon(LPTSTR);

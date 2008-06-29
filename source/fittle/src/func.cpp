@@ -45,18 +45,18 @@ int GetParentDir(LPCTSTR pszFilePath, LPTSTR pszParPath){
 	if(!FILE_EXIST(pszFilePath)){
 		//ファイル、ディレクトリ以外
 		return OTHERS;
-	}else if(GetFileAttributes(pszFilePath) & FILE_ATTRIBUTE_DIRECTORY){
+	}else if(PathIsDirectory(pszFilePath)){
 		//ディレクトリだった場合
 		lstrcpyn(pszParPath, szLongPath, MAX_FITTLE_PATH);
 		return FOLDERS;
 	}else{
 		//ファイルだった場合
 
-		if(IsPlayList(szLongPath)){
+		if(IsPlayListFast(szLongPath)){
 			// リスト
 			lstrcpyn(pszParPath, szLongPath, MAX_FITTLE_PATH);
 			return LISTS;
-		}else if(IsArchive(szLongPath)){
+		}else if(IsArchiveFast(szLongPath)){
 			// アーカイブ
 			lstrcpyn(pszParPath, szLongPath, MAX_FITTLE_PATH);
 			return ARCHIVES;
@@ -70,16 +70,20 @@ int GetParentDir(LPCTSTR pszFilePath, LPTSTR pszParPath){
 }
 
 /*プレイリストかどうか判断*/
-BOOL IsPlayList(LPTSTR szFilePath){
+BOOL IsPlayListFast(LPTSTR szFilePath){
 	LPTSTR p;
-
-	if(GetFileAttributes(szFilePath) & FILE_ATTRIBUTE_DIRECTORY) return FALSE;
 	if((p = PathFindExtension(szFilePath)) == NULL || !*p) return FALSE;
 	p++;
 	if(lstrcmpi(p, TEXT("M3U"))==0 || lstrcmpi(p, TEXT("M3U8"))==0 || lstrcmpi(p, TEXT("PLS"))==0)
 		return TRUE;
 	else
 		return FALSE;
+}
+
+/*プレイリストかどうか判断*/
+BOOL IsPlayList(LPTSTR szFilePath){
+	if(PathIsDirectory(szFilePath)) return FALSE;
+	return IsPlayListFast(szFilePath);
 }
 
 //Int型で設定ファイル書き込み
@@ -143,7 +147,7 @@ void GetModuleParentDir(LPTSTR szParPath){
 LPTSTR MyPathAddBackslash(LPTSTR pszPath){
 	if(PathIsDirectory(pszPath)){
 		return PathAddBackslash(pszPath);
-	}else if(IsPlayList(pszPath) || IsArchive(pszPath)){
+	}else if(IsPlayListFast(pszPath) || IsArchiveFast(pszPath)){
 		return pszPath;
 	}else{
 		return PathAddBackslash(pszPath);

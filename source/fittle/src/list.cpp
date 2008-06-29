@@ -167,7 +167,6 @@ BOOL SearchFolder(struct FILEINFO **pRoot, LPTSTR pszSearchPath, BOOL bSubFlag){
 	SYSTEMTIME sysTime;
 	FILETIME locTime;
 	
-	if(!(GetFileAttributes(pszSearchPath) & FILE_ATTRIBUTE_DIRECTORY)) return FALSE;
 	PathAddBackslash(pszSearchPath);
 	wsprintf(szSearchDirW, TEXT("%s*.*"), pszSearchPath);
 	hFind = FindFirstFile(szSearchDirW, &wfd);
@@ -183,7 +182,7 @@ BOOL SearchFolder(struct FILEINFO **pRoot, LPTSTR pszSearchPath, BOOL bSubFlag){
 						wsprintf(szTime, TEXT("%02d/%02d/%02d %02d:%02d:%02d"),
 							sysTime.wYear, sysTime.wMonth, sysTime.wDay, sysTime.wHour, sysTime.wMinute, sysTime.wSecond);
 						pTale = AddList(pTale, szFullPath, szSize, szTime);
-					}if(g_cfg.nZipSearch && bSubFlag && IsArchive(wfd.cFileName)){	// ZIPも検索
+					}if(g_cfg.nZipSearch && bSubFlag && IsArchiveFast(wfd.cFileName)){	// ZIPも検索
 						wsprintf(szFullPath, TEXT("%s%s"), pszSearchPath, wfd.cFileName);
 						ReadArchive(pRoot, szFullPath);
 					}
@@ -481,7 +480,7 @@ int SearchFiles(struct FILEINFO **ppRoot, LPTSTR szFilePath, BOOL bSub){
 #endif
 
 		return FOLDERS;
-	}else if(IsPlayList(szFilePath)){
+	}else if(IsPlayListFast(szFilePath)){
 		ReadM3UFile(ppRoot, szFilePath);			/* プレイリスト */
 
 //#ifdef _DEBUG
@@ -490,7 +489,7 @@ int SearchFiles(struct FILEINFO **ppRoot, LPTSTR szFilePath, BOOL bSub){
 //#endif
 
 		return LISTS;
-	}else if(IsArchive(szFilePath)){
+	}else if(IsArchiveFast(szFilePath)){
 		ReadArchive(ppRoot, szFilePath);			/* アーカイブ */
 
 #ifdef _DEBUG

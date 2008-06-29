@@ -79,8 +79,11 @@ void RefreshComboIcon(HWND hCB){
 	for(i=0;i<nCnt;i++){
 		cbi.iItem = i;
 		SendMessage(hCB, CBEM_GETITEM, (WPARAM)0, (LPARAM)&cbi);
-		if(cbi.pszText[3]) {
-			if (IsArchive(cbi.pszText)) {
+		if (cbi.pszText[0] == TEXT('\\') && cbi.pszText[1] == TEXT('\\')) {
+			/* UNCパスは時間がかかるので省略 */
+			cbi.lParam = cbi.iImage = cbi.iSelectedImage = m_iFolderIcon;
+		} else if(cbi.pszText[3]) {
+			if (IsArchiveFast(cbi.pszText)) {
 				cbi.lParam = cbi.iImage = cbi.iSelectedImage = GetArchiveIconIndex(cbi.pszText);
 			}else{
 				cbi.lParam = cbi.iImage = cbi.iSelectedImage = m_iFolderIcon;
@@ -189,10 +192,10 @@ HTREEITEM MakeTwoTree(HWND hTV,	HTREEITEM hTarNode){
 							TreeView_InsertItem(hTV, &tvi);
 							tvi.hParent = hTarNode;
 						}
-					}else if(IsArchive(szTargetPath)){
+					}else if(IsArchiveFast(szTargetPath)){
 						tvi.item.iImage = tvi.item.iSelectedImage = (m_iListIcon != -1) ? GetArchiveIconIndex(szTargetPath) : -1;
 						hChildNode = TreeView_InsertItem(hTV, &tvi);
-					}else if(IsPlayList(szTargetPath)){
+					}else if(IsPlayListFast(szTargetPath)){
 						tvi.item.iImage = tvi.item.iSelectedImage = m_iListIcon;
 						hChildNode = TreeView_InsertItem(hTV, &tvi);
 					}
@@ -219,7 +222,7 @@ BOOL CheckHaveChild(LPTSTR szTargetPath){
 			wsprintf(szNowDir, TEXT("%s\\%s"), szTargetPath, (LPTSTR)wfd.cFileName);
 			//ゴミ以外のディレクトリだったらTRUE
 			if(lstrcmp((LPTSTR)wfd.cFileName, TEXT(".")) && lstrcmp((LPTSTR)wfd.cFileName, TEXT(".."))){
-				if((wfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) || IsPlayList(szNowDir) || IsArchive(szNowDir)){
+				if((wfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) || IsPlayListFast(szNowDir) || IsArchiveFast(szNowDir)){
 					FindClose(hFind);
 					return TRUE;
 				}

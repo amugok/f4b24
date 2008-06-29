@@ -20,6 +20,7 @@ enum {OTHERS=0, FOLDERS, FILES, LISTS, ARCHIVES, NA_CUESHEETS_, URLS};
 LPTSTR GetFileName(LPTSTR);
 int GetParentDir(LPCTSTR, LPTSTR);
 BOOL IsPlayList(LPTSTR);
+BOOL IsPlayListFast(LPTSTR);
 int WritePrivateProfileInt(LPTSTR, LPTSTR, int, LPTSTR);
 BOOL GetTimeAndSize(LPCTSTR, LPTSTR, LPTSTR);
 void SetOLECursor(int);

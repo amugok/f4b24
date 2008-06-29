@@ -50,27 +50,34 @@ static LPTSTR GetArchivePath(LPTSTR pDst, LPTSTR pSrc, int nDstMax){
 
 
 /* 書庫ファイルのパスに対応するプラグインを取得 */
-ARCHIVE_PLUGIN_INFO *GetAPlugin(LPTSTR szFilePath){
+static ARCHIVE_PLUGIN_INFO *GetAPluginEx(LPTSTR szFilePath, BOOL fCheckDirectory){
 	LPTSTR p;
 
 	if(!pTop) return NULL;
 
-	if(!PathIsDirectory(szFilePath)){
-		if((p = PathFindExtension(szFilePath)) != NULL && *p){
-			ARCHIVE_PLUGIN_INFO *pPlugin = pTop;
-			p++;
-			while (pPlugin){
-				if (pPlugin->IsArchiveExt(p)) return pPlugin;
-				pPlugin = pPlugin->pNext;
-			}
+	if(fCheckDirectory && PathIsDirectory(szFilePath)) return NULL;
+	if((p = PathFindExtension(szFilePath)) != NULL && *p){
+		ARCHIVE_PLUGIN_INFO *pPlugin = pTop;
+		p++;
+		while (pPlugin){
+			if (pPlugin->IsArchiveExt(p)) return pPlugin;
+			pPlugin = pPlugin->pNext;
 		}
 	}
 	return NULL;
 }
 
+static ARCHIVE_PLUGIN_INFO *GetAPlugin(LPTSTR szFilePath){
+	return GetAPluginEx(szFilePath, TRUE);
+}
+
 /* アーカイブかどうか判断 */
 BOOL IsArchive(LPTSTR szFilePath){
 	return GetAPlugin(szFilePath) != NULL;
+}
+
+BOOL IsArchiveFast(LPTSTR szFilePath){
+	return GetAPluginEx(szFilePath, FALSE) != NULL;
 }
 
 static LPTSTR CheckArchivePath(LPTSTR pszFilePath){
@@ -87,7 +94,7 @@ static LPTSTR CheckArchivePath(LPTSTR pszFilePath){
 BOOL IsArchivePath(LPTSTR pszFilePath){
 	TCHAR szArchivePath[MAX_PATH];
 	LPTSTR p = CheckArchivePath(pszFilePath);
-	return p && GetArchivePath(szArchivePath, pszFilePath, MAX_PATH) && FILE_EXIST(szArchivePath);
+	return p && GetArchivePath(szArchivePath, pszFilePath, MAX_PATH);// && FILE_EXIST(szArchivePath);
 }
 
 typedef struct {
@@ -206,7 +213,7 @@ int GetArchiveIconIndex(LPTSTR pszPath){
 BOOL GetArchiveTagInfo(LPTSTR pszPath, TAGINFO *pTagInfo){
 	TCHAR szArchivePath[MAX_FITTLE_PATH];
 	LPTSTR p = GetArchivePath(szArchivePath, pszPath, MAX_FITTLE_PATH);
-	ARCHIVE_PLUGIN_INFO *pPlugin = p ? GetAPlugin(szArchivePath) : 0;
+	ARCHIVE_PLUGIN_INFO *pPlugin = p ? GetAPluginEx(szArchivePath, FALSE) : 0;
 	if (!pPlugin || pPlugin->nAPDKVer < 2 || !pPlugin->GetBasicTag) return FALSE;
 	ZeroMemory(pTagInfo, sizeof(TAGINFO));
 	return pPlugin->GetBasicTag(szArchivePath, p, pTagInfo->szTrack, pTagInfo->szTitle, pTagInfo->szAlbum, pTagInfo->szArtist);
@@ -217,7 +224,7 @@ HICON GetArchiveItemIcon(LPTSTR pszPath){
 	SHFILEINFO shfinfo = {0};
 	TCHAR szArchivePath[MAX_FITTLE_PATH];
 	LPTSTR p = GetArchivePath(szArchivePath, pszPath, MAX_FITTLE_PATH);
-	ARCHIVE_PLUGIN_INFO *pPlugin = p ? GetAPlugin(szArchivePath) : 0;
+	ARCHIVE_PLUGIN_INFO *pPlugin = p ? GetAPluginEx(szArchivePath, FALSE) : 0;
 	if (!pPlugin || pPlugin->nAPDKVer < 2 || !pPlugin->ResolveIndirect || !pPlugin->ResolveIndirect(szArchivePath, p, szStart, szEnd)){
 		lstrcpyn(szArchivePath, pszPath, MAX_PATH);
 	}
@@ -228,7 +235,7 @@ HICON GetArchiveItemIcon(LPTSTR pszPath){
 BOOL GetArchiveItemType(LPTSTR pszPath, LPTSTR pBuf, int nBufMax){
 	TCHAR szArchivePath[MAX_FITTLE_PATH];
 	LPTSTR p = GetArchivePath(szArchivePath, pszPath, MAX_FITTLE_PATH);
-	ARCHIVE_PLUGIN_INFO *pPlugin = p ? GetAPlugin(szArchivePath) : 0;
+	ARCHIVE_PLUGIN_INFO *pPlugin = p ? GetAPluginEx(szArchivePath, FALSE) : 0;
 	if (!pPlugin || pPlugin->nAPDKVer < 2 || !pPlugin->GetItemType){
 		return FALSE;
 	}
@@ -238,7 +245,7 @@ BOOL GetArchiveItemType(LPTSTR pszPath, LPTSTR pBuf, int nBufMax){
 LPTSTR GetArchiveItemFileName(LPTSTR pszPath){
 	TCHAR szArchivePath[MAX_FITTLE_PATH];
 	LPTSTR p = GetArchivePath(szArchivePath, pszPath, MAX_FITTLE_PATH);
-	ARCHIVE_PLUGIN_INFO *pPlugin = p ? GetAPlugin(szArchivePath) : 0;
+	ARCHIVE_PLUGIN_INFO *pPlugin = p ? GetAPluginEx(szArchivePath, FALSE) : 0;
 	if (!pPlugin || pPlugin->nAPDKVer < 2 || !pPlugin->GetItemFileName){
 		return 0;
 	}
@@ -248,7 +255,7 @@ LPTSTR GetArchiveItemFileName(LPTSTR pszPath){
 BOOL GetArchiveGain(LPTSTR pszPath, float *pGain, DWORD hBass){
 	TCHAR szArchivePath[MAX_FITTLE_PATH];
 	LPTSTR p = GetArchivePath(szArchivePath, pszPath, MAX_FITTLE_PATH);
-	ARCHIVE_PLUGIN_INFO *pPlugin = p ? GetAPlugin(szArchivePath) : 0;
+	ARCHIVE_PLUGIN_INFO *pPlugin = p ? GetAPluginEx(szArchivePath, FALSE) : 0;
 	if (!pPlugin || pPlugin->nAPDKVer < 3 || !pPlugin->GetGain){
 		return FALSE;
 	}
