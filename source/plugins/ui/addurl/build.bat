@@ -23,6 +23,5 @@ goto exitcmd
 :buildall
 
 call %0 addurl /MD
-call %0 addurlu /MD
 
 :exitcmd

@@ -34,14 +34,14 @@ All rights reserved.
 	fconfig.exe   設定画面 fcpプラグインが無いと何もできない
 
 追加した専用プラグイン
-	addurl.dll    URLを追加 text13以降推奨
-	addurlu.dll   URLを追加 ユニコード対応 text13以降推奨
+	addurl.dll    URLを追加 Ansi/Unicode両対応 text13以降推奨
+	addurlu.dll   廃止
 	bookmark.dll  しおり 要test18以降
 	bookmarku.dll しおり ユニコード対応 要test18以降
 	fconfig.dll   設定画面 fcpプラグインが無いと何もできない 要test12以降
 	fconfigu.dll  設定画面 fcpプラグインが無いと何もできない ユニコード対応 要test12以降
 	minipaneu.dll ミニパネル ユニコード対応 要test17以降
-	wadsp.dll     WinampDSPプラグイン対応 ユニコード対応 要test25以降 要bass_wadsp.dll
+	wadsp.dll     WinampDSPプラグイン対応 Ansi/Unicode両対応 要test25以降 要bass_wadsp.dll
 	wadsp.fcp     wadsp.dll 設定
 	cue.fap       cueシート対応 Ansi版専用 要test14以降
 	arj.fap       arj書庫対応 Ansi版専用 要統合アーカイバプロジェクト版unarj32j.dll

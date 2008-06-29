@@ -22,8 +22,10 @@
 #endif
 
 #define MAX_FITTLE_PATH 260*2
-#define FILE_EXIST(X) (GetFileAttributes(X)==0xFFFFFFFF ? FALSE : TRUE)
-#define IsURLPath(X) StrStr(X, TEXT("://"))
+#define FILE_EXISTA(X) (GetFileAttributesA(X)==0xFFFFFFFF ? FALSE : TRUE)
+#define FILE_EXISTW(X) (GetFileAttributesW(X)==0xFFFFFFFF ? FALSE : TRUE)
+#define IsURLPathA(X) StrStrA(X, "://")
+#define IsURLPathW(X) StrStrW(X, L"://")
 
 static BOOL OnInit();
 static void OnQuit();
@@ -45,6 +47,7 @@ static FITTLE_PLUGIN_INFO fpi = {
 	NULL
 };
 
+static BOOL fIsUnicode = FALSE;
 static WNDPROC hOldProc = 0;
 static HMODULE hDLL = 0;
 
@@ -105,12 +108,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 		UpdateMenuItems((HMENU)wp);
 		break;
 	}
-	return CallWindowProc(hOldProc, hWnd, msg, wp, lp);
+	return (fIsUnicode ? CallWindowProcW : CallWindowProcA)(hOldProc, hWnd, msg, wp, lp);
 }
 
 /* 起動時に一度だけ呼ばれます */
 static BOOL OnInit(){
-	hOldProc = (WNDPROC)SetWindowLong(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
+	fIsUnicode = ((GetVersion() & 0x80000000) == 0) || IsWindowUnicode(fpi.hParent);
+	hOldProc = (WNDPROC)(fIsUnicode ? SetWindowLongW : SetWindowLongA)(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
 	return TRUE;
 }
 
@@ -132,26 +136,43 @@ static void OnConfig(){
 }
 
 static BOOL CALLBACK AddURLDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
-	static LPTSTR pszText;
-	TCHAR szTemp[MAX_FITTLE_PATH];
+	static LPVOID pszBuf;
+	union {
+		CHAR A[MAX_FITTLE_PATH];
+		WCHAR W[MAX_FITTLE_PATH];
+	} szTemp;
 
 	switch(msg)
-	{		
+	{
 		case WM_INITDIALOG:
-			pszText = (LPTSTR)lp;
+			pszBuf = (LPVOID)lp;
 
 			// クリップボードに有効なURIが入っていればエディットボックスにコピー
-			if(IsClipboardFormatAvailable(CF_TEXT)){
+			if(IsClipboardFormatAvailable(fIsUnicode ? CF_UNICODETEXT : CF_TEXT)){
 				if(OpenClipboard(NULL)){
-					HANDLE hMem = GetClipboardData(CF_TEXT);
-					LPTSTR pMem = (LPTSTR)GlobalLock(hMem);
-					lstrcpyn((LPTSTR)(LPCTSTR)szTemp, pMem, MAX_FITTLE_PATH);
-					GlobalUnlock(hMem);
-					CloseClipboard();
-				}
-				if(IsURLPath(szTemp) || FILE_EXIST(szTemp)){
-					SetWindowText(GetDlgItem(hDlg, IDC_EDIT1), szTemp);
-					SendMessage(GetDlgItem(hDlg, IDC_EDIT1), EM_SETSEL, (WPARAM)0, (LPARAM)lstrlen(szTemp));
+					HANDLE hMem = GetClipboardData(fIsUnicode ? CF_UNICODETEXT : CF_TEXT);
+					if (hMem){
+						LPVOID pMem = (LPVOID)GlobalLock(hMem);
+						if (pMem){
+							if (fIsUnicode)
+								lstrcpynW(szTemp.W, (LPCWSTR)pMem, MAX_FITTLE_PATH);
+							else
+								lstrcpynA(szTemp.A, (LPCSTR)pMem, MAX_FITTLE_PATH);
+							GlobalUnlock(hMem);
+							CloseClipboard();
+							if (fIsUnicode){
+								if(IsURLPathW(szTemp.W) || FILE_EXISTW(szTemp.W)){
+									SetWindowTextW(GetDlgItem(hDlg, IDC_EDIT1), szTemp.W);
+									SendMessageW(GetDlgItem(hDlg, IDC_EDIT1), EM_SETSEL, (WPARAM)0, (LPARAM)lstrlenW(szTemp.W));
+								}
+							}else{
+								if(IsURLPathA(szTemp.A) || FILE_EXISTA(szTemp.A)){
+									SetWindowTextA(GetDlgItem(hDlg, IDC_EDIT1), szTemp.A);
+									SendMessageA(GetDlgItem(hDlg, IDC_EDIT1), EM_SETSEL, (WPARAM)0, (LPARAM)lstrlenA(szTemp.A));
+								}
+							}
+						}
+					}
 				}
 			}
 			SendMessage(hDlg, WM_SETTEXT, 0, (LPARAM)TEXT("アドレスを追加"));
@@ -159,17 +180,24 @@ static BOOL CALLBACK AddURLDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			return FALSE;
 
 		case WM_COMMAND:
-			switch(LOWORD(wp))
-			{
+			switch(LOWORD(wp)) {
 				case IDOK:	// 設定保存
-					GetWindowText(GetDlgItem(hDlg, IDC_EDIT1), szTemp, MAX_FITTLE_PATH);
-					if(lstrlen(szTemp)==0){
-						EndDialog(hDlg, FALSE);
-						return TRUE;
+					BOOL fRet;
+					fRet = FALSE;
+					if (fIsUnicode){
+						GetWindowTextW(GetDlgItem(hDlg, IDC_EDIT1), szTemp.W, MAX_FITTLE_PATH);
+						if(lstrlenW(szTemp.W)){
+							lstrcpynW((LPWSTR)pszBuf, szTemp.W, MAX_FITTLE_PATH);
+							fRet = TRUE;
+						}
 					}else{
-						lstrcpyn(pszText, szTemp, MAX_FITTLE_PATH);
-						EndDialog(hDlg, TRUE);
+						GetWindowTextA(GetDlgItem(hDlg, IDC_EDIT1), szTemp.A, MAX_FITTLE_PATH);
+						if(lstrlenA(szTemp.A)){
+							lstrcpynA((LPSTR)pszBuf, szTemp.A, MAX_FITTLE_PATH);
+							fRet = TRUE;
+						}
 					}
+					EndDialog(hDlg, fRet);
 					return TRUE;
 
 				case IDCANCEL:	// 設定を保存せずに終了
@@ -188,8 +216,7 @@ static BOOL CALLBACK AddURLDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 	}
 }
 
-static void SendCopyData(HWND hFittle, int iType, LPTSTR lpszString){
-#ifdef UNICODE
+static void SendCopyDataW(HWND hFittle, int iType, LPWSTR lpszString){
 	CHAR nameA[MAX_FITTLE_PATH];
 	LPBYTE lpWork;
 	COPYDATASTRUCT cds;
@@ -208,20 +235,31 @@ static void SendCopyData(HWND hFittle, int iType, LPTSTR lpszString){
 	cds.cbData = cbData;
 	SendMessage(hFittle, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
 	HeapFree(GetProcessHeap(), 0, lpWork);
-#else
+}
+
+static void SendCopyDataA(HWND hFittle, int iType, LPSTR lpszString){
 	COPYDATASTRUCT cds;
 	cds.dwData = iType;
 	cds.lpData = (LPVOID)lpszString;
 	cds.cbData = (lstrlenA(lpszString) + 1) * sizeof(CHAR);
 	// 文字列送信
 	SendMessage(hFittle, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
-#endif
 }
 
 static void AddURL(HWND hWnd){
-	TCHAR szLabel[MAX_FITTLE_PATH];
-	szLabel[0] = '\0';
-	if(DialogBoxParam(hDLL, TEXT("TAB_NAME_DIALOG"), hWnd, AddURLDlgProc, (LPARAM)szLabel)){
-		SendCopyData(fpi.hParent, 1, szLabel);
+	union {
+		WCHAR W[MAX_FITTLE_PATH];
+		CHAR A[MAX_FITTLE_PATH];
+	} szLabel;
+	if (fIsUnicode){
+		szLabel.W[0] = L'\0';
+		if(DialogBoxParamW(hDLL, L"TAB_NAME_DIALOG", hWnd, AddURLDlgProc, (LPARAM)szLabel.W)){
+			SendCopyDataW(fpi.hParent, 1, szLabel.W);
+		}
+	}else{
+		szLabel.A[0] = '\0';
+		if(DialogBoxParamA(hDLL, "TAB_NAME_DIALOG", hWnd, AddURLDlgProc, (LPARAM)szLabel.A)){
+			SendCopyDataA(fpi.hParent, 1, szLabel.A);
+		}
 	}
 }
