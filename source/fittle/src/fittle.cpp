@@ -2781,14 +2781,17 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 }
 
 static void FreeChannelInfo(BOOL bFlag){
-	BASS_ChannelStop(g_cInfo[bFlag].hChan);
-	BASS_StreamFree(g_cInfo[bFlag].hChan);	// BASS_STREAM_AUTOFREEにすればいらないかも
+	if (g_cInfo[bFlag].hChan){
+		BASS_ChannelStop(g_cInfo[bFlag].hChan);
+		BASS_StreamFree(g_cInfo[bFlag].hChan);	// BASS_STREAM_AUTOFREEにすればいらないかも
+		g_cInfo[bFlag].hChan = 0;
+	}
 
 	if(g_cInfo[bFlag].pBuff){
 		HeapFree(GetProcessHeap(), 0, (LPVOID)g_cInfo[bFlag].pBuff);
+		g_cInfo[bFlag].pBuff = NULL;
 	}
-	g_cInfo[bFlag].pBuff = NULL;
-	g_cInfo[bFlag].hChan = NULL;
+	g_cInfo[bFlag].sGain = 1;
 	return;
 }
 
@@ -2810,7 +2813,27 @@ static DWORD CALLBACK MainStreamProc(HSTREAM /*handle*/, void *buf, DWORD len, v
 }
 
 static void SetVolumeAndGain(HSTREAM h, DWORD dwVol){
-	BASS_ChannelSetAttribute(h, BASS_ATTRIB_VOL, g_cInfo[g_bNow].sGain * dwVol / (float)SLIDER_DIVIDED);
+	float fVol = g_cInfo[g_bNow].sGain * dwVol / (float)SLIDER_DIVIDED;
+	if (fVol > 1) fVol = 1;
+	BASS_ChannelSetAttribute(h, BASS_ATTRIB_VOL, fVol);
+}
+
+static void SetFadeIn(HSTREAM h, DWORD dwVol, DWORD dwTime){
+	if(g_cfg.nFadeOut){
+		float fVol = g_cInfo[g_bNow].sGain * dwVol / (float)SLIDER_DIVIDED;
+		if (fVol > 1) fVol = 1;
+		BASS_ChannelSlideAttribute(h, BASS_ATTRIB_VOL, fVol, dwTime);
+		while (BASS_ChannelIsSliding(h, BASS_ATTRIB_VOL)) Sleep(1);
+	} else {
+		SetVolumeAndGain(h, dwVol);
+	}
+}
+
+static void SetFadeOut(HSTREAM h, DWORD dwTime){
+	if(g_cfg.nFadeOut){
+		BASS_ChannelSlideAttribute(h, BASS_ATTRIB_VOL, 0.0f, dwTime);
+		while (BASS_ChannelIsSliding(h, BASS_ATTRIB_VOL)) Sleep(1);
+	}
 }
 
 // メインストリームを作成
@@ -3130,19 +3153,16 @@ static BOOL _BASS_ChannelSetPosition(DWORD handle, int nPos){
 
 	qPos = g_cInfo[g_bNow].qDuration;
 	qPos = qPos*nPos/1000 + g_cInfo[g_bNow].qStart;
-	// Fade-out
-	if(g_cfg.nFadeOut){
-		BASS_ChannelSlideAttribute(m_hChanOut, BASS_ATTRIB_VOL, 0.0f, 150);
-		while (BASS_ChannelIsSliding(m_hChanOut, BASS_ATTRIB_VOL)) Sleep(1);
-	}
-	BASS_ChannelStop(m_hChanOut);
 
+	SetFadeOut(m_hChanOut, 150);
+
+	BASS_ChannelStop(m_hChanOut);
 	bRet = BASS_ChannelSetPosition(handle, qPos, BASS_POS_BYTE);
 
-	if(g_cfg.nFadeOut){
-		SetVolumeAndGain(m_hChanOut, SendMessage(m_hVolume, TBM_GETPOS, 0, 0));
-	}
+	SetVolumeAndGain(m_hChanOut, SendMessage(m_hVolume, TBM_GETPOS, 0, 0));
+
 	BASS_ChannelPlay(m_hChanOut, FALSE);
+
 	if(dwMode != BASS_ChannelIsActive(m_hChanOut)){
 		OnStatusChangePlugins();
 	}
@@ -3178,22 +3198,15 @@ static int FilePause(){
 
 	dMode = BASS_ChannelIsActive(m_hChanOut);
 	if(dMode==BASS_ACTIVE_PLAYING){
-		// Fade-out
-		if(g_cfg.nFadeOut){
-			BASS_ChannelSlideAttribute(m_hChanOut, BASS_ATTRIB_VOL, 0.0f, 250);
-			while (BASS_ChannelIsSliding(m_hChanOut, BASS_ATTRIB_VOL)) Sleep(1);
-		}
+		SetFadeOut(m_hChanOut, 250);
 		BASS_ChannelPause(m_hChanOut);
 		SendMessage(m_hToolBar,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(TRUE, 0));
 	}else if(dMode==BASS_ACTIVE_PAUSED){
 		BASS_ChannelPlay(m_hChanOut, FALSE);
-		// Fade-in
-		if(g_cfg.nFadeOut){
-			BASS_ChannelSlideAttribute(m_hChanOut, BASS_ATTRIB_VOL, SendMessage(m_hVolume, TBM_GETPOS, 0, 0) / (float)SLIDER_DIVIDED, 250);
-			while (BASS_ChannelIsSliding(m_hChanOut, BASS_ATTRIB_VOL)) Sleep(1);
-		}
+		SetFadeIn(hRet, SendMessage(m_hVolume, TBM_GETPOS, 0, 0), 250);
 		SendMessage(m_hToolBar,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(FALSE, 0));
 	}else{
+		SetVolumeAndGain(m_hChanOut, SendMessage(m_hVolume, TBM_GETPOS, 0, 0));
 		SendMessage(m_hToolBar,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(FALSE, 0));
 	}
 
@@ -3205,11 +3218,7 @@ static int FilePause(){
 
 // アウトプットストリームを停止、表示を初期化
 static int StopOutputStream(HWND hWnd){
-	// Fade-out
-	if(g_cfg.nFadeOut){
-		BASS_ChannelSlideAttribute(m_hChanOut, BASS_ATTRIB_VOL, 0.0f, 250);
-		while (BASS_ChannelIsSliding(m_hChanOut, BASS_ATTRIB_VOL)) Sleep(1);
-	}
+	SetFadeOut(m_hChanOut, 250);
 
 	// ストリームを削除
 	KillTimer(hWnd, ID_SEEKTIMER);
@@ -3218,12 +3227,8 @@ static int StopOutputStream(HWND hWnd){
 	BASS_StreamFree(m_hChanOut);
 	m_hChanOut = 0;
 
-	if(g_cInfo[!g_bNow].hChan){
-		FreeChannelInfo(!g_bNow);
-	}
-	if(g_cInfo[g_bNow].hChan){
-		FreeChannelInfo(g_bNow);
-	}
+	FreeChannelInfo(!g_bNow);
+	FreeChannelInfo(g_bNow);
 
 	//スライダバー
 	EnableWindow(m_hSeek, FALSE);
