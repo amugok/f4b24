@@ -322,13 +322,13 @@ static BOOL GetGain(float *pGain, DWORD hBass){
 
 	switch (nGainMode){
 	case 1:
-		volume = pow(2, gi.album_gain / 6);
+		volume = pow(10, gi.album_gain / 20);
 		break;
 	case 2:
 		volume = 1 / gi.album_peak;
 		break;
 	case 3:
-		volume = pow(2, gi.track_gain / 6);
+		volume = pow(10, gi.track_gain / 20);
 		break;
 	case 4:
 		volume = 1 / gi.track_peak;
