@@ -8,11 +8,11 @@
 #pragma comment(lib,"kernel32.lib")
 #pragma comment(lib,"user32.lib")
 #pragma comment(lib,"gdi32.lib")
-#pragma comment(lib,"shell32.lib")
 #pragma comment(lib,"comctl32.lib")
 #pragma comment(lib,"comdlg32.lib")
 #pragma comment(lib,"ole32.lib")
 #pragma comment(lib,"shlwapi.lib")
+#pragma comment(lib,"shell32.lib")
 #pragma comment(linker, "/EXPORT:GetCPluginInfo=_GetCPluginInfo@0")
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)

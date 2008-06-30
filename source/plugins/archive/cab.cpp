@@ -8,7 +8,6 @@
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")
 #pragma comment(lib,"user32.lib")
-#pragma comment(lib,"shell32.lib")
 #pragma comment(lib,"shlwapi.lib")
 #ifdef UNICODE
 #pragma comment(linker, "/EXPORT:GetAPluginInfoW=_GetAPluginInfoW@0")

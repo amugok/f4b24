@@ -4,8 +4,8 @@
 
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")
-#pragma comment(lib,"shell32.lib")
 #pragma comment(lib,"shlwapi.lib")
+#pragma comment(lib,"shell32.lib")
 #pragma comment(lib,"ole32.lib")
 #pragma comment(lib,"comdlg32.lib")
 #pragma comment(lib,"user32.lib")
