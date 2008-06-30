@@ -377,6 +377,7 @@ static BOOL CALLBACK GeneralSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 				g_cfg.nOut32bit = (int)SendDlgItemMessage(hDlg, IDC_CHECK13, BM_GETCHECK, 0, 0);
 				g_cfg.nReplayGainMode = (int)SendDlgItemMessage(hDlg, IDC_COMBO2, CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
 				g_cfg.nReplayGainMixer = (int)SendDlgItemMessage(hDlg, IDC_COMBO3, CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
+				g_cfg.nReplayGainAmp = (int)SendDlgItemMessage(hDlg, IDC_SPIN1, UDM_GETPOS, (WPARAM)0, (LPARAM)0);
 				g_cfg.nFadeOut = (int)SendDlgItemMessage(hDlg, IDC_CHECK14, BM_GETCHECK, 0, 0);
 				SaveConfig();
 				ApplyFittle();
