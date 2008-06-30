@@ -160,6 +160,10 @@ static void LoadConfig(){
 	g_cfg.nFadeOut = GetPrivateProfileInt(TEXT("Main"), TEXT("FadeOut"), 1, m_szINIPath);
 	// ReplayGainの適用方法
 	g_cfg.nReplayGainMode = GetPrivateProfileInt(TEXT("Main"), TEXT("ReplayGainMode"), 1, m_szINIPath);
+	// 音量増幅方法
+	g_cfg.nReplayGainMixer = GetPrivateProfileInt(TEXT("Main"), TEXT("ReplayGainMixer"), 1, m_szINIPath);
+	// 音量増幅値(%)
+	g_cfg.nReplayGainAmp = GetPrivateProfileInt(TEXT("Main"), TEXT("ReplayGainAmp"), 100, m_szINIPath);
 	// スタートアップフォルダ読み込み
 	GetPrivateProfileString(TEXT("Main"), TEXT("StartPath"), TEXT(""), g_cfg.szStartPath, MAX_FITTLE_PATH, m_szINIPath);
 	// ファイラのパス
@@ -231,6 +235,8 @@ static void SaveConfig(){
 	WritePrivateProfileInt(TEXT("Main"), TEXT("Out32bit"), g_cfg.nOut32bit, m_szINIPath);
 	WritePrivateProfileInt(TEXT("Main"), TEXT("FadeOut"), g_cfg.nFadeOut, m_szINIPath);
 	WritePrivateProfileInt(TEXT("Main"), TEXT("ReplayGainMode"), g_cfg.nReplayGainMode, m_szINIPath);
+	WritePrivateProfileInt(TEXT("Main"), TEXT("ReplayGainMixer"), g_cfg.nReplayGainMixer, m_szINIPath);
+	WritePrivateProfileInt(TEXT("Main"), TEXT("ReplayGainAmp"), g_cfg.nReplayGainAmp, m_szINIPath);
 
 	WritePrivateProfileString(TEXT("Main"), TEXT("StartPath"), g_cfg.szStartPath, m_szINIPath);
 	WritePrivateProfileString(TEXT("Main"), TEXT("FilerPath"), g_cfg.szFilerPath, m_szINIPath);
@@ -296,6 +302,8 @@ static BOOL GeneralCheckChanged(HWND hDlg){
 	if (g_cfg.nSeekAmount != GetDlgItemInt(hDlg, IDC_COMBO1, NULL, FALSE)) return TRUE;
 	if (g_cfg.nOut32bit != (int)SendDlgItemMessage(hDlg, IDC_CHECK13, BM_GETCHECK, 0, 0)) return TRUE;
 	if (g_cfg.nReplayGainMode != SendDlgItemMessage(hDlg, IDC_COMBO2, CB_GETCURSEL, (WPARAM)0, (LPARAM)0)) return TRUE;
+	if (g_cfg.nReplayGainMixer != SendDlgItemMessage(hDlg, IDC_COMBO3, CB_GETCURSEL, (WPARAM)0, (LPARAM)0)) return TRUE;
+	if (g_cfg.nReplayGainAmp != SendDlgItemMessage(hDlg, IDC_SPIN1, UDM_GETPOS, (WPARAM)0, (LPARAM)0)) return TRUE;
 	if (g_cfg.nFadeOut != (int)SendDlgItemMessage(hDlg, IDC_CHECK14, BM_GETCHECK, 0, 0)) return TRUE;
 	return FALSE;
 }
@@ -342,6 +350,14 @@ static BOOL CALLBACK GeneralSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 			SendDlgItemMessage(hDlg, IDC_COMBO2, CB_INSERTSTRING, (WPARAM)4, (LPARAM)TEXT("track peak"));
 			SendDlgItemMessage(hDlg, IDC_COMBO2, CB_SETCURSEL, (WPARAM)g_cfg.nReplayGainMode, (LPARAM)0);
 
+			SendDlgItemMessage(hDlg, IDC_COMBO3, CB_INSERTSTRING, (WPARAM)0, (LPARAM)TEXT("内蔵"));
+			SendDlgItemMessage(hDlg, IDC_COMBO3, CB_INSERTSTRING, (WPARAM)1, (LPARAM)TEXT("増幅のみ内蔵"));
+			SendDlgItemMessage(hDlg, IDC_COMBO3, CB_INSERTSTRING, (WPARAM)2, (LPARAM)TEXT("BASS(増幅不可)"));
+			SendDlgItemMessage(hDlg, IDC_COMBO3, CB_SETCURSEL, (WPARAM)g_cfg.nReplayGainMixer, (LPARAM)0);
+
+			SendDlgItemMessage(hDlg, IDC_SPIN1, UDM_SETRANGE, (WPARAM)0, (LPARAM)MAKELONG(999, 1));
+			SendDlgItemMessage(hDlg, IDC_SPIN1, UDM_SETPOS, (WPARAM)0, (LPARAM)MAKELONG(g_cfg.nReplayGainAmp, 0));
+
 			SendDlgItemMessage(hDlg, IDC_CHECK14, BM_SETCHECK, (WPARAM)g_cfg.nFadeOut, 0);
 			return TRUE;
 
@@ -360,6 +376,7 @@ static BOOL CALLBACK GeneralSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 				g_cfg.nSeekAmount = GetDlgItemInt(hDlg, IDC_COMBO1, NULL, FALSE);
 				g_cfg.nOut32bit = (int)SendDlgItemMessage(hDlg, IDC_CHECK13, BM_GETCHECK, 0, 0);
 				g_cfg.nReplayGainMode = (int)SendDlgItemMessage(hDlg, IDC_COMBO2, CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
+				g_cfg.nReplayGainMixer = (int)SendDlgItemMessage(hDlg, IDC_COMBO3, CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
 				g_cfg.nFadeOut = (int)SendDlgItemMessage(hDlg, IDC_CHECK14, BM_GETCHECK, 0, 0);
 				SaveConfig();
 				ApplyFittle();

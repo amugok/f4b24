@@ -32,11 +32,11 @@
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test25u")
+#define F4B24_VERSION_STRING TEXT("test26u")
 #else
-#define F4B24_VERSION_STRING TEXT("test25")
+#define F4B24_VERSION_STRING TEXT("test26")
 #endif
-#define F4B24_VERSION 25
+#define F4B24_VERSION 26
 #define F4B24_IF_VERSION 25
 #ifndef _DEBUG
 #define FITTLE_TITLE FITTLE_VERSION TEXT(" for BASS 2.4 ") F4B24_VERSION_STRING
@@ -606,6 +606,12 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			}
 
 			TIMECHECK("BASS初期化")
+
+			m_bFLoat = (g_cfg.nOut32bit && IsSupportFloatOutput()) ? TRUE : FALSE;
+			g_cInfo[0].sGain = 1;
+			g_cInfo[1].sGain = 1;
+
+			TIMECHECK("BASS32bit出力確認")
 
 			// 優先度
 			if(g_cfg.nHighTask){
@@ -2492,6 +2498,10 @@ static void LoadConfig(){
 	g_cfg.nFadeOut = GetPrivateProfileInt(TEXT("Main"), TEXT("FadeOut"), 1, m_szINIPath);
 	// ReplayGainの適用方法
 	g_cfg.nReplayGainMode = GetPrivateProfileInt(TEXT("Main"), TEXT("ReplayGainMode"), 1, m_szINIPath);
+	// 音量増幅方法
+	g_cfg.nReplayGainMixer = GetPrivateProfileInt(TEXT("Main"), TEXT("ReplayGainMixer"), 1, m_szINIPath);
+	// 音量増幅値(%)
+	g_cfg.nReplayGainAmp = GetPrivateProfileInt(TEXT("Main"), TEXT("ReplayGainAmp"), 100, m_szINIPath);
 	// スタートアップフォルダ読み込み
 	GetPrivateProfileString(TEXT("Main"), TEXT("StartPath"), TEXT(""), g_cfg.szStartPath, MAX_FITTLE_PATH, m_szINIPath);
 	// ファイラのパス
@@ -2537,7 +2547,6 @@ static void LoadState(){
 	GetPrivateProfileString(TEXT("Main"), TEXT("LastFile"), TEXT(""), g_cfg.szLastFile, MAX_FITTLE_PATH, m_szINIPath);
 
 	m_hFont = NULL;
-	m_bFLoat = (BOOL)g_cfg.nOut32bit;
 }
 
 /* 終了時の状態を保存する */
@@ -2726,6 +2735,7 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 	}
 
 	g_cInfo[bFlag].sGain = 1;
+	g_cInfo[bFlag].sAmp = 0;
 	g_cInfo[bFlag].hChan = BASS_StreamCreateFile((BOOL)g_cInfo[bFlag].pBuff,
 												(g_cInfo[bFlag].pBuff?(void *)g_cInfo[bFlag].pBuff:(void *)szFilePath),
 												0, (DWORD)g_cInfo[bFlag].qDuration,
@@ -2796,12 +2806,53 @@ static void FreeChannelInfo(BOOL bFlag){
 }
 
 // メインストリームプロシージャ
-static DWORD CALLBACK MainStreamProc(HSTREAM /*handle*/, void *buf, DWORD len, void * /*user*/){
+static DWORD CALLBACK MainStreamProc(HSTREAM handle, void *buf, DWORD len, void * /*user*/){
 	DWORD r;
-
-	if(BASS_ChannelIsActive(g_cInfo[g_bNow].hChan)){
-		r = BASS_ChannelGetData(g_cInfo[g_bNow].hChan, buf, len);
-		if(m_bCueEnd || !BASS_ChannelIsActive(g_cInfo[g_bNow].hChan)){
+	CHANNELINFO *pCh = &g_cInfo[g_bNow];
+	BASS_CHANNELINFO bci;
+	if(BASS_ChannelGetInfo(handle ,&bci) && BASS_ChannelIsActive(pCh->hChan)){
+		BOOL fFloat = bci.flags & BASS_SAMPLE_FLOAT;
+		r = BASS_ChannelGetData(pCh->hChan, buf, fFloat ? len | BASS_DATA_FLOAT : len);
+		if (pCh->sAmp > 0 && r > 0 && r < BASS_STREAMPROC_END) {
+			DWORD i;
+			if (BASS_ChannelGetInfo(pCh->hChan ,&bci)) {
+				if (fFloat || (bci.flags & BASS_SAMPLE_FLOAT)){
+					float *p = (float *)buf;
+					float v = pCh->sAmp;
+					DWORD l = r >> 2;
+					for (i = 0; i < l; i++){
+						p[i] *= v;
+					}
+				}else if (bci.flags & BASS_SAMPLE_8BITS){
+					unsigned char *p = (unsigned char *)buf;
+					int v = (int)(pCh->sAmp * 256);
+					DWORD l = r;
+					int s;
+					for (i = 0; i < l; i++){
+						s = ((((int)p[i]) - 128) * v) >> 8;
+						if (s < -128)
+							s = -128;
+						else if (s > 127)
+							s = 127;
+						p[i] = (unsigned char)(s + 128);
+					}
+				}else{
+					signed short *p = (signed short *)buf;
+					int v = (int)(pCh->sAmp * 256);
+					DWORD l = r >> 1;
+					int s;
+					for (i = 0; i < l; i++){
+						s = (((int)p[i]) * v) >> 8;
+						if (s < -32768)
+							s = -32768;
+						else if (s > 32767)
+							s = 32767;
+						p[i] = (signed short)s;
+					}
+				}
+			}
+		}
+		if(m_bCueEnd || !BASS_ChannelIsActive(pCh->hChan)){
 			m_bCueEnd = FALSE;
 
 			PostMessage(GetParent(m_hStatus), WM_F4B24_IPC, WM_F4B24_INTERNAL_PLAY_NEXT, 0);
@@ -2812,17 +2863,39 @@ static DWORD CALLBACK MainStreamProc(HSTREAM /*handle*/, void *buf, DWORD len, v
 	return r;
 }
 
+static float CalcBassVolume(DWORD dwVol){
+	float fVol = g_cfg.nReplayGainAmp * g_cInfo[g_bNow].sGain * dwVol / (float)(SLIDER_DIVIDED * 100);
+	switch (g_cfg.nReplayGainMixer) {
+	case 0:
+		/*  内蔵 */
+		g_cInfo[g_bNow].sAmp = (fVol == (float)1) ? 0 : fVol;
+		fVol = 1;
+		break;
+	case 1:
+		/*  増幅のみ内蔵 */
+		if (fVol > 1){
+			g_cInfo[g_bNow].sAmp = fVol;
+			fVol = 1;
+		}else{
+			g_cInfo[g_bNow].sAmp = 0;
+		}
+		break;
+	case 2:
+		/*  BASS */
+		g_cInfo[g_bNow].sAmp = 0;
+		if (fVol > 1) fVol = 1;
+		break;
+	}
+	return fVol;
+}
+
 static void SetVolumeAndGain(HSTREAM h, DWORD dwVol){
-	float fVol = g_cInfo[g_bNow].sGain * dwVol / (float)SLIDER_DIVIDED;
-	if (fVol > 1) fVol = 1;
-	BASS_ChannelSetAttribute(h, BASS_ATTRIB_VOL, fVol);
+	BASS_ChannelSetAttribute(h, BASS_ATTRIB_VOL, CalcBassVolume(dwVol));
 }
 
 static void SetFadeIn(HSTREAM h, DWORD dwVol, DWORD dwTime){
 	if(g_cfg.nFadeOut){
-		float fVol = g_cInfo[g_bNow].sGain * dwVol / (float)SLIDER_DIVIDED;
-		if (fVol > 1) fVol = 1;
-		BASS_ChannelSlideAttribute(h, BASS_ATTRIB_VOL, fVol, dwTime);
+		BASS_ChannelSlideAttribute(h, BASS_ATTRIB_VOL, CalcBassVolume(dwVol), dwTime);
 		while (BASS_ChannelIsSliding(h, BASS_ATTRIB_VOL)) Sleep(1);
 	} else {
 		SetVolumeAndGain(h, dwVol);
@@ -2839,7 +2912,9 @@ static void SetFadeOut(HSTREAM h, DWORD dwTime){
 // メインストリームを作成
 static HSTREAM CreateMainStream(BASS_CHANNELINFO *info){
 	HSTREAM hRet;
-	hRet = BASS_StreamCreate(info->freq, info->chans, info->flags & ~BASS_STREAM_DECODE, &MainStreamProc, 0);
+	DWORD dwFlag = info->flags & ~BASS_STREAM_DECODE;
+	if (m_bFLoat) dwFlag = (dwFlag & ~BASS_SAMPLE_8BITS) | BASS_SAMPLE_FLOAT;
+	hRet = BASS_StreamCreate(info->freq, info->chans, dwFlag, &MainStreamProc, 0);
 
 	SendMessage(GetParent(m_hStatus), WM_F4B24_IPC, WM_F4B24_HOOK_CREATE_STREAM, (LPARAM)hRet);
 
@@ -3203,7 +3278,7 @@ static int FilePause(){
 		SendMessage(m_hToolBar,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(TRUE, 0));
 	}else if(dMode==BASS_ACTIVE_PAUSED){
 		BASS_ChannelPlay(m_hChanOut, FALSE);
-		SetFadeIn(hRet, SendMessage(m_hVolume, TBM_GETPOS, 0, 0), 250);
+		SetFadeIn(m_hChanOut, SendMessage(m_hVolume, TBM_GETPOS, 0, 0), 250);
 		SendMessage(m_hToolBar,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(FALSE, 0));
 	}else{
 		SetVolumeAndGain(m_hChanOut, SendMessage(m_hVolume, TBM_GETPOS, 0, 0));

@@ -83,6 +83,7 @@ typedef struct {
 	QWORD qDuration;			// 再生終了位置
 	LPBYTE pBuff;				// メモリバッファ
 	float sGain;
+	float sAmp;
 } CHANNELINFO;
 
 struct CONFIG{
@@ -116,6 +117,8 @@ struct CONFIG{
 	int nOut32bit;				// 32bit(float)で出力する
 	int nFadeOut;				// 停止時にフェードアウトする
 	int nReplayGainMode;		// ReplayGainの適用方法
+	int nReplayGainMixer;		// 音量増幅方法
+	int nReplayGainAmp;			// 音量増幅値(%)
 
 	TCHAR szStartPath[MAX_FITTLE_PATH];	// スタートアップパス
 	TCHAR szFilerPath[MAX_FITTLE_PATH];	// ファイラのパス

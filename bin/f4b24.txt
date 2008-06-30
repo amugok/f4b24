@@ -1,7 +1,7 @@
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test25
+              for BASS 2.4 test26
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
@@ -60,6 +60,9 @@ All rights reserved.
 	fittle.fcp      fittle.exe 設定
 
 実験履歴
+	test26/test26u
+		BASSが音量増幅機能を持たないため無音になる場合があった問題に対処
+
 	test25/test25u
 		BASSWMA2.4の仕様変更に対応
 		WinampDSPプラグイン対応機能を削除してみた
