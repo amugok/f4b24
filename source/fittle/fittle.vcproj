@@ -264,6 +264,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				OutputFile="$(SolutionDir)..\bin\$(ProjectName).exe"
 				GenerateDebugInformation="true"
 				TargetMachine="1"
 			/>
@@ -304,10 +305,6 @@
 			</File>
 			<File
 				RelativePath=".\src\bass_tag.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\src\dsp.cpp"
 				>
 			</File>
 			<File
@@ -361,10 +358,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\dsp.h"
-				>
-			</File>
-			<File
 				RelativePath=".\src\FindDlg.h"
 				>
 			</File>
@@ -398,10 +391,6 @@
 			</File>
 			<File
 				RelativePath=".\src\Tree.h"
-				>
-			</File>
-			<File
-				RelativePath=".\src\UNZIP32.H"
 				>
 			</File>
 		</Filter>

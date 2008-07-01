@@ -29,6 +29,8 @@ static void HFree(LPVOID lp){
 	HeapFree(GetProcessHeap(), 0, lp);
 }
 
+#ifdef UNICODE
+#else
 static BOOL UTF8ToMultiByte(LPCSTR lpszSrc, int nSrcSize, LPSTR lpszDst, int nDstSize){
 	int lw = MultiByteToWideChar(CP_UTF8, 0, lpszSrc, nSrcSize, 0, 0);
 	LPWSTR pa;
@@ -40,6 +42,7 @@ static BOOL UTF8ToMultiByte(LPCSTR lpszSrc, int nSrcSize, LPSTR lpszDst, int nDs
 	HFree(pa);
 	return TRUE;
 }
+#endif
 
 #define XMIN(x,y) ((x>y)?y:x)
 static BOOL ID3_ReadFrameText(BYTE bType, LPBYTE pTextRaw, int nTextRawSize, LPTSTR pszBuf, int nBufSize){

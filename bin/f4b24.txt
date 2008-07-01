@@ -1,7 +1,7 @@
                               
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test26
+              for BASS 2.4 test27
 
                               
 
@@ -60,6 +60,9 @@ All rights reserved.
 	fittle.fcp      fittle.exe Ý’è
 
 ŽÀŒ±—š—ð
+	test27/test27u
+		Ansi”Å‚Å‚àWindows98‚Å‹N“®‚Å‚«‚È‚©‚Á‚½–â‘è‚ðC³
+
 	test26/test26u
 		BASS‚ª‰¹—Ê‘•‹@”\‚ðŽ‚½‚È‚¢‚½‚ß–³‰¹‚É‚È‚éê‡‚ª‚ ‚Á‚½–â‘è‚É‘Îˆ
 

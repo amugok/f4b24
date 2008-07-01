@@ -32,11 +32,11 @@
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test26u")
+#define F4B24_VERSION_STRING TEXT("test27u")
 #else
-#define F4B24_VERSION_STRING TEXT("test26")
+#define F4B24_VERSION_STRING TEXT("test27")
 #endif
-#define F4B24_VERSION 26
+#define F4B24_VERSION 27
 #define F4B24_IF_VERSION 25
 #ifndef _DEBUG
 #define FITTLE_TITLE FITTLE_VERSION TEXT(" for BASS 2.4 ") F4B24_VERSION_STRING
@@ -4639,6 +4639,8 @@ static void ExecuteSettingDialog(HWND hWnd, LPCTSTR lpszConfigPath){
 
 	TCHAR szCmd[MAX_FITTLE_PATH];
 	TCHAR szPath[MAX_FITTLE_PATH];
+
+	(void)hWnd;
 
 	GetModuleParentDir(szPath);
 	lstrcat(szPath, TEXT("fconfig.exe"));
