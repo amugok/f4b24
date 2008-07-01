@@ -232,7 +232,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				WADSPNODE *pNext = pDsp->pNext;
 				LRESULT lRet = SendMessageA((HWND)lp, LB_ADDSTRING, (WPARAM)0, (LPARAM)BASS_WADSP_GetName(pDsp->h));
 				if (lRet != LB_ERR && lRet != LB_ERRSPACE){
-					lRet = SendMessageA((HWND)lp, LB_SETITEMDATA, (WPARAM)lRet, (LPARAM)i);
+					lRet = SendMessage((HWND)lp, LB_SETITEMDATA, (WPARAM)lRet, (LPARAM)i);
 				}
 				pDsp = pNext;
 			}

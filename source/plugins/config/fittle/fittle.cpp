@@ -348,6 +348,8 @@ static BOOL CALLBACK GeneralSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 			SendDlgItemMessage(hDlg, IDC_COMBO2, CB_INSERTSTRING, (WPARAM)2, (LPARAM)TEXT("album peak"));
 			SendDlgItemMessage(hDlg, IDC_COMBO2, CB_INSERTSTRING, (WPARAM)3, (LPARAM)TEXT("track gain"));
 			SendDlgItemMessage(hDlg, IDC_COMBO2, CB_INSERTSTRING, (WPARAM)4, (LPARAM)TEXT("track peak"));
+			SendDlgItemMessage(hDlg, IDC_COMBO2, CB_INSERTSTRING, (WPARAM)5, (LPARAM)TEXT("album gain limited by peak"));
+			SendDlgItemMessage(hDlg, IDC_COMBO2, CB_INSERTSTRING, (WPARAM)6, (LPARAM)TEXT("track gain limited by peak"));
 			SendDlgItemMessage(hDlg, IDC_COMBO2, CB_SETCURSEL, (WPARAM)g_cfg.nReplayGainMode, (LPARAM)0);
 
 			SendDlgItemMessage(hDlg, IDC_COMBO3, CB_INSERTSTRING, (WPARAM)0, (LPARAM)TEXT("“à‘ "));

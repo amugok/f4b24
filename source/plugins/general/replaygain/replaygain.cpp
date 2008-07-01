@@ -332,6 +332,16 @@ static BOOL GetGain(float *pGain, DWORD hBass){
 	case 4:
 		volume = 1 / gi.track_peak;
 		break;
+	case 5:
+		volume = pow(10, gi.album_gain / 20);
+		if (volume > 1 / gi.album_peak)
+			volume = 1 / gi.album_peak;
+		break;
+	case 6:
+		volume = pow(10, gi.track_gain / 20);
+		if (volume > 1 / gi.track_peak)
+			volume = 1 / gi.track_peak;
+		break;
 	}
 
 	*pGain = volume;

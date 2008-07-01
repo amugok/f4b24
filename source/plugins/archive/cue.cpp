@@ -523,6 +523,16 @@ static BOOL CALLBACK GetGain(LPTSTR pszArchivePath, LPTSTR pszTrackPart, float *
 	case 4:
 		volume = 1 / track_peak;
 		break;
+	case 5:
+		volume = pow(10, album_gain / 20);
+		if (volume > 1 / album_peak)
+			volume = 1 / album_peak;
+		break;
+	case 6:
+		volume = pow(10, track_gain / 20);
+		if (volume > 1 / track_peak)
+			volume = 1 / track_peak;
+		break;
 	}
 	
 	// ƒNƒ[ƒY
