@@ -1,8 +1,15 @@
-#include "../../../fittle/resource/resource.h"
-#include "../../../fittle/src/fittle.h"
+#define WINVER		0x0400	// 98à»ç~
+#define _WIN32_WINNT	0x0400
+#define _WIN32_IE	0x0400	// IE4à»ç~
+#include <windows.h>
+#include <commctrl.h>
+#include <shlobj.h>
+#include <shlwapi.h>
+
 #include "../../../fittle/src/plugin.h"
 #include "../../../fittle/src/f4b24.h"
 #include "../cplugin.h"
+#include "minipane.rh"
 
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")
@@ -23,7 +30,7 @@
 static BOOL fIsUnicode = FALSE;
 static HMODULE hDLL = 0;
 
-#define WA_MAX_SIZE MAX_FITTLE_PATH
+#define WA_MAX_SIZE MAX_PATH
 #define WAIsUnicode fIsUnicode
 #include "../../../fittle/src/wastr.h"
 

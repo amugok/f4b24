@@ -9,6 +9,12 @@
 //	便利な関数(あんまり便利じゃないかも)
 //
 
+#if defined(_MSC_VER) && defined(_DEBUG)
+#define _CRTDBG_MAP_ALLOC
+#include <cstdlib>
+#include <crtdbg.h>
+#endif
+
 #include "func.h"
 #include "bass_tag.h"
 #include "archive.h"
@@ -153,3 +159,63 @@ LPTSTR MyPathAddBackslash(LPTSTR pszPath){
 		return PathAddBackslash(pszPath);
 	}
 }
+
+#ifdef _DEBUG
+#if 1
+/* リークチェック */
+void *HAlloc(DWORD dwSize){
+	return malloc(dwSize);
+}
+void *HZAlloc(DWORD dwSize){
+	return calloc(dwSize, 1);
+}
+void *HRealloc(LPVOID pPtr, DWORD dwSize){
+	return realloc(pPtr, dwSize);
+}
+void HFree(LPVOID pPtr){
+	free(pPtr);
+}
+#else
+/* 開放ポインタアクセスチェック */
+typedef struct {
+	DWORD dwSize;
+} HW;
+LPVOID HAlloc(DWORD dwSize){
+	HW *p = (HW *)VirtualAlloc(0, sizeof(HW) + dwSize, MEM_COMMIT, PAGE_READWRITE);
+	if (!p) return NULL;
+	p->dwSize = dwSize;
+	ZeroMemory(p + 1, dwSize);
+	return p + 1;
+}
+LPVOID HZAlloc(DWORD dwSize){
+	return HAlloc(dwSize);
+}
+LPVOID HRealloc(LPVOID pPtr, DWORD dwSize){
+	HW *o = ((HW *)pPtr) - 1;
+	LPVOID n = HAlloc(dwSize);
+	if (n) {
+		CopyMemory(n, o + 1, o->dwSize);
+		HFree(pPtr);
+	}
+	return n;
+}
+void HFree(LPVOID pPtr){
+	DWORD dwOldProtect;
+	HW *o = ((HW *)pPtr) - 1;
+	VirtualProtect(o, o->dwSize, PAGE_GUARD, &dwOldProtect);
+}
+#endif
+#else
+void *HAlloc(DWORD dwSize){
+	return HeapAlloc(GetProcessHeap(), 0, dwSize);
+}
+void *HZAlloc(DWORD dwSize){
+	return HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwSize);
+}
+void *HRealloc(LPVOID pPtr, DWORD dwSize){
+	return HeapReAlloc(GetProcessHeap(), 0, pPtr, dwSize);
+}
+void HFree(LPVOID pPtr){
+	HeapFree(GetProcessHeap(), 0, pPtr);
+}
+#endif

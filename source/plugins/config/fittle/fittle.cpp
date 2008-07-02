@@ -797,15 +797,7 @@ static DWORD CALLBACK GetConfigPageCount(void){
 	return 5 + 1;
 }
 
-#ifndef PROPSHEETPAGE_V1
-#define PROPSHEETPAGEA_V1 PROPSHEETPAGEA
-#define PROPSHEETPAGEW_V1 PROPSHEETPAGEW
-#endif
 static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel, LPSTR pszConfigPath, int nConfigPathSize){
-	union {
-		PROPSHEETPAGEA_V1 A;
-		PROPSHEETPAGEW_V1 W;
-	} psp;
 	WASTR dlgtemp;
 	LPCSTR lpszTemplate, lpszPath;
 	DLGPROC lpfnDlgProc = 0;
@@ -841,20 +833,6 @@ static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel, LPSTR pszCo
 	}
 	if (!lpfnDlgProc) return NULL;
 	lstrcpynA(pszConfigPath, lpszPath, nConfigPathSize);
-	WAstrcpyA(&dlgtemp, lpszTemplate);;
-	if (WAIsUnicode) {
-		psp.W.dwSize = sizeof (PROPSHEETPAGEW_V1);
-		psp.W.dwFlags = PSP_DEFAULT;
-		psp.W.hInstance = hDLL;
-		psp.W.pszTemplate = dlgtemp.W;
-		psp.W.pfnDlgProc = (DLGPROC)lpfnDlgProc;
-		return CreatePropertySheetPageW(&psp.W);
-	} else {
-		psp.A.dwSize = sizeof (PROPSHEETPAGEA_V1);
-		psp.A.dwFlags = PSP_DEFAULT;
-		psp.A.hInstance = hDLL;
-		psp.A.pszTemplate = dlgtemp.A;
-		psp.A.pfnDlgProc = (DLGPROC)lpfnDlgProc;
-		return CreatePropertySheetPageA(&psp.A);
-	}
+	WAstrcpyA(&dlgtemp, lpszTemplate);
+	return WACreatePropertySheetPage(hDLL, &dlgtemp, lpfnDlgProc);
 }

@@ -145,6 +145,22 @@ static BOOL OutputCheckChanged(HWND hDlg){
 	return FALSE;
 }
 
+static void UpdatePreAmp(HWND hDlg){
+	switch (SendDlgItemMessage(hDlg, IDC_COMBO2, CB_GETCURSEL, (WPARAM)0, (LPARAM)0))
+	{
+	case 0:
+	case 2:
+	case 4:
+		EnableWindow(GetDlgItem(hDlg, IDC_EDIT3), FALSE);
+		EnableWindow(GetDlgItem(hDlg, IDC_SPIN2), FALSE);
+		break;
+	default:
+		EnableWindow(GetDlgItem(hDlg, IDC_EDIT3), TRUE);
+		EnableWindow(GetDlgItem(hDlg, IDC_SPIN2), TRUE);
+		break;
+	}
+}
+
 static BOOL CALLBACK OutputSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 	int i;
 	switch(msg)
@@ -179,6 +195,7 @@ static BOOL CALLBACK OutputSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			SendDlgItemMessage(hDlg, IDC_SPIN2, UDM_SETRANGE, (WPARAM)0, (LPARAM)MAKELONG(999, 1));
 			SendDlgItemMessage(hDlg, IDC_SPIN2, UDM_SETPOS, (WPARAM)0, (LPARAM)MAKELONG(m_cfg.nReplayGainPreAmp, 0));
 
+			UpdatePreAmp(hDlg);
 			return TRUE;
 
 		case WM_NOTIFY:
@@ -196,6 +213,9 @@ static BOOL CALLBACK OutputSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			return FALSE;
 
 		case WM_COMMAND:
+			if(LOWORD(wp)==IDC_COMBO2){
+				UpdatePreAmp(hDlg);
+			}
 			if (OutputCheckChanged(hDlg))
 				PropSheet_Changed(GetParent(hDlg) , hDlg);
 			else

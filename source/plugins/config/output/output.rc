@@ -92,27 +92,29 @@ BEGIN
                     WS_TABSTOP
     CONTROL         "32bit(float)で出力する(要再起動)",IDC_CHECK13,"Button",
                     BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,15,45,178,11
-    CONTROL         "停止時にフェードアウトする",IDC_CHECK14,"Button",
-                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,15,57,178,11
-    EDITTEXT        IDC_EDIT1,55,75,50,15,ES_RIGHT | ES_AUTOHSCROLL | 
+    CONTROL         "停止時にフェードアウトする(BASSASIO利用時無効)",
+                    IDC_CHECK14,"Button",BS_AUTOCHECKBOX | WS_GROUP | 
+                    WS_TABSTOP,15,57,178,11
+    EDITTEXT        IDC_EDIT1,55,75,25,15,ES_RIGHT | ES_AUTOHSCROLL | 
                     ES_NUMBER
     CONTROL         "Spin1",IDC_SPIN1,"msctls_updown32",UDS_SETBUDDYINT | 
                     UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | 
-                    UDS_NOTHOUSANDS,110,70,9,20
-    EDITTEXT        IDC_EDIT3,55,119,50,15,ES_RIGHT | ES_AUTOHSCROLL | 
+                    UDS_NOTHOUSANDS,85,70,10,20
+    EDITTEXT        IDC_EDIT3,55,119,25,15,ES_RIGHT | ES_AUTOHSCROLL | 
                     ES_NUMBER
     CONTROL         "Spin1",IDC_SPIN2,"msctls_updown32",UDS_SETBUDDYINT | 
                     UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | 
-                    UDS_NOTHOUSANDS,110,115,9,20
+                    UDS_NOTHOUSANDS,85,115,10,20
     COMBOBOX        IDC_COMBO2,55,140,95,103,CBS_DROPDOWNLIST | WS_VSCROLL | 
                     WS_TABSTOP
-    COMBOBOX        IDC_COMBO3,55,160,95,103,CBS_DROPDOWNLIST | WS_VSCROLL | 
+    COMBOBOX        IDC_COMBO3,55,160,70,103,CBS_DROPDOWNLIST | WS_VSCROLL | 
                     WS_TABSTOP
     GROUPBOX        "ReplayGain(次曲から有効)",IDC_STATIC,5,105,193,80
     LTEXT           "適用方法",IDC_STATIC,15,145,35,10
     LTEXT           "PostAmp(%)",IDC_STATIC,15,80,35,10
     LTEXT           "PreAmp(%)",IDC_STATIC,15,124,35,10
     GROUPBOX        "基本",IDC_STATIC,5,10,193,90
+    LTEXT           "(増幅時音質劣化に注意)",IDC_STATIC,95,80,90,10
 END
 
 #endif    // 日本語 resources

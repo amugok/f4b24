@@ -39,8 +39,12 @@ static void WAstrcpyA(LPWASTR pBuf, LPCSTR pValue){
 	WAstrcpyonA(pBuf, 0, pValue, WA_MAX_SIZE);
 }
 
+static void WAstrcatWX(LPWASTR pBuf, LPCWSTR pValue){
+	int l = lstrlenW(pBuf->W);
+	lstrcpynW(pBuf->W, pValue, WA_MAX_SIZE - l);
+}
+
 static void WAstrcatA(LPWASTR pBuf, LPCSTR pValue){
-	WASTR work;
 	int l = WAstrlen(pBuf);
 	WAstrcpyonA(pBuf, l, pValue, WA_MAX_SIZE - l);
 }
@@ -118,6 +122,7 @@ static void WAGetDlgItemText(HWND hDlg, int iItemID, LPWASTR pBuf){
 	WAGetWindowText(GetDlgItem(hDlg, iItemID), pBuf);
 }
 
+#ifdef GetOpenFileName
 static BOOL WAOpenFilerPath(LPWASTR pPath, HWND hWnd, LPCSTR pszMsg, LPCSTR pszFilter, LPCSTR pszDefExt){
 	union {
 		OPENFILENAMEA A;
@@ -167,7 +172,9 @@ static BOOL WAOpenFilerPath(LPWASTR pPath, HWND hWnd, LPCSTR pszMsg, LPCSTR pszF
 	WAstrcpy(pPath, &file);
 	return TRUE;
 }
+#endif
 
+#ifdef SHBrowseForFolder
 static BOOL WABrowseForFolder(LPWASTR pPath, HWND hWnd, LPCSTR pszMsg){
 	union {
 		BROWSEINFOA A;
@@ -195,7 +202,9 @@ static BOOL WABrowseForFolder(LPWASTR pPath, HWND hWnd, LPCSTR pszMsg){
 	CoTaskMemFree(pidl);
 	return TRUE;
 }
+#endif
 
+#ifdef ChooseFont
 static BOOL WAChooseFont(LPWASTR pFontName, int *pFontHeight, int *pFontStyle, HWND hWnd){
 	union {
 		CHOOSEFONTW W;
@@ -248,6 +257,70 @@ static BOOL WAChooseFont(LPWASTR pFontName, int *pFontHeight, int *pFontStyle, H
 		*pFontHeight = cf.A.iPointSize / 10;
 	}
 	return TRUE;
+}
+#endif
+
+#ifdef CreatePropertySheetPage
+#ifndef PROPSHEETPAGE_V1
+#define PROPSHEETPAGEA_V1 PROPSHEETPAGEA
+#define PROPSHEETPAGEW_V1 PROPSHEETPAGEW
+#endif
+static HPROPSHEETPAGE WACreatePropertySheetPage(HMODULE hmod, LPCWASTR pTemplate, DLGPROC lpfnDlgProc){
+	union {
+		PROPSHEETPAGEA_V1 A;
+		PROPSHEETPAGEW_V1 W;
+	} psp;
+	if (WAIsUnicode) {
+		psp.W.dwSize = sizeof (PROPSHEETPAGEW_V1);
+		psp.W.dwFlags = PSP_DEFAULT;
+		psp.W.hInstance = hmod;
+		psp.W.pszTemplate = pTemplate->W;
+		psp.W.pfnDlgProc = (DLGPROC)lpfnDlgProc;
+		return CreatePropertySheetPageW(&psp.W);
+	} else {
+		psp.A.dwSize = sizeof (PROPSHEETPAGEA_V1);
+		psp.A.dwFlags = PSP_DEFAULT;
+		psp.A.hInstance = hmod;
+		psp.A.pszTemplate = pTemplate->A;
+		psp.A.pfnDlgProc = (DLGPROC)lpfnDlgProc;
+		return CreatePropertySheetPageA(&psp.A);
+	}
+}
+#endif
+
+typedef BOOL (CALLBACK * LPFNWAREGISTERPLUGIN)(HMODULE hPlugin);
+static void WAEnumPlugins(HMODULE hParent, LPCSTR lpszSubDir, LPCSTR lpszMask, LPFNWAREGISTERPLUGIN lpfnRegProc){
+	HANDLE hFind;
+	WASTR szDir, szPath;
+	union {
+		WIN32_FIND_DATAA A;
+		WIN32_FIND_DATAW W;
+	} wfd;
+	WAGetModuleParentDir(hParent, &szDir);
+	WAstrcatA(&szDir, lpszSubDir);
+	WAstrcpy(&szPath, &szDir);
+	WAstrcatA(&szPath, lpszMask);
+
+	hFind = WAIsUnicode ? FindFirstFileW(szPath.W, &wfd.W) : FindFirstFileA(szPath.A, &wfd.A);
+
+	if(hFind!=INVALID_HANDLE_VALUE){
+		do{
+			HMODULE hPlugin;
+			if (WAIsUnicode) {
+				WAstrcpy(&szPath, &szDir);
+				WAstrcatWX(&szPath, wfd.W.cFileName);
+				hPlugin = LoadLibraryW(szPath.W);
+			}else{
+				WAstrcpy(&szPath, &szDir);
+				WAstrcatA(&szPath, wfd.A.cFileName);
+				hPlugin = LoadLibraryA(szPath.A);
+			}
+			if(hPlugin && !lpfnRegProc(hPlugin)){
+				FreeLibrary(hPlugin);
+			}
+		}while(WAIsUnicode ? FindNextFileW(hFind, &wfd.W) : FindNextFileA(hFind, &wfd.A));
+		FindClose(hFind);
+	}
 }
 
 #endif

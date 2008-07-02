@@ -22,7 +22,7 @@ struct LISTTAB *MakeNewTab(HWND hTab, LPTSTR szTabName, int nItem){
 	WNDPROC OldProc = NULL;
 	TCITEM tci;
 
-	pNew = (struct LISTTAB *)HeapAlloc(GetProcessHeap(), 0/*HEAP_ZERO_MEMORY*/, sizeof(struct LISTTAB));
+	pNew = (struct LISTTAB *)HAlloc(sizeof(struct LISTTAB));
 	if(!pNew){
 		MessageBox(GetParent(hTab), TEXT("タブの作成に失敗しました。メモリを確保してください。"), TEXT("Fittle"), MB_OK);
 		return NULL;
@@ -276,7 +276,7 @@ int RemoveListTab(HWND hTab, int nItem){
 	RECT rcTab;
 	DeleteAllList(&(GetListTab(hTab, nItem)->pRoot));
 	DestroyWindow(GetListTab(hTab, nItem)->hList);
-	HeapFree(GetProcessHeap(), 0, GetListTab(hTab, nItem));
+	HFree(GetListTab(hTab, nItem));
 	TabCtrl_DeleteItem(hTab, nItem);
 	// タブの行数が変わるとリストビューがずれるためそれを修正
 	GetClientRect(hTab, &rcTab);
@@ -436,7 +436,7 @@ BOOL LoadPlaylists(HWND hTab){
 	if(hFile==INVALID_HANDLE_VALUE) return FALSE;
 
 	dwSize = GetFileSize(hFile, NULL) + sizeof(TCHAR);
-	szBuff = (LPTSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwSize);
+	szBuff = (LPTSTR)HZAlloc(dwSize);
 	if(!szBuff){
 		MessageBox(GetParent(hTab), TEXT("メモリの確保に失敗しました。"), TEXT("Fittle"), MB_OK);
 		return FALSE;
@@ -481,7 +481,7 @@ BOOL LoadPlaylists(HWND hTab){
 		}
 		TraverseList(pNew);
 	}
-	HeapFree(GetProcessHeap(), 0, szBuff);
+	HFree(szBuff);
 	return TRUE;
 }
 
@@ -492,7 +492,7 @@ static void RemoveAllTabs(HWND hTab, int nTabCount){
 		LISTTAB *pTab = GetListTab(hTab, i);
 		DeleteAllList(&(pTab->pRoot));
 		DestroyWindow(pTab->hList);
-		HeapFree(GetProcessHeap(), 0, pTab);
+		HFree(pTab);
 		TabCtrl_DeleteItem(hTab, i);
 	}
 }
@@ -541,7 +541,7 @@ BOOL SavePlaylists(HWND hTab){
 	nBuffSize *= (MAX_FITTLE_PATH + 1) * sizeof(TCHAR);
 #endif
 
-	szBuff = (LPTSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, nBuffSize);
+	szBuff = (LPTSTR)HZAlloc(nBuffSize);
 	if(!szBuff){
 		MessageBox(GetParent(hTab), TEXT("メモリの確保に失敗しました。"), TEXT("Fittle"), MB_OK);
 		RemoveAllTabs(hTab, nTabCount);
@@ -583,14 +583,14 @@ BOOL SavePlaylists(HWND hTab){
 	hFile = CreateFile(szColPath, GENERIC_WRITE,
 		0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 	if(hFile==INVALID_HANDLE_VALUE){
-		HeapFree(GetProcessHeap(), 0, szBuff);
+		HFree(szBuff);
 		return FALSE;
 	}
 	WriteFile(hFile, szBuff, (DWORD)nBuffPos * sizeof(TCHAR), &dwAccBytes, NULL);
 	CloseHandle(hFile);
 
 	// メモリの開放
-	HeapFree(GetProcessHeap(), 0, szBuff);
+	HFree(szBuff);
 
 	return TRUE;
 }

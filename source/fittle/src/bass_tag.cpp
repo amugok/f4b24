@@ -7,6 +7,7 @@
 
 #include "fittle.h"
 #include "bass_tag.h"
+#include "func.h"
 #include "readtag.h"
 
 static BOOL Riff_ReadTag(DWORD handle, TAGINFO *pTagInfo){

@@ -41,7 +41,7 @@ int SetDrivesToCombo(HWND hCB){
 
 	// ドライブ列挙
 	dwSize = GetLogicalDriveStrings(0, NULL); // サイズを取得
-	szBuff = (LPTSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (dwSize + 1) * sizeof(TCHAR));
+	szBuff = (LPTSTR)HZAlloc((dwSize + 1) * sizeof(TCHAR));
 	if(!szBuff){
 		MessageBox(GetParent(hCB), TEXT("コンボボックスの初期化に失敗しました。メモリを確保してください。"), TEXT("Fittle"), MB_OK);
 		return -1;
@@ -53,7 +53,7 @@ int SetDrivesToCombo(HWND hCB){
 		citem.lParam = citem.iImage = citem.iSelectedImage = -1;
 		SendMessage(hCB, CBEM_INSERTITEM, 0, (LPARAM)&citem);
 	}
-	HeapFree(GetProcessHeap(), 0, szBuff);
+	HFree(szBuff);
 
 	SendMessage(GetParent(hCB), WM_F4B24_IPC, (WPARAM)WM_F4B24_HOOK_UPDATE_DRIVELISTE, (LPARAM)hCB);
 

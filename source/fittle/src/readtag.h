@@ -78,21 +78,13 @@ static BOOL IsBomUTF16LE(LPBYTE pText, int nTextSize){
 	return nTextSize >= 2 && pText[0] == 0xff && pText[1] == 0xfe;
 }
 
-static LPVOID HAlloc(DWORD dwSize){
-	return HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwSize);
-}
-
-static void HFree(LPVOID lp){
-	HeapFree(GetProcessHeap(), 0, lp);
-}
-
 #ifdef UNICODE
 #else
 static BOOL UTF8ToMultiByte(LPCSTR lpszSrc, int nSrcSize, LPSTR lpszDst, int nDstSize){
 	int lw = MultiByteToWideChar(CP_UTF8, 0, lpszSrc, nSrcSize, 0, 0);
 	LPWSTR pa;
 	if (lw == 0) return FALSE;
-	pa = (LPWSTR)HAlloc(lw * sizeof(WCHAR));
+	pa = (LPWSTR)HZAlloc(lw * sizeof(WCHAR));
 	if (!pa) return FALSE;
 	MultiByteToWideChar(CP_UTF8, 0, lpszSrc, nSrcSize, pa, lw);
 	WideCharToMultiByte(CP_ACP, 0, pa, lw, lpszDst, nDstSize, NULL, NULL);
@@ -127,7 +119,7 @@ static BOOL ID3_ReadFrameText(BYTE bType, LPBYTE pTextRaw, int nTextRawSize, LPT
 			bType = 2;
 		}
 		if (bType == 2){
-			LPBYTE pa = (LPBYTE)HAlloc(nTextRawSize);
+			LPBYTE pa = (LPBYTE)HZAlloc(nTextRawSize);
 			if (pa){
 				int l = nTextRawSize >> 1;
 				int i;
@@ -157,7 +149,7 @@ static BOOL ID3_ReadFrameText(BYTE bType, LPBYTE pTextRaw, int nTextRawSize, LPT
 }
 
 static LPBYTE Unsync(LPBYTE pSrc, unsigned nSrcLen, unsigned nDstLmt, unsigned *pnDstLen) {
-	LPBYTE lpUnsync = (LPBYTE)HAlloc(nSrcLen ? nSrcLen : nDstLmt);
+	LPBYTE lpUnsync = (LPBYTE)HZAlloc(nSrcLen ? nSrcLen : nDstLmt);
 	if (lpUnsync) {
 		unsigned i, j;
 		for (i = j = 0; (nSrcLen ? (i < nSrcLen) : (j < nDstLmt)); i++){

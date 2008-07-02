@@ -24,7 +24,7 @@ struct FILEINFO **AddList(struct FILEINFO **ptr, LPTSTR szFileName, LPTSTR pszFi
 	struct FILEINFO *NewFileInfo;
 
 	if(*ptr==NULL){
-		NewFileInfo = (struct FILEINFO *)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(struct FILEINFO));
+		NewFileInfo = (struct FILEINFO *)HZAlloc(sizeof(struct FILEINFO));
 		lstrcpyn(NewFileInfo->szFilePath, szFileName, MAX_FITTLE_PATH);
 		lstrcpyn(NewFileInfo->szSize, pszFileSize, 50);
 		lstrcpyn(NewFileInfo->szTime, pszFileTime, 50);
@@ -45,7 +45,7 @@ int DeleteAList(struct FILEINFO *pDel, struct FILEINFO **pRoot){
 		if(*pTmp==pDel){
 			if (pDel == g_pNextFile) g_pNextFile = NULL;
 			*pTmp = pDel->pNext; // íœƒZƒ‹‚ð”ò‚Î‚µ‚Ä˜AŒ‹
-			HeapFree(GetProcessHeap(), 0, pDel);
+			HFree(pDel);
 			break;
 		}
 	}
@@ -56,13 +56,12 @@ int DeleteAList(struct FILEINFO *pDel, struct FILEINFO **pRoot){
 int DeleteAllList(struct FILEINFO **pRoot){
 	struct FILEINFO *pNxt;
 	struct FILEINFO *pTmp;
-	HANDLE hPH = GetProcessHeap();
 
 	pTmp = *pRoot;
 	while(pTmp){
 		if (pTmp == g_pNextFile) g_pNextFile = NULL;
 		pNxt = pTmp->pNext;
-		HeapFree(hPH, 0, pTmp);
+		HFree(pTmp);
 		pTmp = pNxt;
 	}
 	*pRoot = NULL;
@@ -237,7 +236,7 @@ int ReadM3UFile(struct FILEINFO **pSub, LPTSTR pszFilePath){
 	*(PathFindFileName(szParPath)-1) = '\0';
 
 	dwSize = GetFileSize(hFile, NULL);
-	lpszBuf = (LPSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwSize + sizeof(CHAR));
+	lpszBuf = (LPSTR)HZAlloc(dwSize + sizeof(CHAR));
 	if(!lpszBuf) return -1;
 	ReadFile(hFile, lpszBuf, dwSize, &dwAccBytes, NULL);
 	lpszBuf[dwAccBytes] = '\0';
@@ -308,7 +307,7 @@ int ReadM3UFile(struct FILEINFO **pSub, LPTSTR pszFilePath){
 		}while(lpszBuf[i++] != '\0');
 	}
 	CloseHandle(hFile);
-	HeapFree(GetProcessHeap(), 0, lpszBuf);
+	HFree(lpszBuf);
 
 #ifdef _DEBUG
 		wsprintf(szBuff, TEXT("ReadPlaylist time: %d ms\n"), GetTickCount() - dTime);

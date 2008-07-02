@@ -18,6 +18,11 @@
 #include "plugin.h"
 #include "f4b24.h"
 
+#if defined(_MSC_VER) && defined(_DEBUG)
+#define _CRTDBG_MAP_ALLOC
+#include <crtdbg.h>
+#endif
+
 // ライブラリをリンク
 #if defined(_MSC_VER)
 #pragma comment(lib, "comctl32.lib")
@@ -32,12 +37,12 @@
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test27u")
+#define F4B24_VERSION_STRING TEXT("test28u")
 #else
-#define F4B24_VERSION_STRING TEXT("test27")
+#define F4B24_VERSION_STRING TEXT("test28")
 #endif
-#define F4B24_VERSION 27
-#define F4B24_IF_VERSION 25
+#define F4B24_VERSION 28
+#define F4B24_IF_VERSION 28
 #ifndef _DEBUG
 #define FITTLE_TITLE FITTLE_VERSION TEXT(" for BASS 2.4 ") F4B24_VERSION_STRING
 #else
@@ -199,7 +204,7 @@ static void StringListFree(LPSTRING_LIST *pList){
 	LPSTRING_LIST pCur = *pList;
 	while (pCur){
 		LPSTRING_LIST pNext = pCur->pNext;
-		HeapFree(GetProcessHeap(), 0, pCur);
+		HFree(pCur);
 		pCur = pNext;
 	}
 	*pList = NULL;
@@ -227,7 +232,7 @@ static  LPSTRING_LIST StringListFindI(LPSTRING_LIST *pList, LPCTSTR szValue){
 static int StringListAdd(LPSTRING_LIST *pList, LPTSTR szValue){
 	int i = 0;
 	LPSTRING_LIST pCur = *pList;
-	LPSTRING_LIST pNew = (LPSTRING_LIST)HeapAlloc(GetProcessHeap(), 0, sizeof(STRING_LIST) + sizeof(TCHAR) * lstrlen(szValue));
+	LPSTRING_LIST pNew = (LPSTRING_LIST)HAlloc(sizeof(STRING_LIST) + sizeof(TCHAR) * lstrlen(szValue));
 	if (!pNew) return -1;
 	pNew->pNext = NULL;
 	lstrcpy(pNew->szString, szValue);
@@ -335,7 +340,7 @@ static void SendCopyData(HWND hFittle, int iType, LPTSTR lpszString){
 	if (la & 1) la++; /* WORD align */
 	lw = lstrlenW(lpszString) + 1;
 	cbData = la * sizeof(CHAR) + lw * sizeof(WCHAR);
-	lpWork = (LPBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, cbData);
+	lpWork = (LPBYTE)HZAlloc(cbData);
 	if (!lpWork) return;
 	lstrcpyA((LPSTR)(lpWork), nameA);
 	lstrcpyW((LPWSTR)(lpWork + la), lpszString);
@@ -343,7 +348,7 @@ static void SendCopyData(HWND hFittle, int iType, LPTSTR lpszString){
 	cds.lpData = (LPVOID)lpWork;
 	cds.cbData = cbData;
 	SendMessage(hFittle, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
-	HeapFree(GetProcessHeap(), 0, lpWork);
+	HFree(lpWork);
 #else
 	COPYDATASTRUCT cds;
 	cds.dwData = iType;
@@ -503,6 +508,10 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 	HACCEL hAccel;
 	HMODULE XARGD = ExpandArgs(&XARGC, &XARGV);
 
+#if defined(_MSC_VER) && defined(_DEBUG)
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
+
 #ifndef _DEBUG
 	BOOL bMulti = FALSE;
 	LRESULT lRet = CheckMultiInstance(&bMulti);
@@ -528,13 +537,13 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 		}
 	}
 
-	// 必要はないがコマンドライン展開の後始末
 #ifdef UNICODE
 	if (XARGV) GlobalFree(XARGV);
 #elif defined(_MSC_VER)
 #else
 	if (XARGD) FreeLibrary(XARGD);
 #endif
+	ClearTypelist();
 
 	return (int)msg.wParam;
 }
@@ -1571,10 +1580,11 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				case IDM_LIST_TOOL:
 					if((nLBIndex = ListView_GetNextItem(GetCurListTab(m_hTab)->hList, -1, LVNI_SELECTED))!=-1){
 						if(lstrlen(g_cfg.szToolPath)!=0){
-							LPTSTR pszFiles;
-							pszFiles = MallocAndConcatPath(GetCurListTab(m_hTab));
-							MyShellExecute(hWnd, g_cfg.szToolPath, pszFiles, TRUE);
-							HeapFree(GetProcessHeap(), 0, pszFiles);
+							LPTSTR pszFiles = MallocAndConcatPath(GetCurListTab(m_hTab));
+							if (pszFiles) {
+								MyShellExecute(hWnd, g_cfg.szToolPath, pszFiles, TRUE);
+								HFree(pszFiles);
+							}
 						}else{
 							SendMessage(hWnd, WM_F4B24_IPC, WM_F4B24_IPC_SETTING, WM_F4B24_IPC_SETTING_LP_PATH);
 						}
@@ -2282,6 +2292,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				break;
 			case WM_F4B24_IPC_GET_REPLAYGAIN_MODE:
 				return g_cfg.nReplayGainMode;
+			case WM_F4B24_IPC_GET_PREAMP:
+				return g_cfg.nReplayGainPreAmp;
 
 			case WM_F4B24_IPC_GET_VERSION_STRING:
 				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)FITTLE_VERSION);
@@ -3502,7 +3514,7 @@ static void MyShellExecute(HWND hWnd, LPTSTR pszExePath, LPTSTR pszFilePathes, B
 
 	int nSize = lstrlen(pszArgs) + lstrlen(pszFilePathes) + 5;
 
-	LPTSTR pszBuff = (LPTSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(TCHAR) * nSize);
+	LPTSTR pszBuff = (LPTSTR)HZAlloc(sizeof(TCHAR) * nSize);
 
 	if(!bMulti){
 		PathQuoteSpaces(pszFilePathes);
@@ -3521,20 +3533,27 @@ static void MyShellExecute(HWND hWnd, LPTSTR pszExePath, LPTSTR pszFilePathes, B
 		*(pszArgs-1) = TEXT(' ');
 	}
 
-	HeapFree(GetProcessHeap(), 0, pszBuff);
+	HFree(pszBuff);
 	return;
 }
 
 // リストで選択されたアイテムのパスを連結して返す。どこかでFreeしてください。
 static LPTSTR MallocAndConcatPath(LISTTAB *pListTab){
-	LPTSTR pszRet = (LPTSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(TCHAR) * 2);
+	DWORD s = sizeof(TCHAR) * 2;
+	LPTSTR pszRet = (LPTSTR)HZAlloc(s);
+	LPTSTR pszNew;
 
 	int i = -1;
 	while( (i = ListView_GetNextItem(pListTab->hList, i, LVNI_SELECTED)) != -1 ){
 		LPTSTR pszTarget = GetPtrFromIndex(pListTab->pRoot, i)->szFilePath;
 		if(!IsURLPath(pszTarget) && !IsArchivePath(pszTarget)){	// 削除できないファイルでなければ
-			int nNewSize = HeapSize(GetProcessHeap(), 0, pszRet) + (lstrlen(pszTarget) + 5) * sizeof(TCHAR);
-			pszRet = (LPTSTR)HeapReAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, pszRet, nNewSize);
+			s += (lstrlen(pszTarget) + 3) * sizeof(TCHAR);
+			pszNew = (LPTSTR)HRealloc(pszRet, s);
+			if (!pszNew) {
+				HFree(pszRet);
+				return NULL;
+			}
+			pszRet = pszNew;
 			lstrcat(pszRet, TEXT("\""));
 			lstrcat(pszRet, pszTarget);
 			lstrcat(pszRet, TEXT("\" "));
@@ -4735,15 +4754,17 @@ static void RemoveFiles(HWND hWnd){
 	// 初期化
 	SHFILEOPSTRUCT fops;
 	TCHAR szMsg[MAX_FITTLE_PATH];
-	int i, j, q;
+	int i, j, q, s;
 	LPTSTR pszTarget;
 	BOOL bPlaying;
-	LPTSTR p;
+	LPTSTR p, np;
 
 	bPlaying = FALSE;
 	j = 0;
 	q = 0;
-	p = (LPTSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(TCHAR) * 2);
+	s = 2 * sizeof(TCHAR);
+	p = (LPTSTR)HZAlloc(s);
+	if (!p) return;
 
 	// パスを連結など
 	i = ListView_GetNextItem(GetCurListTab(m_hTab)->hList, -1, LVNI_SELECTED);
@@ -4751,11 +4772,17 @@ static void RemoveFiles(HWND hWnd){
 		pszTarget = GetPtrFromIndex(GetCurListTab(m_hTab)->pRoot, i)->szFilePath;
 		if(i==GetCurListTab(m_hTab)->nPlaying) bPlaying = TRUE;	// 削除ファイルが演奏中
 		if(!IsURLPath(pszTarget) && !IsArchivePath(pszTarget)){	// 削除できないファイルでなければ
+			int l = lstrlen(pszTarget);
 			j++;
-			p = (LPTSTR)HeapReAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, p,
-				HeapSize(GetProcessHeap(), 0, p) + (lstrlen(pszTarget) + 2) * sizeof(TCHAR));
+			s += (l + 1) * sizeof(TCHAR);
+			np = (LPTSTR)HRealloc(p, s);
+			if (!np) {
+				HFree(p);
+				return;
+			}
+			p = np;
 			lstrcpy(p+q, pszTarget);
-			q += lstrlen(pszTarget) + 1;
+			q += l + 1;
 			*(p+q) = TEXT('\0');
 		}
 		i = ListView_GetNextItem(GetCurListTab(m_hTab)->hList, i, LVNI_SELECTED);
@@ -4781,6 +4808,6 @@ static void RemoveFiles(HWND hWnd){
 		}
 		if(bPlaying) SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_NEXT, 0), 0);
 	}
-	HeapFree(GetProcessHeap(), 0, p);
+	HFree(p);
 }
 

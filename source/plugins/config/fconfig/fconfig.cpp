@@ -12,7 +12,6 @@
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")
 #pragma comment(lib,"user32.lib")
-//#pragma comment(lib,"gdi32.lib")
 #pragma comment(lib,"comctl32.lib")
 #pragma comment(lib,"shlwapi.lib")
 #pragma comment(lib,"shell32.lib")
@@ -24,6 +23,7 @@
 #endif
 
 #define MAX_FITTLE_PATH 260*2
+
 #define FCONFIG_MAPPING_NAME "fconfig.exe - <shared memory>"
 
 typedef enum {
@@ -44,6 +44,10 @@ static SHARED_MEMORY *psm = NULL;
 static CONFIG_PLUGIN_INFO *pTop = NULL;
 
 static BOOL fIsUnicode = FALSE;
+
+#define WA_MAX_SIZE MAX_PATH
+#define WAIsUnicode fIsUnicode
+#include "../../../fittle/src/wastr.h"
 
 
 static void CloseSharedMemory(){
@@ -73,15 +77,12 @@ static SHARED_MEMORY_STATUS OpenSharedMemory(){
 }
 
 /* ƒvƒ‰ƒOƒCƒ“‚ð“o˜^ */
-static BOOL RegisterPlugin(FARPROC lpfnProc){
-	GetCPluginInfoFunc GetCPluginInfo = (GetCPluginInfoFunc)lpfnProc;
-	if (GetCPluginInfo){
-		CONFIG_PLUGIN_INFO *pNewPlugins = GetCPluginInfo();
+static BOOL CALLBACK RegisterPlugin(HMODULE hPlugin){
+	FARPROC lpfnProc = GetProcAddress(hPlugin, "GetCPluginInfo");
+	if (lpfnProc){
+		CONFIG_PLUGIN_INFO *pNewPlugins = ((GetCPluginInfoFunc)lpfnProc)();
 		if (pNewPlugins){
 			CONFIG_PLUGIN_INFO *pNext = pNewPlugins;
-			do{
-				pNext = pNext->pNext;
-			} while (pNext);
 			for (pNext = pNewPlugins; pNext->pNext; pNext = pNext->pNext);
 			pNext->pNext = pTop;
 			pTop = pNewPlugins;
@@ -92,48 +93,7 @@ static BOOL RegisterPlugin(FARPROC lpfnProc){
 }
 
 static void InitPlugins(){
-	HANDLE hFind;
-	union {
-		CHAR A[MAX_PATH];
-		WCHAR W[MAX_PATH];
-	} szDir, szPath;
-	union {
-		WIN32_FIND_DATAA A;
-		WIN32_FIND_DATAW W;
-	} wfd;
-
-	if (fIsUnicode) {
-		GetModuleFileNameW(NULL, szDir.W, MAX_FITTLE_PATH);
-		*PathFindFileNameW(szDir.W) = L'\0';
-		PathCombineW(szPath.W, szDir.W, L"*.fcp");
-		hFind = FindFirstFileW(szPath.W, &wfd.W);
-	} else {
-		GetModuleFileNameA(NULL, szDir.A, MAX_FITTLE_PATH);
-		*PathFindFileNameA(szDir.A) = '\0';
-		PathCombineA(szPath.A, szDir.A, "*.fcp");
-		hFind = FindFirstFileA(szPath.A, &wfd.A);
-	}
-
-	if(hFind!=INVALID_HANDLE_VALUE){
-		do{
-			HINSTANCE hDll;
-			if (fIsUnicode){
-				PathCombineW(szPath.W, szDir.W, wfd.W.cFileName);
-				hDll = LoadLibraryW(szPath.W);
-			}else{
-				PathCombineA(szPath.A, szDir.A, wfd.A.cFileName);
-				hDll = LoadLibraryA(szPath.A);
-			}
-			if(hDll){
-				FARPROC pfnCPlugin = GetProcAddress(hDll, "GetCPluginInfo");
-				if (!pfnCPlugin || !RegisterPlugin(pfnCPlugin))
-				{
-					FreeLibrary(hDll);
-				}
-			}
-		}while(fIsUnicode ? FindNextFileW(hFind, &wfd.W) : FindNextFileA(hFind, &wfd.A));
-		FindClose(hFind);
-	}
+	WAEnumPlugins(NULL, "", "*.fcp", RegisterPlugin);
 }
 
 static void *HAlloc(DWORD dwSize){

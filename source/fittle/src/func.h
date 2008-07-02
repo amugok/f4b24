@@ -26,4 +26,10 @@ BOOL GetTimeAndSize(LPCTSTR, LPTSTR, LPTSTR);
 void SetOLECursor(int);
 void GetModuleParentDir(LPTSTR);
 LPTSTR MyPathAddBackslash(LPTSTR);
+
+LPVOID HAlloc(DWORD dwSize);
+LPVOID HZAlloc(DWORD dwSize);
+LPVOID HRealloc(LPVOID pPtr, DWORD dwSize);
+void HFree(LPVOID pPtr);
+
 #endif

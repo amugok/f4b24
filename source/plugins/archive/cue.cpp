@@ -476,6 +476,8 @@ static BOOL CALLBACK GetGain(LPTSTR pszArchivePath, LPTSTR pszTrackPart, float *
 	float volume = 1;
 
 	int nGainMode = SendMessage(apinfo.hwndMain, WM_F4B24_IPC, WM_F4B24_IPC_GET_REPLAYGAIN_MODE, 0);
+	int nPreAmp = SendMessage(apinfo.hwndMain, WM_F4B24_IPC, WM_F4B24_IPC_GET_PREAMP, 0);
+	if (!nPreAmp) nPreAmp = 100;
 
 	// ƒI[ƒvƒ“
 	hFile = CreateFile(pszArchivePath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -512,24 +514,24 @@ static BOOL CALLBACK GetGain(LPTSTR pszArchivePath, LPTSTR pszTrackPart, float *
 
 	switch (nGainMode){
 	case 1:
-		volume = pow(10, album_gain / 20);
+		volume = nPreAmp * pow(10, album_gain / 20 - 2);
 		break;
 	case 2:
 		volume = 1 / album_peak;
 		break;
 	case 3:
-		volume = pow(10, track_gain / 20);
+		volume = nPreAmp * pow(10, track_gain / 20 - 2);
 		break;
 	case 4:
 		volume = 1 / track_peak;
 		break;
 	case 5:
-		volume = pow(10, album_gain / 20);
+		volume = nPreAmp * pow(10, album_gain / 20 - 2);
 		if (volume > 1 / album_peak)
 			volume = 1 / album_peak;
 		break;
 	case 6:
-		volume = pow(10, track_gain / 20);
+		volume = nPreAmp * pow(10, track_gain / 20 - 2);
 		if (volume > 1 / track_peak)
 			volume = 1 / track_peak;
 		break;
