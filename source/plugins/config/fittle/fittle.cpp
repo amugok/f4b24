@@ -1006,6 +1006,7 @@ static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel, LPSTR pszCo
 	WASTR dlgtemp;
 	LPCSTR lpszTemplate, lpszPath;
 	DLGPROC lpfnDlgProc = 0;
+	fIsUnicode = ((GetVersion() & 0x80000000) == 0);
 	if (nLevel == 0){
 		if (nIndex == 0){
 			lpszTemplate = "GENERAL_SHEET";
