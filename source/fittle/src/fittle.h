@@ -118,7 +118,8 @@ struct CONFIG{
 	int nFadeOut;				// 停止時にフェードアウトする
 	int nReplayGainMode;		// ReplayGainの適用方法
 	int nReplayGainMixer;		// 音量増幅方法
-	int nReplayGainAmp;			// 音量増幅値(%)
+	int nReplayGainPreAmp;		// PreAmp(%)
+	int nReplayGainPostAmp;		// PostAmp(%)
 
 	TCHAR szStartPath[MAX_FITTLE_PATH];	// スタートアップパス
 	TCHAR szFilerPath[MAX_FITTLE_PATH];	// ファイラのパス

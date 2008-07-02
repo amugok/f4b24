@@ -25,8 +25,62 @@
 #define SET_SUBCLASS(hWnd, Proc) \
 	SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)Proc))
 
+static BOOL fIsUnicode = FALSE;
 static HMODULE hDLL = 0;
-static struct CONFIG g_cfg;				// 設定構造体
+
+#define WA_MAX_SIZE MAX_FITTLE_PATH
+#define WAIsUnicode fIsUnicode
+#include "../../../fittle/src/wastr.h"
+
+
+static struct {
+	int nBkColor;				// 背景の色
+	int nTextColor;				// 文字の色
+	int nPlayTxtCol;			// 再生曲文字列
+	int nPlayBkCol;				// 再生曲背景
+	int nPlayView;				// 再生曲の表示方法
+	int nHighTask;				// システムの優先度
+	int nGridLine;				// グリッドラインを表示
+	int nSingleExpand;			// フォルダを一つしか開かない
+	int nExistCheck;			// 存在確認
+	int nTimeInList;			// プレイリストで更新日時を取得する
+	int nTreeIcon;				// ツリー、コンボのアイコン表示
+	int nTrayOpt;				// タスクトレイモード
+	int nHideShow;				// 隠しフォルダを表示するか
+	int nTabBottom;				// タブを下に表示する
+	int nTabMulti;				// 多段で表示する
+	int nAllSub;				// 全てのフォルダがサブフォルダを持つ
+	int nPathTip;				// ヒントでフルパスを表示
+	int nInfoTip;				// 曲名お知らせ機能
+	int nTagReverse;			// タイトル、アーティストを反転
+	int nShowHeader;			// ヘッダコントロールを表示する
+	int nSeekAmount;			// シーク量
+	int nVolAmount;				// 音量変化量(隠し設定?)
+	int nResume;				// 終了時に再生していた曲を起動時にも再生する
+	int nResPosFlag;			// 終了時の再生位置も記録復元する
+	int nCloseMin;				// 閉じるボタンで最小化する
+	int nZipSearch;				// サブフォルダを検索で圧縮ファイルも検索する
+	int nTabHide;				// タブが一つの時はタブを隠す
+	int nOut32bit;				// 32bit(float)で出力する
+	int nFadeOut;				// 停止時にフェードアウトする
+	int nReplayGainMode;		// ReplayGainの適用方法
+	int nReplayGainMixer;		// 音量増幅方法
+	int nReplayGainPreAmp;		// PreAmp(%)
+	int nReplayGainPostAmp;		// PostAmp(%)
+
+	WASTR szStartPath;	// スタートアップパス
+	WASTR szFilerPath;	// ファイラのパス
+
+	int nHotKey[HOTKEY_COUNT];	// ホットキー
+
+	int nTrayClick[6];			// クリック時の動作
+
+	WASTR szFontName;		// フォントの名前
+	int nFontHeight;			// フォントの高さ
+	int nFontStyle;				// フォントのスタイル
+
+	WASTR szToolPath;
+} m_cfg;				// 設定構造体
 
 static DWORD CALLBACK GetConfigPageCount(void);
 static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel, LPSTR pszConfigPath, int nConfigPathSize);
@@ -74,274 +128,355 @@ static void ApplyFittle(){
 	PostF4B24Message(WM_F4B24_IPC_APPLY_CONFIG, 0);
 }
 
-// 実行ファイルのパスを取得
-void GetModuleParentDir(LPTSTR szParPath){
-	TCHAR szPath[MAX_FITTLE_PATH];
-
-	GetModuleFileName(NULL, szPath, MAX_FITTLE_PATH);
-	GetLongPathName(szPath, szParPath, MAX_FITTLE_PATH); // 98以降
-	*PathFindFileName(szParPath) = '\0';
-	return;
-}
-
-// 整数型で設定ファイル書き込み
-static int WritePrivateProfileInt(LPTSTR szAppName, LPTSTR szKeyName, int nData, LPTSTR szINIPath){
-	TCHAR szTemp[100];
-
-	wsprintf(szTemp, TEXT("%d"), nData);
-	return WritePrivateProfileString(szAppName, szKeyName, szTemp, szINIPath);
-}
 
 // グローバルな設定を読み込む
 static void LoadConfig(){
 	int i;
-	TCHAR szSec[10];
+	CHAR szSec[10];
 
-	TCHAR m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
-
-	// INIファイルの位置を取得
-	GetModuleParentDir(m_szINIPath);
-	lstrcat(m_szINIPath, TEXT("fittle.ini"));
+	WASetIniFile(NULL, "fittle.ini");
 
 	// コントロールカラー
-	g_cfg.nBkColor = (int)GetPrivateProfileInt(TEXT("Color"), TEXT("BkColor"), (int)GetSysColor(COLOR_WINDOW), m_szINIPath);
-	g_cfg.nTextColor = (int)GetPrivateProfileInt(TEXT("Color"), TEXT("TextColor"), (int)GetSysColor(COLOR_WINDOWTEXT), m_szINIPath);
-	g_cfg.nPlayTxtCol = (int)GetPrivateProfileInt(TEXT("Color"), TEXT("PlayTxtCol"), (int)RGB(0xFF, 0, 0), m_szINIPath);
-	g_cfg.nPlayBkCol = (int)GetPrivateProfileInt(TEXT("Color"), TEXT("PlayBkCol"), (int)RGB(230, 234, 238), m_szINIPath);
+	m_cfg.nBkColor = WAGetIniInt("Color", "BkColor", (int)GetSysColor(COLOR_WINDOW));
+	m_cfg.nTextColor = WAGetIniInt("Color", "TextColor", (int)GetSysColor(COLOR_WINDOWTEXT));
+	m_cfg.nPlayTxtCol = WAGetIniInt("Color", "PlayTxtCol", (int)RGB(0xFF, 0, 0));
+	m_cfg.nPlayBkCol = WAGetIniInt("Color", "PlayBkCol", (int)RGB(230, 234, 238));
 	// 表示方法
-	g_cfg.nPlayView = GetPrivateProfileInt(TEXT("Color"), TEXT("PlayView"), 1, m_szINIPath);
+	m_cfg.nPlayView = WAGetIniInt("Color", "PlayView", 1);
 
 	// システムの優先度の設定
-	g_cfg.nHighTask = GetPrivateProfileInt(TEXT("Main"), TEXT("Priority"), 0, m_szINIPath);
+	m_cfg.nHighTask = WAGetIniInt("Main", "Priority", 0);
 	// グリッドライン
-	g_cfg.nGridLine = GetPrivateProfileInt(TEXT("Main"), TEXT("GridLine"), 1, m_szINIPath);
-	g_cfg.nSingleExpand = GetPrivateProfileInt(TEXT("Main"), TEXT("SingleExp"), 0, m_szINIPath);
+	m_cfg.nGridLine = WAGetIniInt("Main", "GridLine", 1);
+	m_cfg.nSingleExpand = WAGetIniInt("Main", "SingleExp", 0);
 	// 存在確認
-	g_cfg.nExistCheck = GetPrivateProfileInt(TEXT("Main"), TEXT("ExistCheck"), 0, m_szINIPath);
+	m_cfg.nExistCheck = WAGetIniInt("Main", "ExistCheck", 0);
 	// プレイリストで更新日時を取得する
-	g_cfg.nTimeInList = GetPrivateProfileInt(TEXT("Main"), TEXT("TimeInList"), 0, m_szINIPath);
+	m_cfg.nTimeInList = WAGetIniInt("Main", "TimeInList", 0);
 	// システムイメージリストを結合
-	g_cfg.nTreeIcon = GetPrivateProfileInt(TEXT("Main"), TEXT("TreeIcon"), TRUE, m_szINIPath);
+	m_cfg.nTreeIcon = WAGetIniInt("Main", "TreeIcon", TRUE);
 	// タスクトレイに収納のチェック
-	g_cfg.nTrayOpt = GetPrivateProfileInt(TEXT("Main"), TEXT("Tray"), 1, m_szINIPath);
+	m_cfg.nTrayOpt = WAGetIniInt("Main", "Tray", 1);
 	// ツリー表示設定
-	g_cfg.nHideShow = GetPrivateProfileInt(TEXT("Main"), TEXT("HideShow"), 0, m_szINIPath);
+	m_cfg.nHideShow = WAGetIniInt("Main", "HideShow", 0);
 	// タブを下に表示する
-	g_cfg.nTabBottom = GetPrivateProfileInt(TEXT("Main"), TEXT("TabBottom"), 0, m_szINIPath);
+	m_cfg.nTabBottom = WAGetIniInt("Main", "TabBottom", 0);
 	// 多段で表示する
-	g_cfg.nTabMulti = GetPrivateProfileInt(TEXT("Main"), TEXT("TabMulti"), 1, m_szINIPath);
+	m_cfg.nTabMulti = WAGetIniInt("Main", "TabMulti", 1);
 	// すべてのフォルダが～
-	g_cfg.nAllSub = GetPrivateProfileInt(TEXT("Main"), TEXT("AllSub"), 0, m_szINIPath);
+	m_cfg.nAllSub = WAGetIniInt("Main", "AllSub", 0);
 	// ツールチップでフルパスを表示
-	g_cfg.nPathTip = GetPrivateProfileInt(TEXT("Main"), TEXT("PathTip"), 1, m_szINIPath);
+	m_cfg.nPathTip = WAGetIniInt("Main", "PathTip", 1);
 	// 曲名お知らせ機能
-	g_cfg.nInfoTip = GetPrivateProfileInt(TEXT("Main"), TEXT("Info"), 1, m_szINIPath);
+	m_cfg.nInfoTip = WAGetIniInt("Main", "Info", 1);
 	// タグを反転
-	g_cfg.nTagReverse = GetPrivateProfileInt(TEXT("Main"), TEXT("TagReverse"), 0, m_szINIPath);
+	m_cfg.nTagReverse = WAGetIniInt("Main", "TagReverse", 0);
 	// ヘッダコントロールを表示する
-	g_cfg.nShowHeader = GetPrivateProfileInt(TEXT("Main"), TEXT("ShowHeader"), 1, m_szINIPath);
+	m_cfg.nShowHeader = WAGetIniInt("Main", "ShowHeader", 1);
 	// シーク量
-	g_cfg.nSeekAmount = GetPrivateProfileInt(TEXT("Main"), TEXT("SeekAmount"), 5, m_szINIPath);
+	m_cfg.nSeekAmount = WAGetIniInt("Main", "SeekAmount", 5);
 	// 音量変化量(隠し設定)
-	g_cfg.nVolAmount = GetPrivateProfileInt(TEXT("Main"), TEXT("VolAmount"), 5, m_szINIPath);
+	m_cfg.nVolAmount = WAGetIniInt("Main", "VolAmount", 5);
 	// 終了時に再生していた曲を起動時にも再生する
-	g_cfg.nResume = GetPrivateProfileInt(TEXT("Main"), TEXT("Resume"), 0, m_szINIPath);
+	m_cfg.nResume = WAGetIniInt("Main", "Resume", 0);
 	// 終了時の再生位置も記録復元する
-	g_cfg.nResPosFlag = GetPrivateProfileInt(TEXT("Main"), TEXT("ResPosFlag"), 0, m_szINIPath);
+	m_cfg.nResPosFlag = WAGetIniInt("Main", "ResPosFlag", 0);
 	// 閉じるボタンで最小化する
-	g_cfg.nCloseMin = GetPrivateProfileInt(TEXT("Main"), TEXT("CloseMin"), 0, m_szINIPath);
+	m_cfg.nCloseMin = WAGetIniInt("Main", "CloseMin", 0);
 	// サブフォルダを検索で圧縮ファイルも検索する
-	g_cfg.nZipSearch = GetPrivateProfileInt(TEXT("Main"), TEXT("ZipSearch"), 0, m_szINIPath);
+	m_cfg.nZipSearch = WAGetIniInt("Main", "ZipSearch", 0);
 	// タブが一つの時はタブを隠す
-	g_cfg.nTabHide = GetPrivateProfileInt(TEXT("Main"), TEXT("TabHide"), 0, m_szINIPath);
+	m_cfg.nTabHide = WAGetIniInt("Main", "TabHide", 0);
 	// 32bit(float)で出力する
-	g_cfg.nOut32bit = GetPrivateProfileInt(TEXT("Main"), TEXT("Out32bit"), 0, m_szINIPath);
+	m_cfg.nOut32bit = WAGetIniInt("Main", "Out32bit", 0);
 	// 停止時にフェードアウトする
-	g_cfg.nFadeOut = GetPrivateProfileInt(TEXT("Main"), TEXT("FadeOut"), 1, m_szINIPath);
+	m_cfg.nFadeOut = WAGetIniInt("Main", "FadeOut", 1);
 	// ReplayGainの適用方法
-	g_cfg.nReplayGainMode = GetPrivateProfileInt(TEXT("Main"), TEXT("ReplayGainMode"), 1, m_szINIPath);
+	m_cfg.nReplayGainMode = WAGetIniInt("ReplayGain", "Mode", 1);
 	// 音量増幅方法
-	g_cfg.nReplayGainMixer = GetPrivateProfileInt(TEXT("Main"), TEXT("ReplayGainMixer"), 1, m_szINIPath);
-	// 音量増幅値(%)
-	g_cfg.nReplayGainAmp = GetPrivateProfileInt(TEXT("Main"), TEXT("ReplayGainAmp"), 100, m_szINIPath);
+	m_cfg.nReplayGainMixer = WAGetIniInt("ReplayGain", "Mixer", 1);
+	// PreAmp(%)
+	m_cfg.nReplayGainPreAmp = WAGetIniInt("ReplayGain", "PreAmp", 100);
+	// PostAmp(%)
+	m_cfg.nReplayGainPostAmp = WAGetIniInt("ReplayGain", "PostAmp", 100);
 	// スタートアップフォルダ読み込み
-	GetPrivateProfileString(TEXT("Main"), TEXT("StartPath"), TEXT(""), g_cfg.szStartPath, MAX_FITTLE_PATH, m_szINIPath);
+	WAGetIniStr("Main", "StartPath", &m_cfg.szStartPath);
 	// ファイラのパス
-	GetPrivateProfileString(TEXT("Main"), TEXT("FilerPath"), TEXT(""), g_cfg.szFilerPath, MAX_FITTLE_PATH, m_szINIPath);
+	WAGetIniStr("Main", "FilerPath", &m_cfg.szFilerPath);
 
 	// ホットキーの設定
 	for(i=0;i<HOTKEY_COUNT;i++){
-		wsprintf(szSec, TEXT("HotKey%d"), i);
-		g_cfg.nHotKey[i] = GetPrivateProfileInt(TEXT("HotKey"), szSec, 0, m_szINIPath);
+		wsprintfA(szSec, "HotKey%d", i);
+		m_cfg.nHotKey[i] = WAGetIniInt("HotKey", szSec, 0);
 	}
 
 	// クリック時の動作
-	g_cfg.nTrayClick[0] = GetPrivateProfileInt(TEXT("TaskTray"), TEXT("Click0"), 6, m_szINIPath);
-	g_cfg.nTrayClick[1] = GetPrivateProfileInt(TEXT("TaskTray"), TEXT("Click1"), 0, m_szINIPath);
-	g_cfg.nTrayClick[2] = GetPrivateProfileInt(TEXT("TaskTray"), TEXT("Click2"), 8, m_szINIPath);
-	g_cfg.nTrayClick[3] = GetPrivateProfileInt(TEXT("TaskTray"), TEXT("Click3"), 0, m_szINIPath);
-	g_cfg.nTrayClick[4] = GetPrivateProfileInt(TEXT("TaskTray"), TEXT("Click4"), 5, m_szINIPath);
-	g_cfg.nTrayClick[5] = GetPrivateProfileInt(TEXT("TaskTray"), TEXT("Click5"), 0, m_szINIPath);
+	for(i=0;i<6;i++){
+		wsprintfA(szSec, "Click%d", i);
+		m_cfg.nTrayClick[i] = WAGetIniInt("TaskTray", szSec, "\x6\x0\x8\x0\x5\x0"[i]); //ホットキー
+	}
 
 	// フォント設定読み込み
-	GetPrivateProfileString(TEXT("Font"), TEXT("FontName"), TEXT(""), g_cfg.szFontName, 32, m_szINIPath);	// フォント名""がデフォルトの印
-	g_cfg.nFontHeight = GetPrivateProfileInt(TEXT("Font"), TEXT("Height"), 10, m_szINIPath);
-	g_cfg.nFontStyle = GetPrivateProfileInt(TEXT("Font"), TEXT("Style"), 0, m_szINIPath);
+	WAGetIniStr("Font", "FontName", &m_cfg.szFontName);	// フォント名""がデフォルトの印
+	m_cfg.nFontHeight = WAGetIniInt("Font", "Height", 10);
+	m_cfg.nFontStyle = WAGetIniInt("Font", "Style", 0);
 
 	// 外部ツール
-	GetPrivateProfileString(TEXT("Tool"), TEXT("Path0"), TEXT(""), g_cfg.szToolPath, MAX_FITTLE_PATH, m_szINIPath);
-	return;
+	WAGetIniStr("Tool", "Path0", &m_cfg.szToolPath);
 }
 
 // 設定を保存
 static void SaveConfig(){
 	int i;
-	TCHAR szSec[10];
+	CHAR szSec[10];
 
-	TCHAR m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
+	WASetIniFile(NULL, "fittle.ini");
 
-	// INIファイルの位置を取得
-	GetModuleParentDir(m_szINIPath);
-	lstrcat(m_szINIPath, TEXT("fittle.ini"));
+	WASetIniInt("Color", "BkColor", m_cfg.nBkColor);
+	WASetIniInt("Color", "TextColor", m_cfg.nTextColor);
+	WASetIniInt("Color", "PlayTxtCol", m_cfg.nPlayTxtCol);
+	WASetIniInt("Color", "PlayBkCol", m_cfg.nPlayBkCol);
+	WASetIniInt("Color", "PlayView", m_cfg.nPlayView);
 
-	WritePrivateProfileInt(TEXT("Color"), TEXT("BkColor"), g_cfg.nBkColor, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Color"), TEXT("TextColor"), g_cfg.nTextColor, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Color"), TEXT("PlayTxtCol"), g_cfg.nPlayTxtCol, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Color"), TEXT("PlayBkCol"), g_cfg.nPlayBkCol, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Color"), TEXT("PlayView"), g_cfg.nPlayView, m_szINIPath);
+	WASetIniInt("Main", "Priority", m_cfg.nHighTask); //システム優先度
+	WASetIniInt("Main", "GridLine", m_cfg.nGridLine);
+	WASetIniInt("Main", "SingleExp", m_cfg.nSingleExpand);
+	WASetIniInt("Main", "ExistCheck", m_cfg.nExistCheck);
+	WASetIniInt("Main", "TimeInList", m_cfg.nTimeInList);
+	WASetIniInt("Main", "TreeIcon", m_cfg.nTreeIcon);
+	WASetIniInt("Main", "Tray", m_cfg.nTrayOpt); //タスクトレイモード
+	WASetIniInt("Main", "HideShow", m_cfg.nHideShow);
+	WASetIniInt("Main", "TabBottom", m_cfg.nTabBottom);
+	WASetIniInt("Main", "TabMulti", m_cfg.nTabMulti);
+	WASetIniInt("Main", "AllSub", m_cfg.nAllSub);
+	WASetIniInt("Main", "PathTip", m_cfg.nPathTip); // ツールチップでフルパスを表示
+	WASetIniInt("Main", "Info", m_cfg.nInfoTip); //曲名お知らせ
+	WASetIniInt("Main", "TagReverse", m_cfg.nTagReverse);
+	WASetIniInt("Main", "ShowHeader", m_cfg.nShowHeader);
+	WASetIniInt("Main", "SeekAmount", m_cfg.nSeekAmount);
+	WASetIniInt("Main", "VolAmount", m_cfg.nVolAmount);
+	WASetIniInt("Main", "Resume", m_cfg.nResume);
+	WASetIniInt("Main", "ResPosFlag", m_cfg.nResPosFlag);
+	WASetIniInt("Main", "CloseMin", m_cfg.nCloseMin);
+	WASetIniInt("Main", "ZipSearch", m_cfg.nZipSearch);
+	WASetIniInt("Main", "TabHide", m_cfg.nTabHide);
+	WASetIniInt("Main", "Out32bit", m_cfg.nOut32bit);
+	WASetIniInt("Main", "FadeOut", m_cfg.nFadeOut);
+	WASetIniInt("ReplayGain", "Mode", m_cfg.nReplayGainMode);
+	WASetIniInt("ReplayGain", "Mixer", m_cfg.nReplayGainMixer);
+	WASetIniInt("ReplayGain", "PreAmp", m_cfg.nReplayGainPreAmp);
+	WASetIniInt("ReplayGain", "PostAmp", m_cfg.nReplayGainPostAmp);
 
-	WritePrivateProfileInt(TEXT("Main"), TEXT("Priority"), g_cfg.nHighTask, m_szINIPath); //システム優先度
-	WritePrivateProfileInt(TEXT("Main"), TEXT("GridLine"), g_cfg.nGridLine, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Main"), TEXT("SingleExp"), g_cfg.nSingleExpand, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Main"), TEXT("ExistCheck"), g_cfg.nExistCheck, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Main"), TEXT("TimeInList"), g_cfg.nTimeInList, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Main"), TEXT("TreeIcon"), g_cfg.nTreeIcon, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Main"), TEXT("Tray"), g_cfg.nTrayOpt, m_szINIPath); //タスクトレイモード
-	WritePrivateProfileInt(TEXT("Main"), TEXT("HideShow"), g_cfg.nHideShow, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Main"), TEXT("TabBottom"), g_cfg.nTabBottom, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Main"), TEXT("TabMulti"), g_cfg.nTabMulti, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Main"), TEXT("AllSub"), g_cfg.nAllSub, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Main"), TEXT("PathTip"), g_cfg.nPathTip, m_szINIPath); // ツールチップでフルパスを表示
-	WritePrivateProfileInt(TEXT("Main"), TEXT("Info"), g_cfg.nInfoTip, m_szINIPath); //曲名お知らせ
-	WritePrivateProfileInt(TEXT("Main"), TEXT("TagReverse"), g_cfg.nTagReverse, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Main"), TEXT("ShowHeader"), g_cfg.nShowHeader, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Main"), TEXT("SeekAmount"), g_cfg.nSeekAmount, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Main"), TEXT("VolAmount"), g_cfg.nVolAmount, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Main"), TEXT("Resume"), g_cfg.nResume, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Main"), TEXT("ResPosFlag"), g_cfg.nResPosFlag, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Main"), TEXT("CloseMin"), g_cfg.nCloseMin, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Main"), TEXT("ZipSearch"), g_cfg.nZipSearch, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Main"), TEXT("TabHide"), g_cfg.nTabHide, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Main"), TEXT("Out32bit"), g_cfg.nOut32bit, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Main"), TEXT("FadeOut"), g_cfg.nFadeOut, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Main"), TEXT("ReplayGainMode"), g_cfg.nReplayGainMode, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Main"), TEXT("ReplayGainMixer"), g_cfg.nReplayGainMixer, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Main"), TEXT("ReplayGainAmp"), g_cfg.nReplayGainAmp, m_szINIPath);
-
-	WritePrivateProfileString(TEXT("Main"), TEXT("StartPath"), g_cfg.szStartPath, m_szINIPath);
-	WritePrivateProfileString(TEXT("Main"), TEXT("FilerPath"), g_cfg.szFilerPath, m_szINIPath);
+	WASetIniStr("Main", "StartPath", &m_cfg.szStartPath);
+	WASetIniStr("Main", "FilerPath", &m_cfg.szFilerPath);
 
 	// ホットキーを保存
 	for(i=0;i<HOTKEY_COUNT;i++){
-		wsprintf(szSec, TEXT("HotKey%d"), i);
-		WritePrivateProfileInt(TEXT("HotKey"), szSec, g_cfg.nHotKey[i], m_szINIPath); //ホットキー
+		wsprintfA(szSec, "HotKey%d", i);
+		WASetIniInt("HotKey", szSec, m_cfg.nHotKey[i]); //ホットキー
 	}
 
 	// タスクトレイを保存
 	for(i=0;i<6;i++){
-		wsprintf(szSec, TEXT("Click%d"), i);
-		WritePrivateProfileInt(TEXT("TaskTray"), szSec, g_cfg.nTrayClick[i], m_szINIPath); //ホットキー
+		wsprintfA(szSec, "Click%d", i);
+		WASetIniInt("TaskTray", szSec, m_cfg.nTrayClick[i]); //ホットキー
 	}
 
-	WritePrivateProfileInt(TEXT("Font"), TEXT("Height"), g_cfg.nFontHeight, m_szINIPath);
-	WritePrivateProfileInt(TEXT("Font"), TEXT("Style"), g_cfg.nFontStyle, m_szINIPath);
+	WASetIniInt("Font", "Height", m_cfg.nFontHeight);
+	WASetIniInt("Font", "Style", m_cfg.nFontStyle);
 
-	WritePrivateProfileString(TEXT("Font"), TEXT("FontName"), g_cfg.szFontName, m_szINIPath);
-
+	WASetIniStr("Font", "FontName", &m_cfg.szFontName);
 
 	// 外部ツール保存
-	WritePrivateProfileString(TEXT("Tool"), TEXT("Path0"), g_cfg.szToolPath, m_szINIPath);
+	WASetIniStr("Tool", "Path0", &m_cfg.szToolPath);
 
-	WritePrivateProfileString(NULL, NULL, NULL, m_szINIPath);
-	return;
+	WAFlushIni();
 }
 
-static BOOL OpenFilerPath(LPTSTR szPath, HWND hWnd, LPCTSTR pszMsg){
-	OPENFILENAME ofn;
-	TCHAR szFile[MAX_FITTLE_PATH] = {0};
-	TCHAR szFileTitle[MAX_FITTLE_PATH] = {0};
+static BOOL WAOpenFilerPath(LPWASTR pPath, HWND hWnd, LPCSTR pszMsg, LPCSTR pszFilter, LPCSTR pszDefExt){
+	union {
+		OPENFILENAMEA A;
+		OPENFILENAMEW W;
+	} ofn;
+	int i;
+	WASTR msg, filter, defext, file, title;
+	WAstrcpyA(&msg, pszMsg);
+	WAstrcpyA(&filter, pszFilter);
+	WAstrcpyA(&defext, pszDefExt);
+	WAstrcpyA(&file, "");
+	WAstrcpyA(&title, "");
 
 	ZeroMemory(&ofn, sizeof(ofn));
-	ofn.lStructSize = sizeof(ofn);
-	ofn.hwndOwner = hWnd;
-	ofn.lpstrFilter = TEXT("実行ファイル(*.exe)\0*.exe\0\0");
-	ofn.lpstrFile = szFile;
-	ofn.lpstrFileTitle = szFileTitle;
-	ofn.lpstrInitialDir = szPath;
-	ofn.nFilterIndex = 1;
-	ofn.nMaxFile = MAX_FITTLE_PATH;
-	ofn.nMaxFileTitle = MAX_FITTLE_PATH;
-	ofn.Flags = OFN_HIDEREADONLY;
-	ofn.lpstrDefExt = TEXT("exe");
-	ofn.lpstrTitle = pszMsg;
+	if (WAIsUnicode) {
+		for (i = 0; filter.W[i]; i++) if (filter.W[i] == L';') filter.W[i] = L'\0';
+		ofn.W.lStructSize = sizeof(OPENFILENAMEW);
+		ofn.W.hwndOwner = hWnd;
+		ofn.W.lpstrFilter = filter.W;
+		ofn.W.lpstrFile = file.W;
+		ofn.W.lpstrFileTitle = title.W;
+		ofn.W.lpstrInitialDir = pPath->W;
+		ofn.W.nFilterIndex = 1;
+		ofn.W.nMaxFile = WA_MAX_SIZE;
+		ofn.W.nMaxFileTitle = WA_MAX_SIZE;
+		ofn.W.Flags = OFN_HIDEREADONLY;
+		ofn.W.lpstrDefExt = defext.W;
+		ofn.W.lpstrTitle = msg.W;
+		if(GetOpenFileNameW(&ofn.W)==0) return FALSE;
+	} else {
+		for (i = 0; filter.A[i]; i++) if (filter.A[i] == L';') filter.A[i] = L'\0';
+		ofn.A.lStructSize = sizeof(OPENFILENAMEA);
+		ofn.A.hwndOwner = hWnd;
+		ofn.A.lpstrFilter = filter.A;
+		ofn.A.lpstrFile = file.A;
+		ofn.A.lpstrFileTitle = title.A;
+		ofn.A.lpstrInitialDir = pPath->A;
+		ofn.A.nFilterIndex = 1;
+		ofn.A.nMaxFile = WA_MAX_SIZE;
+		ofn.A.nMaxFileTitle = WA_MAX_SIZE;
+		ofn.A.Flags = OFN_HIDEREADONLY;
+		ofn.A.lpstrDefExt = defext.A;
+		ofn.A.lpstrTitle = msg.A;
+		if(GetOpenFileNameA(&ofn.A)==0) return FALSE;
+	}
 
-	if(GetOpenFileName(&ofn)==0) return FALSE;
-	lstrcpyn(szPath, szFile, MAX_FITTLE_PATH);
+	WAstrcpy(pPath, &file);
+	return TRUE;
+}
+
+static BOOL WABrowseForFolder(LPWASTR pPath, HWND hWnd, LPCSTR pszMsg){
+	union {
+		BROWSEINFOA A;
+		BROWSEINFOW W;
+	} bi;
+	WASTR msg;
+	LPITEMIDLIST pidl;
+	WAstrcpyA(&msg, pszMsg);
+
+	ZeroMemory(&bi, sizeof(bi));
+	if (WAIsUnicode) {
+		bi.W.hwndOwner = hWnd;
+		bi.W.lpszTitle = msg.W;
+		pidl = SHBrowseForFolderW(&bi.W);
+	} else {
+		bi.A.hwndOwner = hWnd;
+		bi.A.lpszTitle = msg.A;
+		pidl = SHBrowseForFolderA(&bi.A);
+	}
+	if (!pidl) return FALSE;
+	if (WAIsUnicode)
+		SHGetPathFromIDListW(pidl, pPath->W);
+	else
+		SHGetPathFromIDListA(pidl, pPath->A);
+	CoTaskMemFree(pidl);
+	return TRUE;
+}
+
+static BOOL WAChooseFont(LPWASTR pFontName, int *pFontHeight, int *pFontStyle, HWND hWnd){
+	union {
+		CHOOSEFONTW W;
+		CHOOSEFONTA A;
+	} cf;
+	union {
+		LOGFONTW W;
+		LOGFONTA A;
+	} lf;
+	HDC hDC;
+
+	hDC = GetDC(hWnd);
+	if (!hDC) return FALSE;
+	ZeroMemory(&lf, sizeof(lf));
+	if (WAIsUnicode) {
+		lstrcpynW(lf.W.lfFaceName, pFontName->W, LF_FACESIZE);
+		lf.W.lfHeight = -MulDiv(*pFontHeight, GetDeviceCaps(hDC, LOGPIXELSY), 72);
+		lf.W.lfItalic = (m_cfg.nFontStyle&ITALIC_FONTTYPE?TRUE:FALSE);
+		lf.W.lfWeight = (m_cfg.nFontStyle&BOLD_FONTTYPE?FW_BOLD:0);
+	} else {
+		lstrcpynA(lf.A.lfFaceName, pFontName->A, LF_FACESIZE);
+		lf.A.lfHeight = -MulDiv(*pFontHeight, GetDeviceCaps(hDC, LOGPIXELSY), 72);
+		lf.A.lfItalic = (m_cfg.nFontStyle&ITALIC_FONTTYPE?TRUE:FALSE);
+		lf.A.lfWeight = (m_cfg.nFontStyle&BOLD_FONTTYPE?FW_BOLD:0);
+	}
+	ReleaseDC(hWnd, hDC);
+
+	ZeroMemory(&cf, sizeof(cf));
+	if (WAIsUnicode) {
+		lf.W.lfCharSet = SHIFTJIS_CHARSET;
+		cf.W.lStructSize = sizeof(CHOOSEFONTW);
+		cf.W.hwndOwner = hWnd;
+		cf.W.lpLogFont = &lf.W;
+		cf.W.Flags = CF_SCREENFONTS | CF_INITTOLOGFONTSTRUCT | CF_NOSCRIPTSEL;
+		cf.W.nFontType = SCREEN_FONTTYPE;
+		if(!ChooseFontW(&cf.W)) return FALSE;
+		lstrcpynW(pFontName->W, lf.W.lfFaceName, LF_FACESIZE);
+		*pFontStyle = cf.W.nFontType;
+		*pFontHeight = cf.W.iPointSize / 10;
+	} else {
+		lf.A.lfCharSet = SHIFTJIS_CHARSET;
+		cf.A.lStructSize = sizeof(CHOOSEFONTA);
+		cf.A.hwndOwner = hWnd;
+		cf.A.lpLogFont = &lf.A;
+		cf.A.Flags = CF_SCREENFONTS | CF_INITTOLOGFONTSTRUCT | CF_NOSCRIPTSEL;
+		cf.A.nFontType = SCREEN_FONTTYPE;
+		if(!ChooseFontA(&cf.A)) return FALSE;
+		lstrcpynA(pFontName->A, lf.A.lfFaceName, LF_FACESIZE);
+		*pFontStyle = cf.A.nFontType;
+		*pFontHeight = cf.A.iPointSize / 10;
+	}
 	return TRUE;
 }
 
 static BOOL GeneralCheckChanged(HWND hDlg){
-	if (g_cfg.nExistCheck != (int)SendDlgItemMessage(hDlg, IDC_CHECK12, BM_GETCHECK, 0, 0)) return TRUE;
-	if (g_cfg.nTimeInList != (int)SendDlgItemMessage(hDlg, IDC_CHECK1, BM_GETCHECK, 0, 0)) return TRUE;
-	if (g_cfg.nTagReverse != (int)SendDlgItemMessage(hDlg, IDC_CHECK2, BM_GETCHECK, 0, 0)) return TRUE;
-	if (g_cfg.nResume != (int)SendDlgItemMessage(hDlg, IDC_CHECK3, BM_GETCHECK, 0, 0)) return TRUE;
-	if (g_cfg.nResPosFlag != (int)SendDlgItemMessage(hDlg, IDC_CHECK10, BM_GETCHECK, 0, 0)) return TRUE;
-	if (g_cfg.nHighTask != (int)SendDlgItemMessage(hDlg, IDC_CHECK4, BM_GETCHECK, 0, 0)) return TRUE;
-	if (g_cfg.nCloseMin != (int)SendDlgItemMessage(hDlg, IDC_CHECK5, BM_GETCHECK, 0, 0)) return TRUE;
-	if (g_cfg.nZipSearch != (int)SendDlgItemMessage(hDlg, IDC_CHECK6, BM_GETCHECK, 0, 0)) return TRUE;
-	if (g_cfg.nSeekAmount != GetDlgItemInt(hDlg, IDC_COMBO1, NULL, FALSE)) return TRUE;
-	if (g_cfg.nOut32bit != (int)SendDlgItemMessage(hDlg, IDC_CHECK13, BM_GETCHECK, 0, 0)) return TRUE;
-	if (g_cfg.nReplayGainMode != SendDlgItemMessage(hDlg, IDC_COMBO2, CB_GETCURSEL, (WPARAM)0, (LPARAM)0)) return TRUE;
-	if (g_cfg.nReplayGainMixer != SendDlgItemMessage(hDlg, IDC_COMBO3, CB_GETCURSEL, (WPARAM)0, (LPARAM)0)) return TRUE;
-	if (g_cfg.nReplayGainAmp != SendDlgItemMessage(hDlg, IDC_SPIN1, UDM_GETPOS, (WPARAM)0, (LPARAM)0)) return TRUE;
-	if (g_cfg.nFadeOut != (int)SendDlgItemMessage(hDlg, IDC_CHECK14, BM_GETCHECK, 0, 0)) return TRUE;
+	if (m_cfg.nExistCheck != (int)SendDlgItemMessage(hDlg, IDC_CHECK12, BM_GETCHECK, 0, 0)) return TRUE;
+	if (m_cfg.nTimeInList != (int)SendDlgItemMessage(hDlg, IDC_CHECK1, BM_GETCHECK, 0, 0)) return TRUE;
+	if (m_cfg.nTagReverse != (int)SendDlgItemMessage(hDlg, IDC_CHECK2, BM_GETCHECK, 0, 0)) return TRUE;
+	if (m_cfg.nResume != (int)SendDlgItemMessage(hDlg, IDC_CHECK3, BM_GETCHECK, 0, 0)) return TRUE;
+	if (m_cfg.nResPosFlag != (int)SendDlgItemMessage(hDlg, IDC_CHECK10, BM_GETCHECK, 0, 0)) return TRUE;
+	if (m_cfg.nHighTask != (int)SendDlgItemMessage(hDlg, IDC_CHECK4, BM_GETCHECK, 0, 0)) return TRUE;
+	if (m_cfg.nCloseMin != (int)SendDlgItemMessage(hDlg, IDC_CHECK5, BM_GETCHECK, 0, 0)) return TRUE;
+	if (m_cfg.nZipSearch != (int)SendDlgItemMessage(hDlg, IDC_CHECK6, BM_GETCHECK, 0, 0)) return TRUE;
+	if (m_cfg.nSeekAmount != GetDlgItemInt(hDlg, IDC_COMBO1, NULL, FALSE)) return TRUE;
+	if (m_cfg.nOut32bit != (int)SendDlgItemMessage(hDlg, IDC_CHECK13, BM_GETCHECK, 0, 0)) return TRUE;
+	if (m_cfg.nReplayGainMode != SendDlgItemMessage(hDlg, IDC_COMBO2, CB_GETCURSEL, (WPARAM)0, (LPARAM)0)) return TRUE;
+	if (m_cfg.nReplayGainMixer != SendDlgItemMessage(hDlg, IDC_COMBO3, CB_GETCURSEL, (WPARAM)0, (LPARAM)0)) return TRUE;
+	if (m_cfg.nReplayGainPostAmp != SendDlgItemMessage(hDlg, IDC_SPIN1, UDM_GETPOS, (WPARAM)0, (LPARAM)0)) return TRUE;
+	if (m_cfg.nFadeOut != (int)SendDlgItemMessage(hDlg, IDC_CHECK14, BM_GETCHECK, 0, 0)) return TRUE;
 	return FALSE;
 }
 
 static BOOL CALLBACK GeneralSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
+	int i;
 	switch(msg)
 	{
 		case WM_INITDIALOG:
-			int i;
-			TCHAR szBuff[3];
 
 			LoadConfig();
 		
-			SendDlgItemMessage(hDlg, IDC_CHECK12, BM_SETCHECK, (WPARAM)g_cfg.nExistCheck, 0);
-			/*if(!g_cfg.nExistCheck){
+			SendDlgItemMessage(hDlg, IDC_CHECK12, BM_SETCHECK, (WPARAM)m_cfg.nExistCheck, 0);
+			/*if(!m_cfg.nExistCheck){
 				EnableWindow(GetDlgItem(hDlg, IDC_CHECK1), FALSE);
 			}*/
-			SendDlgItemMessage(hDlg, IDC_CHECK1, BM_SETCHECK, (WPARAM)g_cfg.nTimeInList, 0);
-			SendDlgItemMessage(hDlg, IDC_CHECK2, BM_SETCHECK, (WPARAM)g_cfg.nTagReverse, 0);
-			SendDlgItemMessage(hDlg, IDC_CHECK3, BM_SETCHECK, (WPARAM)g_cfg.nResume, 0);
-			SendDlgItemMessage(hDlg, IDC_CHECK10, BM_SETCHECK, (WPARAM)g_cfg.nResPosFlag, 0);
-			if(!g_cfg.nResume){
+			SendDlgItemMessage(hDlg, IDC_CHECK1, BM_SETCHECK, (WPARAM)m_cfg.nTimeInList, 0);
+			SendDlgItemMessage(hDlg, IDC_CHECK2, BM_SETCHECK, (WPARAM)m_cfg.nTagReverse, 0);
+			SendDlgItemMessage(hDlg, IDC_CHECK3, BM_SETCHECK, (WPARAM)m_cfg.nResume, 0);
+			SendDlgItemMessage(hDlg, IDC_CHECK10, BM_SETCHECK, (WPARAM)m_cfg.nResPosFlag, 0);
+			if(!m_cfg.nResume){
 				EnableWindow(GetDlgItem(hDlg, IDC_CHECK10), FALSE);
 			}
-			SendDlgItemMessage(hDlg, IDC_CHECK4, BM_SETCHECK, (WPARAM)g_cfg.nHighTask, 0);
-			SendDlgItemMessage(hDlg, IDC_CHECK5, BM_SETCHECK, (WPARAM)g_cfg.nCloseMin, 0);
-			SendDlgItemMessage(hDlg, IDC_CHECK6, BM_SETCHECK, (WPARAM)g_cfg.nZipSearch, 0);
+			SendDlgItemMessage(hDlg, IDC_CHECK4, BM_SETCHECK, (WPARAM)m_cfg.nHighTask, 0);
+			SendDlgItemMessage(hDlg, IDC_CHECK5, BM_SETCHECK, (WPARAM)m_cfg.nCloseMin, 0);
+			SendDlgItemMessage(hDlg, IDC_CHECK6, BM_SETCHECK, (WPARAM)m_cfg.nZipSearch, 0);
 			for(i=1;i<=60;i++){
-				wsprintf(szBuff, TEXT("%d"), i);
-				SendDlgItemMessage(hDlg, IDC_COMBO1, CB_ADDSTRING, (WPARAM)0, (LPARAM)szBuff);
+				CHAR szBuff[3];
+				wsprintfA(szBuff, "%d", i);
+				SendDlgItemMessageA(hDlg, IDC_COMBO1, CB_ADDSTRING, (WPARAM)0, (LPARAM)szBuff);
 			}
-			SendDlgItemMessage(hDlg, IDC_COMBO1, CB_SETCURSEL, (WPARAM)g_cfg.nSeekAmount-1, (LPARAM)0);
+			SendDlgItemMessage(hDlg, IDC_COMBO1, CB_SETCURSEL, (WPARAM)m_cfg.nSeekAmount-1, (LPARAM)0);
 
 			if (SendF4B24Message(WM_F4B24_IPC_GET_CAPABLE, WM_F4B24_IPC_GET_CAPABLE_LP_FLOATOUTPUT) == WM_F4B24_IPC_GET_CAPABLE_RET_NOT_SUPPORTED){
 				EnableWindow(GetDlgItem(hDlg, IDC_CHECK13), FALSE);
 			}
 
-			SendDlgItemMessage(hDlg, IDC_CHECK13, BM_SETCHECK, (WPARAM)g_cfg.nOut32bit, 0);
+			SendDlgItemMessage(hDlg, IDC_CHECK13, BM_SETCHECK, (WPARAM)m_cfg.nOut32bit, 0);
 
 			SendDlgItemMessage(hDlg, IDC_COMBO2, CB_INSERTSTRING, (WPARAM)0, (LPARAM)TEXT("off"));
 			SendDlgItemMessage(hDlg, IDC_COMBO2, CB_INSERTSTRING, (WPARAM)1, (LPARAM)TEXT("album gain"));
@@ -350,37 +485,37 @@ static BOOL CALLBACK GeneralSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 			SendDlgItemMessage(hDlg, IDC_COMBO2, CB_INSERTSTRING, (WPARAM)4, (LPARAM)TEXT("track peak"));
 			SendDlgItemMessage(hDlg, IDC_COMBO2, CB_INSERTSTRING, (WPARAM)5, (LPARAM)TEXT("album gain limited by peak"));
 			SendDlgItemMessage(hDlg, IDC_COMBO2, CB_INSERTSTRING, (WPARAM)6, (LPARAM)TEXT("track gain limited by peak"));
-			SendDlgItemMessage(hDlg, IDC_COMBO2, CB_SETCURSEL, (WPARAM)g_cfg.nReplayGainMode, (LPARAM)0);
+			SendDlgItemMessage(hDlg, IDC_COMBO2, CB_SETCURSEL, (WPARAM)m_cfg.nReplayGainMode, (LPARAM)0);
 
 			SendDlgItemMessage(hDlg, IDC_COMBO3, CB_INSERTSTRING, (WPARAM)0, (LPARAM)TEXT("内蔵"));
 			SendDlgItemMessage(hDlg, IDC_COMBO3, CB_INSERTSTRING, (WPARAM)1, (LPARAM)TEXT("増幅のみ内蔵"));
 			SendDlgItemMessage(hDlg, IDC_COMBO3, CB_INSERTSTRING, (WPARAM)2, (LPARAM)TEXT("BASS(増幅不可)"));
-			SendDlgItemMessage(hDlg, IDC_COMBO3, CB_SETCURSEL, (WPARAM)g_cfg.nReplayGainMixer, (LPARAM)0);
+			SendDlgItemMessage(hDlg, IDC_COMBO3, CB_SETCURSEL, (WPARAM)m_cfg.nReplayGainMixer, (LPARAM)0);
 
 			SendDlgItemMessage(hDlg, IDC_SPIN1, UDM_SETRANGE, (WPARAM)0, (LPARAM)MAKELONG(999, 1));
-			SendDlgItemMessage(hDlg, IDC_SPIN1, UDM_SETPOS, (WPARAM)0, (LPARAM)MAKELONG(g_cfg.nReplayGainAmp, 0));
+			SendDlgItemMessage(hDlg, IDC_SPIN1, UDM_SETPOS, (WPARAM)0, (LPARAM)MAKELONG(m_cfg.nReplayGainPostAmp, 0));
 
-			SendDlgItemMessage(hDlg, IDC_CHECK14, BM_SETCHECK, (WPARAM)g_cfg.nFadeOut, 0);
+			SendDlgItemMessage(hDlg, IDC_CHECK14, BM_SETCHECK, (WPARAM)m_cfg.nFadeOut, 0);
 			return TRUE;
 
 		case WM_NOTIFY:
 			if(((NMHDR *)lp)->code==PSN_APPLY){
-				g_cfg.nExistCheck = (int)SendDlgItemMessage(hDlg, IDC_CHECK12, BM_GETCHECK, 0, 0);
-				g_cfg.nTimeInList = (int)SendDlgItemMessage(hDlg, IDC_CHECK1, BM_GETCHECK, 0, 0);
-				g_cfg.nTagReverse = (int)SendDlgItemMessage(hDlg, IDC_CHECK2, BM_GETCHECK, 0, 0);
-				g_cfg.nResume = (int)SendDlgItemMessage(hDlg, IDC_CHECK3, BM_GETCHECK, 0, 0);
-				g_cfg.nResPosFlag = (int)SendDlgItemMessage(hDlg, IDC_CHECK10, BM_GETCHECK, 0, 0);
-				g_cfg.nHighTask = (int)SendDlgItemMessage(hDlg, IDC_CHECK4, BM_GETCHECK, 0, 0);
+				m_cfg.nExistCheck = (int)SendDlgItemMessage(hDlg, IDC_CHECK12, BM_GETCHECK, 0, 0);
+				m_cfg.nTimeInList = (int)SendDlgItemMessage(hDlg, IDC_CHECK1, BM_GETCHECK, 0, 0);
+				m_cfg.nTagReverse = (int)SendDlgItemMessage(hDlg, IDC_CHECK2, BM_GETCHECK, 0, 0);
+				m_cfg.nResume = (int)SendDlgItemMessage(hDlg, IDC_CHECK3, BM_GETCHECK, 0, 0);
+				m_cfg.nResPosFlag = (int)SendDlgItemMessage(hDlg, IDC_CHECK10, BM_GETCHECK, 0, 0);
+				m_cfg.nHighTask = (int)SendDlgItemMessage(hDlg, IDC_CHECK4, BM_GETCHECK, 0, 0);
 
-				g_cfg.nCloseMin = (int)SendDlgItemMessage(hDlg, IDC_CHECK5, BM_GETCHECK, 0, 0);
-				g_cfg.nZipSearch = (int)SendDlgItemMessage(hDlg, IDC_CHECK6, BM_GETCHECK, 0, 0);
+				m_cfg.nCloseMin = (int)SendDlgItemMessage(hDlg, IDC_CHECK5, BM_GETCHECK, 0, 0);
+				m_cfg.nZipSearch = (int)SendDlgItemMessage(hDlg, IDC_CHECK6, BM_GETCHECK, 0, 0);
 
-				g_cfg.nSeekAmount = GetDlgItemInt(hDlg, IDC_COMBO1, NULL, FALSE);
-				g_cfg.nOut32bit = (int)SendDlgItemMessage(hDlg, IDC_CHECK13, BM_GETCHECK, 0, 0);
-				g_cfg.nReplayGainMode = (int)SendDlgItemMessage(hDlg, IDC_COMBO2, CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
-				g_cfg.nReplayGainMixer = (int)SendDlgItemMessage(hDlg, IDC_COMBO3, CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
-				g_cfg.nReplayGainAmp = (int)SendDlgItemMessage(hDlg, IDC_SPIN1, UDM_GETPOS, (WPARAM)0, (LPARAM)0);
-				g_cfg.nFadeOut = (int)SendDlgItemMessage(hDlg, IDC_CHECK14, BM_GETCHECK, 0, 0);
+				m_cfg.nSeekAmount = GetDlgItemInt(hDlg, IDC_COMBO1, NULL, FALSE);
+				m_cfg.nOut32bit = (int)SendDlgItemMessage(hDlg, IDC_CHECK13, BM_GETCHECK, 0, 0);
+				m_cfg.nReplayGainMode = (int)SendDlgItemMessage(hDlg, IDC_COMBO2, CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
+				m_cfg.nReplayGainMixer = (int)SendDlgItemMessage(hDlg, IDC_COMBO3, CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
+				m_cfg.nReplayGainPostAmp = (int)SendDlgItemMessage(hDlg, IDC_SPIN1, UDM_GETPOS, (WPARAM)0, (LPARAM)0);
+				m_cfg.nFadeOut = (int)SendDlgItemMessage(hDlg, IDC_CHECK14, BM_GETCHECK, 0, 0);
 				SaveConfig();
 				ApplyFittle();
 				return TRUE;
@@ -415,26 +550,26 @@ static BOOL CALLBACK GeneralSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 }
 
 static BOOL PathCheckChanged(HWND hDlg){
-	TCHAR szBuff[MAX_FITTLE_PATH];
-	GetDlgItemText(hDlg, IDC_EDIT1, szBuff, MAX_FITTLE_PATH);
-	if (lstrcmp(g_cfg.szStartPath, szBuff) != 0) return TRUE;
-	GetDlgItemText(hDlg, IDC_EDIT3, szBuff, MAX_FITTLE_PATH);
-	if (lstrcmp(g_cfg.szFilerPath, szBuff) != 0) return TRUE;
-	GetDlgItemText(hDlg, IDC_EDIT4, szBuff, MAX_FITTLE_PATH);
-	if (lstrcmp(g_cfg.szToolPath, szBuff) != 0) return TRUE;
+	WASTR buf;
+	WAGetDlgItemText(hDlg, IDC_EDIT1, &buf);
+	if (WAstrcmp(&m_cfg.szStartPath, &buf) != 0) return TRUE;
+	WAGetDlgItemText(hDlg, IDC_EDIT3, &buf);
+	if (WAstrcmp(&m_cfg.szFilerPath, &buf) != 0) return TRUE;
+	WAGetDlgItemText(hDlg, IDC_EDIT4, &buf);
+	if (WAstrcmp(&m_cfg.szToolPath, &buf) != 0) return TRUE;
 	return FALSE;
 }
 
 static BOOL CALLBACK PathSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
-	TCHAR szBuff[MAX_FITTLE_PATH];
+	WASTR buf;
 	switch(msg)
 	{
 		case WM_INITDIALOG:
 			LoadConfig();
 
-			SetWindowText(GetDlgItem(hDlg, IDC_EDIT1), g_cfg.szStartPath);
-			SetWindowText(GetDlgItem(hDlg, IDC_EDIT3), g_cfg.szFilerPath);
-			SetWindowText(GetDlgItem(hDlg, IDC_EDIT4), g_cfg.szToolPath);
+			WASetDlgItemText(hDlg, IDC_EDIT1, &m_cfg.szStartPath);
+			WASetDlgItemText(hDlg, IDC_EDIT3, &m_cfg.szFilerPath);
+			WASetDlgItemText(hDlg, IDC_EDIT4, &m_cfg.szToolPath);
 			SetDlgItemText(hDlg, IDC_STATIC4, TEXT(""));
 			PostF4B24Message(WM_F4B24_IPC_GET_SUPPORT_LIST, (LPARAM)GetDlgItem(hDlg, IDC_STATIC4));
 
@@ -442,9 +577,9 @@ static BOOL CALLBACK PathSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 
 		case WM_NOTIFY:
 			if(((NMHDR *)lp)->code==PSN_APPLY){
-				GetDlgItemText(hDlg, IDC_EDIT1, g_cfg.szStartPath, MAX_FITTLE_PATH);
-				GetDlgItemText(hDlg, IDC_EDIT3, g_cfg.szFilerPath, MAX_FITTLE_PATH);
-				GetDlgItemText(hDlg, IDC_EDIT4, g_cfg.szToolPath, MAX_FITTLE_PATH);
+				WAGetDlgItemText(hDlg, IDC_EDIT1, &m_cfg.szStartPath);
+				WAGetDlgItemText(hDlg, IDC_EDIT3, &m_cfg.szFilerPath);
+				WAGetDlgItemText(hDlg, IDC_EDIT4, &m_cfg.szToolPath);
 				SaveConfig();
 				ApplyFittle();
 				return TRUE;
@@ -453,28 +588,20 @@ static BOOL CALLBACK PathSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 		
 		case WM_COMMAND:
 			if(LOWORD(wp)==IDC_BUTTON1){
-				BROWSEINFO bi;
-				LPITEMIDLIST pidl;
-
-				ZeroMemory(&bi, sizeof(BROWSEINFO));
-				bi.hwndOwner = GetParent(hDlg);
-				bi.lpszTitle = TEXT("起動時に開くフォルダを選択してください");
-				pidl = SHBrowseForFolder(&bi);
-				if(pidl){
-					SHGetPathFromIDList(pidl, szBuff);
-					CoTaskMemFree(pidl);
-					SetDlgItemText(hDlg, IDC_EDIT1, szBuff);
+				WAGetDlgItemText(hDlg, IDC_EDIT1, &buf);
+				if(WABrowseForFolder(&buf, hDlg, "起動時に開くフォルダを選択してください")){
+					WASetDlgItemText(hDlg, IDC_EDIT1, &buf);
 				}
 			}else if(LOWORD(wp)==IDC_BUTTON2){
 				// TODO 一緒にする
-				GetWindowText(GetDlgItem(hDlg, IDC_EDIT3), szBuff, MAX_FITTLE_PATH);
-				if(OpenFilerPath(szBuff, hDlg, TEXT("ファイラを選択してください"))){
-					SetWindowText(GetDlgItem(hDlg, IDC_EDIT3), szBuff);
+				WAGetDlgItemText(hDlg, IDC_EDIT3, &buf);
+				if(WAOpenFilerPath(&buf, hDlg, "ファイラを選択してください", "実行ファイル(*.exe);*.exe;", "exe")){
+					WASetDlgItemText(hDlg, IDC_EDIT3, &buf);
 				}
 			}else if(LOWORD(wp)==IDC_BUTTON3){
-				GetWindowText(GetDlgItem(hDlg, IDC_EDIT4), szBuff, MAX_FITTLE_PATH);
-				if(OpenFilerPath(szBuff, hDlg, TEXT("外部ツールを選択してください"))){
-					SetWindowText(GetDlgItem(hDlg, IDC_EDIT4), szBuff);
+				WAGetDlgItemText(hDlg, IDC_EDIT4, &buf);
+				if(WAOpenFilerPath(&buf, hDlg, "外部ツールを選択してください", "実行ファイル(*.exe);*.exe;", "exe")){
+					WASetDlgItemText(hDlg, IDC_EDIT4, &buf);
 				}
 			}
 
@@ -494,7 +621,7 @@ static BOOL CALLBACK PathSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 static struct ControlSheetWork {
 	int nFontHeight;
 	int nFontStyle;
-	TCHAR szFontName[LF_FACESIZE];
+	WASTR szFontName;
 	int nBkColor;
 	int nTextColor;
 	int nPlayTxtCol;
@@ -511,24 +638,24 @@ static int Get_nPlayView(HWND hDlg){
 }
 
 static BOOL ControlCheckChanged(HWND hDlg){
-	if (g_cfg.nTreeIcon !=(int)SendDlgItemMessage(hDlg, IDC_CHECK1, BM_GETCHECK, 0, 0)) return TRUE;
-	if (g_cfg.nHideShow !=(int)SendDlgItemMessage(hDlg, IDC_CHECK2, BM_GETCHECK, 0, 0)) return TRUE;
-	if (g_cfg.nAllSub !=(int)SendDlgItemMessage(hDlg, IDC_CHECK3, BM_GETCHECK, 0, 0)) return TRUE;
-	if (g_cfg.nPathTip !=(int)SendDlgItemMessage(hDlg, IDC_CHECK4, BM_GETCHECK, 0, 0)) return TRUE;
-	if (g_cfg.nGridLine !=(int)SendDlgItemMessage(hDlg, IDC_CHECK5, BM_GETCHECK, 0, 0)) return TRUE;
-	if (g_cfg.nShowHeader !=(int)SendDlgItemMessage(hDlg, IDC_CHECK6, BM_GETCHECK, 0, 0)) return TRUE;
-	if (g_cfg.nTabHide !=(int)SendDlgItemMessage(hDlg, IDC_CHECK7, BM_GETCHECK, 0, 0)) return TRUE;
-	if (g_cfg.nTabBottom !=(int)SendDlgItemMessage(hDlg, IDC_CHECK8, BM_GETCHECK, 0, 0)) return TRUE;
-	if (g_cfg.nSingleExpand !=(int)SendDlgItemMessage(hDlg, IDC_CHECK9, BM_GETCHECK, 0, 0)) return TRUE;	
-	if (g_cfg.nTabMulti !=(int)SendDlgItemMessage(hDlg, IDC_CHECK11, BM_GETCHECK, 0, 0)) return TRUE;	
-	if (g_cfg.nPlayView !=Get_nPlayView(hDlg)) return TRUE;
-	if (g_cfg.nTextColor !=m_csw.nTextColor) return TRUE;
-	if (g_cfg.nBkColor !=m_csw.nBkColor) return TRUE;
-	if (g_cfg.nPlayTxtCol !=m_csw.nPlayTxtCol) return TRUE;
-	if (g_cfg.nPlayBkCol !=m_csw.nPlayBkCol) return TRUE;
-	if (lstrcmp(g_cfg.szFontName, m_csw.szFontName) != 0) return TRUE;
-	if (g_cfg.nFontHeight !=m_csw.nFontHeight) return TRUE;
-	if (g_cfg.nFontStyle !=m_csw.nFontStyle) return TRUE;
+	if (m_cfg.nTreeIcon !=(int)SendDlgItemMessage(hDlg, IDC_CHECK1, BM_GETCHECK, 0, 0)) return TRUE;
+	if (m_cfg.nHideShow !=(int)SendDlgItemMessage(hDlg, IDC_CHECK2, BM_GETCHECK, 0, 0)) return TRUE;
+	if (m_cfg.nAllSub !=(int)SendDlgItemMessage(hDlg, IDC_CHECK3, BM_GETCHECK, 0, 0)) return TRUE;
+	if (m_cfg.nPathTip !=(int)SendDlgItemMessage(hDlg, IDC_CHECK4, BM_GETCHECK, 0, 0)) return TRUE;
+	if (m_cfg.nGridLine !=(int)SendDlgItemMessage(hDlg, IDC_CHECK5, BM_GETCHECK, 0, 0)) return TRUE;
+	if (m_cfg.nShowHeader !=(int)SendDlgItemMessage(hDlg, IDC_CHECK6, BM_GETCHECK, 0, 0)) return TRUE;
+	if (m_cfg.nTabHide !=(int)SendDlgItemMessage(hDlg, IDC_CHECK7, BM_GETCHECK, 0, 0)) return TRUE;
+	if (m_cfg.nTabBottom !=(int)SendDlgItemMessage(hDlg, IDC_CHECK8, BM_GETCHECK, 0, 0)) return TRUE;
+	if (m_cfg.nSingleExpand !=(int)SendDlgItemMessage(hDlg, IDC_CHECK9, BM_GETCHECK, 0, 0)) return TRUE;	
+	if (m_cfg.nTabMulti !=(int)SendDlgItemMessage(hDlg, IDC_CHECK11, BM_GETCHECK, 0, 0)) return TRUE;	
+	if (m_cfg.nPlayView !=Get_nPlayView(hDlg)) return TRUE;
+	if (m_cfg.nTextColor !=m_csw.nTextColor) return TRUE;
+	if (m_cfg.nBkColor !=m_csw.nBkColor) return TRUE;
+	if (m_cfg.nPlayTxtCol !=m_csw.nPlayTxtCol) return TRUE;
+	if (m_cfg.nPlayBkCol !=m_csw.nPlayBkCol) return TRUE;
+	if (WAstrcmp(&m_cfg.szFontName, &m_csw.szFontName) != 0) return TRUE;
+	if (m_cfg.nFontHeight !=m_csw.nFontHeight) return TRUE;
+	if (m_cfg.nFontStyle !=m_csw.nFontStyle) return TRUE;
 	return FALSE;
 }
 
@@ -541,46 +668,46 @@ static BOOL CALLBACK ControlSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 
 			LoadConfig();
 
-			SendDlgItemMessage(hDlg, IDC_CHECK1, BM_SETCHECK, (WPARAM)g_cfg.nTreeIcon, 0);
-			SendDlgItemMessage(hDlg, IDC_CHECK2, BM_SETCHECK, (WPARAM)g_cfg.nHideShow, 0);
-			SendDlgItemMessage(hDlg, IDC_CHECK3, BM_SETCHECK, (WPARAM)g_cfg.nAllSub, 0);
-			SendDlgItemMessage(hDlg, IDC_CHECK4, BM_SETCHECK, (WPARAM)g_cfg.nPathTip, 0);
-			SendDlgItemMessage(hDlg, IDC_CHECK5, BM_SETCHECK, (WPARAM)g_cfg.nGridLine, 0);
-			SendDlgItemMessage(hDlg, IDC_CHECK6, BM_SETCHECK, (WPARAM)g_cfg.nShowHeader, 0);
-			SendDlgItemMessage(hDlg, IDC_CHECK7, BM_SETCHECK, (WPARAM)g_cfg.nTabHide, 0);
-			SendDlgItemMessage(hDlg, IDC_CHECK8, BM_SETCHECK, (WPARAM)g_cfg.nTabBottom, 0);
-			SendDlgItemMessage(hDlg, IDC_CHECK9, BM_SETCHECK, (WPARAM)g_cfg.nSingleExpand, 0);
-			SendDlgItemMessage(hDlg, IDC_CHECK11, BM_SETCHECK, (WPARAM)g_cfg.nTabMulti, 0);
-			SendDlgItemMessage(hDlg, IDC_RADIO1 + g_cfg.nPlayView, BM_SETCHECK, (WPARAM)BST_CHECKED, 0);
-			m_csw.nFontHeight = g_cfg.nFontHeight;
-			m_csw.nFontStyle = g_cfg.nFontStyle;
-			lstrcpyn(m_csw.szFontName, g_cfg.szFontName, LF_FACESIZE);
-			m_csw.nTextColor = g_cfg.nTextColor;
-			m_csw.nBkColor = g_cfg.nBkColor;
-			m_csw.nPlayTxtCol = g_cfg.nPlayTxtCol;
-			m_csw.nPlayBkCol = g_cfg.nPlayBkCol;
+			SendDlgItemMessage(hDlg, IDC_CHECK1, BM_SETCHECK, (WPARAM)m_cfg.nTreeIcon, 0);
+			SendDlgItemMessage(hDlg, IDC_CHECK2, BM_SETCHECK, (WPARAM)m_cfg.nHideShow, 0);
+			SendDlgItemMessage(hDlg, IDC_CHECK3, BM_SETCHECK, (WPARAM)m_cfg.nAllSub, 0);
+			SendDlgItemMessage(hDlg, IDC_CHECK4, BM_SETCHECK, (WPARAM)m_cfg.nPathTip, 0);
+			SendDlgItemMessage(hDlg, IDC_CHECK5, BM_SETCHECK, (WPARAM)m_cfg.nGridLine, 0);
+			SendDlgItemMessage(hDlg, IDC_CHECK6, BM_SETCHECK, (WPARAM)m_cfg.nShowHeader, 0);
+			SendDlgItemMessage(hDlg, IDC_CHECK7, BM_SETCHECK, (WPARAM)m_cfg.nTabHide, 0);
+			SendDlgItemMessage(hDlg, IDC_CHECK8, BM_SETCHECK, (WPARAM)m_cfg.nTabBottom, 0);
+			SendDlgItemMessage(hDlg, IDC_CHECK9, BM_SETCHECK, (WPARAM)m_cfg.nSingleExpand, 0);
+			SendDlgItemMessage(hDlg, IDC_CHECK11, BM_SETCHECK, (WPARAM)m_cfg.nTabMulti, 0);
+			SendDlgItemMessage(hDlg, IDC_RADIO1 + m_cfg.nPlayView, BM_SETCHECK, (WPARAM)BST_CHECKED, 0);
+			m_csw.nFontHeight = m_cfg.nFontHeight;
+			m_csw.nFontStyle = m_cfg.nFontStyle;
+			WAstrcpy(&m_csw.szFontName, &m_cfg.szFontName);
+			m_csw.nTextColor = m_cfg.nTextColor;
+			m_csw.nBkColor = m_cfg.nBkColor;
+			m_csw.nPlayTxtCol = m_cfg.nPlayTxtCol;
+			m_csw.nPlayBkCol = m_cfg.nPlayBkCol;
 			return TRUE;
 
 		case WM_NOTIFY:
 			if(((NMHDR *)lp)->code==PSN_APPLY){
-				g_cfg.nTreeIcon = (int)SendDlgItemMessage(hDlg, IDC_CHECK1, BM_GETCHECK, 0, 0);
-				g_cfg.nHideShow = (int)SendDlgItemMessage(hDlg, IDC_CHECK2, BM_GETCHECK, 0, 0);
-				g_cfg.nAllSub = (int)SendDlgItemMessage(hDlg, IDC_CHECK3, BM_GETCHECK, 0, 0);
-				g_cfg.nPathTip = (int)SendDlgItemMessage(hDlg, IDC_CHECK4, BM_GETCHECK, 0, 0);
-				g_cfg.nGridLine = (int)SendDlgItemMessage(hDlg, IDC_CHECK5, BM_GETCHECK, 0, 0);
-				g_cfg.nShowHeader = (int)SendDlgItemMessage(hDlg, IDC_CHECK6, BM_GETCHECK, 0, 0);
-				g_cfg.nTabHide = (int)SendDlgItemMessage(hDlg, IDC_CHECK7, BM_GETCHECK, 0, 0);
-				g_cfg.nTabBottom = (int)SendDlgItemMessage(hDlg, IDC_CHECK8, BM_GETCHECK, 0, 0);
-				g_cfg.nSingleExpand = (int)SendDlgItemMessage(hDlg, IDC_CHECK9, BM_GETCHECK, 0, 0);	
-				g_cfg.nTabMulti = (int)SendDlgItemMessage(hDlg, IDC_CHECK11, BM_GETCHECK, 0, 0);	
-				g_cfg.nPlayView = Get_nPlayView(hDlg);
-				g_cfg.nTextColor = m_csw.nTextColor;
-				g_cfg.nBkColor = m_csw.nBkColor;
-				g_cfg.nPlayTxtCol = m_csw.nPlayTxtCol;
-				g_cfg.nPlayBkCol = m_csw.nPlayBkCol;
-				lstrcpyn(g_cfg.szFontName, m_csw.szFontName, LF_FACESIZE);
-				g_cfg.nFontHeight = m_csw.nFontHeight;
-				g_cfg.nFontStyle = m_csw.nFontStyle;
+				m_cfg.nTreeIcon = (int)SendDlgItemMessage(hDlg, IDC_CHECK1, BM_GETCHECK, 0, 0);
+				m_cfg.nHideShow = (int)SendDlgItemMessage(hDlg, IDC_CHECK2, BM_GETCHECK, 0, 0);
+				m_cfg.nAllSub = (int)SendDlgItemMessage(hDlg, IDC_CHECK3, BM_GETCHECK, 0, 0);
+				m_cfg.nPathTip = (int)SendDlgItemMessage(hDlg, IDC_CHECK4, BM_GETCHECK, 0, 0);
+				m_cfg.nGridLine = (int)SendDlgItemMessage(hDlg, IDC_CHECK5, BM_GETCHECK, 0, 0);
+				m_cfg.nShowHeader = (int)SendDlgItemMessage(hDlg, IDC_CHECK6, BM_GETCHECK, 0, 0);
+				m_cfg.nTabHide = (int)SendDlgItemMessage(hDlg, IDC_CHECK7, BM_GETCHECK, 0, 0);
+				m_cfg.nTabBottom = (int)SendDlgItemMessage(hDlg, IDC_CHECK8, BM_GETCHECK, 0, 0);
+				m_cfg.nSingleExpand = (int)SendDlgItemMessage(hDlg, IDC_CHECK9, BM_GETCHECK, 0, 0);	
+				m_cfg.nTabMulti = (int)SendDlgItemMessage(hDlg, IDC_CHECK11, BM_GETCHECK, 0, 0);	
+				m_cfg.nPlayView = Get_nPlayView(hDlg);
+				m_cfg.nTextColor = m_csw.nTextColor;
+				m_cfg.nBkColor = m_csw.nBkColor;
+				m_cfg.nPlayTxtCol = m_csw.nPlayTxtCol;
+				m_cfg.nPlayBkCol = m_csw.nPlayBkCol;
+				WAstrcpy(&m_cfg.szFontName, &m_csw.szFontName);
+				m_cfg.nFontHeight = m_csw.nFontHeight;
+				m_cfg.nFontStyle = m_csw.nFontStyle;
 				SaveConfig();
 				ApplyFittle();
 				return TRUE;
@@ -591,30 +718,7 @@ static BOOL CALLBACK ControlSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 			switch(LOWORD(wp))
 			{
 				case IDC_BUTTON2:
-					CHOOSEFONT cf;
-					LOGFONT lf;
-					HDC hDC;
-
-					hDC = GetDC(hDlg);
-					ZeroMemory(&lf, sizeof(LOGFONT));
-					lstrcpyn(lf.lfFaceName, m_csw.szFontName, LF_FACESIZE);
-					lf.lfHeight = -MulDiv(m_csw.nFontHeight, GetDeviceCaps(hDC, LOGPIXELSY), 72);
-					lf.lfItalic = (g_cfg.nFontStyle&ITALIC_FONTTYPE?TRUE:FALSE);
-					lf.lfWeight = (g_cfg.nFontStyle&BOLD_FONTTYPE?FW_BOLD:0);
-					ReleaseDC(hDlg, hDC);
-
-					ZeroMemory(&cf, sizeof(CHOOSEFONT));
-					lf.lfCharSet = SHIFTJIS_CHARSET;
-					cf.lStructSize = sizeof(CHOOSEFONT);
-					cf.hwndOwner = hDlg;
-					cf.lpLogFont = &lf;
-					cf.Flags = CF_SCREENFONTS | CF_INITTOLOGFONTSTRUCT | CF_NOSCRIPTSEL;
-					cf.nFontType = SCREEN_FONTTYPE;
-					if(ChooseFont(&cf)){
-						lstrcpyn(m_csw.szFontName, lf.lfFaceName, LF_FACESIZE);
-						m_csw.nFontStyle = cf.nFontType;
-						m_csw.nFontHeight = cf.iPointSize / 10;
-					}
+					WAChooseFont(&m_csw.szFontName, &m_csw.nFontHeight, &m_csw.nFontStyle, hDlg);
 					break;
 
 				case IDC_BUTTON3:
@@ -657,7 +761,7 @@ static BOOL CALLBACK ControlSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 					m_csw.nTextColor = (int)GetSysColor(COLOR_WINDOWTEXT);
 					m_csw.nPlayTxtCol = (int)RGB(0xFF, 0, 0);
 					m_csw.nPlayBkCol = (int)RGB(230, 234, 238);
-					m_csw.szFontName[0] = '\0';
+					WAstrcpyA(&m_csw.szFontName, "");
 					break;
 
 				default:
@@ -679,7 +783,7 @@ static BOOL CALLBACK ControlSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 
 static BOOL HotKeyCheckChanged(HWND hDlg){
 	for(int i=0;i<HOTKEY_COUNT;i++){
-		if (g_cfg.nHotKey[i] != (int)SendDlgItemMessage(hDlg, IDC_HOTKEY1 + i, HKM_GETHOTKEY, 0, 0)) return TRUE;
+		if (m_cfg.nHotKey[i] != (int)SendDlgItemMessage(hDlg, IDC_HOTKEY1 + i, HKM_GETHOTKEY, 0, 0)) return TRUE;
 	}
 	return FALSE;
 }
@@ -694,7 +798,7 @@ static BOOL CALLBACK HotKeySheetProc(HWND hDlg, UINT msg, WPARAM /*wp*/, LPARAM 
 
 			for(i=0;i<HOTKEY_COUNT;i++){
 				SendDlgItemMessage(hDlg, IDC_HOTKEY1 + i, HKM_SETRULES, (WPARAM)HKCOMB_NONE, MAKELPARAM(HOTKEYF_ALT, 0));
-				SendDlgItemMessage(hDlg, IDC_HOTKEY1 + i, HKM_SETHOTKEY, (WPARAM)g_cfg.nHotKey[i], 0);
+				SendDlgItemMessage(hDlg, IDC_HOTKEY1 + i, HKM_SETHOTKEY, (WPARAM)m_cfg.nHotKey[i], 0);
 			}
 			return TRUE;
 
@@ -708,7 +812,7 @@ static BOOL CALLBACK HotKeySheetProc(HWND hDlg, UINT msg, WPARAM /*wp*/, LPARAM 
 		case WM_NOTIFY:
 			if(((NMHDR *)lp)->code==PSN_APPLY){
 				for(i=0;i<HOTKEY_COUNT;i++){
-					g_cfg.nHotKey[i] = (int)SendDlgItemMessage(hDlg, IDC_HOTKEY1 + i, HKM_GETHOTKEY, 0, 0);
+					m_cfg.nHotKey[i] = (int)SendDlgItemMessage(hDlg, IDC_HOTKEY1 + i, HKM_GETHOTKEY, 0, 0);
 				}
 				SaveConfig();
 				ApplyFittle();
@@ -829,10 +933,10 @@ static int Get_nInfoTip(HWND hDlg){
 }
 
 static BOOL TaskTrayCheckChanged(HWND hDlg){
-	if (g_cfg.nTrayOpt != Get_nTrayOpt(hDlg)) return TRUE;
-	if (g_cfg.nInfoTip != Get_nInfoTip(hDlg)) return TRUE;
+	if (m_cfg.nTrayOpt != Get_nTrayOpt(hDlg)) return TRUE;
+	if (m_cfg.nInfoTip != Get_nInfoTip(hDlg)) return TRUE;
 	for(int i=0;i<6;i++){
-		if (g_cfg.nTrayClick[i] != SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_GETCURSEL, (WPARAM)0, (LPARAM)0)) return TRUE;
+		if (m_cfg.nTrayClick[i] != SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_GETCURSEL, (WPARAM)0, (LPARAM)0)) return TRUE;
 	}
 	return FALSE;
 }
@@ -844,8 +948,8 @@ static BOOL CALLBACK TaskTraySheetProc(HWND hDlg, UINT msg, WPARAM /*wp*/, LPARA
 
 			LoadConfig();
 
-			SendDlgItemMessage(hDlg, IDC_RADIO1 + g_cfg.nTrayOpt, BM_SETCHECK, (WPARAM)BST_CHECKED, 0);
-			SendDlgItemMessage(hDlg, IDC_RADIO7 + g_cfg.nInfoTip, BM_SETCHECK, (WPARAM)BST_CHECKED, 0);
+			SendDlgItemMessage(hDlg, IDC_RADIO1 + m_cfg.nTrayOpt, BM_SETCHECK, (WPARAM)BST_CHECKED, 0);
+			SendDlgItemMessage(hDlg, IDC_RADIO7 + m_cfg.nInfoTip, BM_SETCHECK, (WPARAM)BST_CHECKED, 0);
 			for(i=0;i<6;i++){
 				SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)0, (LPARAM)TEXT("なし"));
 				SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)1, (LPARAM)TEXT("再生"));
@@ -857,7 +961,7 @@ static BOOL CALLBACK TaskTraySheetProc(HWND hDlg, UINT msg, WPARAM /*wp*/, LPARA
 				SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)7, (LPARAM)TEXT("終了"));
 				SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)8, (LPARAM)TEXT("メニュー表示"));
 				SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_INSERTSTRING, (WPARAM)9, (LPARAM)TEXT("再生/一時停止"));
-				SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_SETCURSEL, (WPARAM)g_cfg.nTrayClick[i], (LPARAM)0);
+				SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_SETCURSEL, (WPARAM)m_cfg.nTrayClick[i], (LPARAM)0);
 			}
 			return TRUE;
 
@@ -870,10 +974,10 @@ static BOOL CALLBACK TaskTraySheetProc(HWND hDlg, UINT msg, WPARAM /*wp*/, LPARA
 
 		case WM_NOTIFY:
 			if(((NMHDR *)lp)->code==PSN_APPLY){
-				g_cfg.nTrayOpt = Get_nTrayOpt(hDlg);
-				g_cfg.nInfoTip = Get_nInfoTip(hDlg);
+				m_cfg.nTrayOpt = Get_nTrayOpt(hDlg);
+				m_cfg.nInfoTip = Get_nInfoTip(hDlg);
 				for(int i=0;i<6;i++){
-					g_cfg.nTrayClick[i] = SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
+					m_cfg.nTrayClick[i] = SendDlgItemMessage(hDlg, IDC_COMBO1+i, CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
 				}
 				SaveConfig();
 				ApplyFittle();
@@ -890,45 +994,63 @@ static DWORD CALLBACK GetConfigPageCount(void){
 	return 5 + 1;
 }
 
+#ifndef PROPSHEETPAGE_V1
+#define PROPSHEETPAGEA_V1 PROPSHEETPAGEA
+#define PROPSHEETPAGEW_V1 PROPSHEETPAGEW
+#endif
 static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel, LPSTR pszConfigPath, int nConfigPathSize){
-	PROPSHEETPAGE psp;
-	psp.dwSize = sizeof (PROPSHEETPAGE);
-	psp.dwFlags = PSP_DEFAULT;
-	psp.hInstance = hDLL;
+	union {
+		PROPSHEETPAGEA_V1 A;
+		PROPSHEETPAGEW_V1 W;
+	} psp;
+	WASTR dlgtemp;
+	LPCSTR lpszTemplate, lpszPath;
+	DLGPROC lpfnDlgProc = 0;
 	if (nLevel == 0){
 		if (nIndex == 0){
-			psp.pszTemplate = TEXT("GENERAL_SHEET");
-			psp.pfnDlgProc = (DLGPROC)GeneralSheetProc;
-			lstrcpynA(pszConfigPath, "fittle/general", nConfigPathSize);
-			return CreatePropertySheetPage(&psp);
+			lpszTemplate = "GENERAL_SHEET";
+			lpfnDlgProc = (DLGPROC)GeneralSheetProc;
+			lpszPath = "fittle/general";
 		} else if (nIndex == 1){
-			psp.pszTemplate = TEXT("PATH_SHEET");
-			psp.pfnDlgProc = (DLGPROC)PathSheetProc;
-			lstrcpynA(pszConfigPath, "fittle/path", nConfigPathSize);
-			return CreatePropertySheetPage(&psp);
+			lpszTemplate = "PATH_SHEET";
+			lpfnDlgProc = (DLGPROC)PathSheetProc;
+			lpszPath = "fittle/path";
 		} else if (nIndex == 2){
-			psp.pszTemplate = TEXT("CONTROL_SHEET");
-			psp.pfnDlgProc = (DLGPROC)ControlSheetProc;
-			lstrcpynA(pszConfigPath, "fittle/control", nConfigPathSize);
-			return CreatePropertySheetPage(&psp);
+			lpszTemplate = "CONTROL_SHEET";
+			lpfnDlgProc = (DLGPROC)ControlSheetProc;
+			lpszPath = "fittle/control";
 		} else if (nIndex == 3){
-			psp.pszTemplate = TEXT("TASKTRAY_SHEET");
-			psp.pfnDlgProc = (DLGPROC)TaskTraySheetProc;
-			lstrcpynA(pszConfigPath, "fittle/tasktray", nConfigPathSize);
-			return CreatePropertySheetPage(&psp);
+			lpszTemplate = "TASKTRAY_SHEET";
+			lpfnDlgProc = (DLGPROC)TaskTraySheetProc;
+			lpszPath = "fittle/tasktray";
 		} else if (nIndex == 4){
-			psp.pszTemplate = TEXT("HOTKEY_SHEET");
-			psp.pfnDlgProc = (DLGPROC)HotKeySheetProc;
-			lstrcpynA(pszConfigPath, "fittle/hotkey", nConfigPathSize);
-			return CreatePropertySheetPage(&psp);
+			lpszTemplate = "HOTKEY_SHEET";
+			lpfnDlgProc = (DLGPROC)HotKeySheetProc;
+			lpszPath = "fittle/hotkey";
 		}
 	} else if (nLevel == 3){
 		if (nIndex == 0){
-			psp.pszTemplate = TEXT("ABOUT_SHEET");
-			psp.pfnDlgProc = (DLGPROC)AboutSheetProc;
-			lstrcpynA(pszConfigPath, "fittle/about", nConfigPathSize);
-			return CreatePropertySheetPage(&psp);
+			lpszTemplate = "ABOUT_SHEET";
+			lpfnDlgProc = (DLGPROC)AboutSheetProc;
+			lpszPath = "fittle/about";
 		}
 	}
-	return 0;
+	if (!lpfnDlgProc) return NULL;
+	lstrcpynA(pszConfigPath, lpszPath, nConfigPathSize);
+	WAstrcpyA(&dlgtemp, lpszTemplate);;
+	if (WAIsUnicode) {
+		psp.W.dwSize = sizeof (PROPSHEETPAGEW_V1);
+		psp.W.dwFlags = PSP_DEFAULT;
+		psp.W.hInstance = hDLL;
+		psp.W.pszTemplate = dlgtemp.W;
+		psp.W.pfnDlgProc = (DLGPROC)lpfnDlgProc;
+		return CreatePropertySheetPageW(&psp.W);
+	} else {
+		psp.A.dwSize = sizeof (PROPSHEETPAGEA_V1);
+		psp.A.dwFlags = PSP_DEFAULT;
+		psp.A.hInstance = hDLL;
+		psp.A.pszTemplate = dlgtemp.A;
+		psp.A.pfnDlgProc = (DLGPROC)lpfnDlgProc;
+		return CreatePropertySheetPageA(&psp.A);
+	}
 }

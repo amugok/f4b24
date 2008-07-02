@@ -2497,11 +2497,13 @@ static void LoadConfig(){
 	// 停止時にフェードアウトする
 	g_cfg.nFadeOut = GetPrivateProfileInt(TEXT("Main"), TEXT("FadeOut"), 1, m_szINIPath);
 	// ReplayGainの適用方法
-	g_cfg.nReplayGainMode = GetPrivateProfileInt(TEXT("Main"), TEXT("ReplayGainMode"), 1, m_szINIPath);
+	g_cfg.nReplayGainMode = GetPrivateProfileInt(TEXT("ReplayGain"), TEXT("Mode"), 1, m_szINIPath);
 	// 音量増幅方法
-	g_cfg.nReplayGainMixer = GetPrivateProfileInt(TEXT("Main"), TEXT("ReplayGainMixer"), 1, m_szINIPath);
-	// 音量増幅値(%)
-	g_cfg.nReplayGainAmp = GetPrivateProfileInt(TEXT("Main"), TEXT("ReplayGainAmp"), 100, m_szINIPath);
+	g_cfg.nReplayGainMixer = GetPrivateProfileInt(TEXT("ReplayGain"), TEXT("Mixer"), 1, m_szINIPath);
+	// PreAmp(%)
+	g_cfg.nReplayGainPreAmp = GetPrivateProfileInt(TEXT("ReplayGain"), TEXT("PreAmp"), 100, m_szINIPath);
+	// PostAmp(%)
+	g_cfg.nReplayGainPostAmp = GetPrivateProfileInt(TEXT("ReplayGain"), TEXT("PostAmp"), 100, m_szINIPath);
 	// スタートアップフォルダ読み込み
 	GetPrivateProfileString(TEXT("Main"), TEXT("StartPath"), TEXT(""), g_cfg.szStartPath, MAX_FITTLE_PATH, m_szINIPath);
 	// ファイラのパス
@@ -2864,7 +2866,7 @@ static DWORD CALLBACK MainStreamProc(HSTREAM handle, void *buf, DWORD len, void 
 }
 
 static float CalcBassVolume(DWORD dwVol){
-	float fVol = g_cfg.nReplayGainAmp * g_cInfo[g_bNow].sGain * dwVol / (float)(SLIDER_DIVIDED * 100);
+	float fVol = g_cfg.nReplayGainPostAmp * g_cInfo[g_bNow].sGain * dwVol / (float)(SLIDER_DIVIDED * 100);
 	switch (g_cfg.nReplayGainMixer) {
 	case 0:
 		/*  内蔵 */
