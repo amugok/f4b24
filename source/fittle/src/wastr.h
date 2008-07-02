@@ -118,4 +118,136 @@ static void WAGetDlgItemText(HWND hDlg, int iItemID, LPWASTR pBuf){
 	WAGetWindowText(GetDlgItem(hDlg, iItemID), pBuf);
 }
 
+static BOOL WAOpenFilerPath(LPWASTR pPath, HWND hWnd, LPCSTR pszMsg, LPCSTR pszFilter, LPCSTR pszDefExt){
+	union {
+		OPENFILENAMEA A;
+		OPENFILENAMEW W;
+	} ofn;
+	int i;
+	WASTR msg, filter, defext, file, title;
+	WAstrcpyA(&msg, pszMsg);
+	WAstrcpyA(&filter, pszFilter);
+	WAstrcpyA(&defext, pszDefExt);
+	WAstrcpyA(&file, "");
+	WAstrcpyA(&title, "");
+
+	ZeroMemory(&ofn, sizeof(ofn));
+	if (WAIsUnicode) {
+		for (i = 0; filter.W[i]; i++) if (filter.W[i] == L';') filter.W[i] = L'\0';
+		ofn.W.lStructSize = sizeof(OPENFILENAMEW);
+		ofn.W.hwndOwner = hWnd;
+		ofn.W.lpstrFilter = filter.W;
+		ofn.W.lpstrFile = file.W;
+		ofn.W.lpstrFileTitle = title.W;
+		ofn.W.lpstrInitialDir = pPath->W;
+		ofn.W.nFilterIndex = 1;
+		ofn.W.nMaxFile = WA_MAX_SIZE;
+		ofn.W.nMaxFileTitle = WA_MAX_SIZE;
+		ofn.W.Flags = OFN_HIDEREADONLY;
+		ofn.W.lpstrDefExt = defext.W;
+		ofn.W.lpstrTitle = msg.W;
+		if(GetOpenFileNameW(&ofn.W)==0) return FALSE;
+	} else {
+		for (i = 0; filter.A[i]; i++) if (filter.A[i] == L';') filter.A[i] = L'\0';
+		ofn.A.lStructSize = sizeof(OPENFILENAMEA);
+		ofn.A.hwndOwner = hWnd;
+		ofn.A.lpstrFilter = filter.A;
+		ofn.A.lpstrFile = file.A;
+		ofn.A.lpstrFileTitle = title.A;
+		ofn.A.lpstrInitialDir = pPath->A;
+		ofn.A.nFilterIndex = 1;
+		ofn.A.nMaxFile = WA_MAX_SIZE;
+		ofn.A.nMaxFileTitle = WA_MAX_SIZE;
+		ofn.A.Flags = OFN_HIDEREADONLY;
+		ofn.A.lpstrDefExt = defext.A;
+		ofn.A.lpstrTitle = msg.A;
+		if(GetOpenFileNameA(&ofn.A)==0) return FALSE;
+	}
+
+	WAstrcpy(pPath, &file);
+	return TRUE;
+}
+
+static BOOL WABrowseForFolder(LPWASTR pPath, HWND hWnd, LPCSTR pszMsg){
+	union {
+		BROWSEINFOA A;
+		BROWSEINFOW W;
+	} bi;
+	WASTR msg;
+	LPITEMIDLIST pidl;
+	WAstrcpyA(&msg, pszMsg);
+
+	ZeroMemory(&bi, sizeof(bi));
+	if (WAIsUnicode) {
+		bi.W.hwndOwner = hWnd;
+		bi.W.lpszTitle = msg.W;
+		pidl = SHBrowseForFolderW(&bi.W);
+	} else {
+		bi.A.hwndOwner = hWnd;
+		bi.A.lpszTitle = msg.A;
+		pidl = SHBrowseForFolderA(&bi.A);
+	}
+	if (!pidl) return FALSE;
+	if (WAIsUnicode)
+		SHGetPathFromIDListW(pidl, pPath->W);
+	else
+		SHGetPathFromIDListA(pidl, pPath->A);
+	CoTaskMemFree(pidl);
+	return TRUE;
+}
+
+static BOOL WAChooseFont(LPWASTR pFontName, int *pFontHeight, int *pFontStyle, HWND hWnd){
+	union {
+		CHOOSEFONTW W;
+		CHOOSEFONTA A;
+	} cf;
+	union {
+		LOGFONTW W;
+		LOGFONTA A;
+	} lf;
+	HDC hDC;
+
+	hDC = GetDC(hWnd);
+	if (!hDC) return FALSE;
+	ZeroMemory(&lf, sizeof(lf));
+	if (WAIsUnicode) {
+		lstrcpynW(lf.W.lfFaceName, pFontName->W, LF_FACESIZE);
+		lf.W.lfHeight = -MulDiv(*pFontHeight, GetDeviceCaps(hDC, LOGPIXELSY), 72);
+		lf.W.lfItalic = (*pFontStyle&ITALIC_FONTTYPE?TRUE:FALSE);
+		lf.W.lfWeight = (*pFontStyle&BOLD_FONTTYPE?FW_BOLD:0);
+	} else {
+		lstrcpynA(lf.A.lfFaceName, pFontName->A, LF_FACESIZE);
+		lf.A.lfHeight = -MulDiv(*pFontHeight, GetDeviceCaps(hDC, LOGPIXELSY), 72);
+		lf.A.lfItalic = (*pFontStyle&ITALIC_FONTTYPE?TRUE:FALSE);
+		lf.A.lfWeight = (*pFontStyle&BOLD_FONTTYPE?FW_BOLD:0);
+	}
+	ReleaseDC(hWnd, hDC);
+
+	ZeroMemory(&cf, sizeof(cf));
+	if (WAIsUnicode) {
+		lf.W.lfCharSet = SHIFTJIS_CHARSET;
+		cf.W.lStructSize = sizeof(CHOOSEFONTW);
+		cf.W.hwndOwner = hWnd;
+		cf.W.lpLogFont = &lf.W;
+		cf.W.Flags = CF_SCREENFONTS | CF_INITTOLOGFONTSTRUCT | CF_NOSCRIPTSEL;
+		cf.W.nFontType = SCREEN_FONTTYPE;
+		if(!ChooseFontW(&cf.W)) return FALSE;
+		lstrcpynW(pFontName->W, lf.W.lfFaceName, LF_FACESIZE);
+		*pFontStyle = cf.W.nFontType;
+		*pFontHeight = cf.W.iPointSize / 10;
+	} else {
+		lf.A.lfCharSet = SHIFTJIS_CHARSET;
+		cf.A.lStructSize = sizeof(CHOOSEFONTA);
+		cf.A.hwndOwner = hWnd;
+		cf.A.lpLogFont = &lf.A;
+		cf.A.Flags = CF_SCREENFONTS | CF_INITTOLOGFONTSTRUCT | CF_NOSCRIPTSEL;
+		cf.A.nFontType = SCREEN_FONTTYPE;
+		if(!ChooseFontA(&cf.A)) return FALSE;
+		lstrcpynA(pFontName->A, lf.A.lfFaceName, LF_FACESIZE);
+		*pFontStyle = cf.A.nFontType;
+		*pFontHeight = cf.A.iPointSize / 10;
+	}
+	return TRUE;
+}
+
 #endif

@@ -1,6 +1,5 @@
 #include "../../../fittle/src/fittle.h"
 #include "../../../fittle/src/f4b24.h"
-#include "../../../fittle/src/plugin.h"
 #include "../cplugin.h"
 #include "fittle.rh"
 
@@ -61,12 +60,6 @@ static struct {
 	int nCloseMin;				// 閉じるボタンで最小化する
 	int nZipSearch;				// サブフォルダを検索で圧縮ファイルも検索する
 	int nTabHide;				// タブが一つの時はタブを隠す
-	int nOut32bit;				// 32bit(float)で出力する
-	int nFadeOut;				// 停止時にフェードアウトする
-	int nReplayGainMode;		// ReplayGainの適用方法
-	int nReplayGainMixer;		// 音量増幅方法
-	int nReplayGainPreAmp;		// PreAmp(%)
-	int nReplayGainPostAmp;		// PostAmp(%)
 
 	WASTR szStartPath;	// スタートアップパス
 	WASTR szFilerPath;	// ファイラのパス
@@ -187,18 +180,6 @@ static void LoadConfig(){
 	m_cfg.nZipSearch = WAGetIniInt("Main", "ZipSearch", 0);
 	// タブが一つの時はタブを隠す
 	m_cfg.nTabHide = WAGetIniInt("Main", "TabHide", 0);
-	// 32bit(float)で出力する
-	m_cfg.nOut32bit = WAGetIniInt("Main", "Out32bit", 0);
-	// 停止時にフェードアウトする
-	m_cfg.nFadeOut = WAGetIniInt("Main", "FadeOut", 1);
-	// ReplayGainの適用方法
-	m_cfg.nReplayGainMode = WAGetIniInt("ReplayGain", "Mode", 1);
-	// 音量増幅方法
-	m_cfg.nReplayGainMixer = WAGetIniInt("ReplayGain", "Mixer", 1);
-	// PreAmp(%)
-	m_cfg.nReplayGainPreAmp = WAGetIniInt("ReplayGain", "PreAmp", 100);
-	// PostAmp(%)
-	m_cfg.nReplayGainPostAmp = WAGetIniInt("ReplayGain", "PostAmp", 100);
 	// スタートアップフォルダ読み込み
 	WAGetIniStr("Main", "StartPath", &m_cfg.szStartPath);
 	// ファイラのパス
@@ -260,12 +241,6 @@ static void SaveConfig(){
 	WASetIniInt("Main", "CloseMin", m_cfg.nCloseMin);
 	WASetIniInt("Main", "ZipSearch", m_cfg.nZipSearch);
 	WASetIniInt("Main", "TabHide", m_cfg.nTabHide);
-	WASetIniInt("Main", "Out32bit", m_cfg.nOut32bit);
-	WASetIniInt("Main", "FadeOut", m_cfg.nFadeOut);
-	WASetIniInt("ReplayGain", "Mode", m_cfg.nReplayGainMode);
-	WASetIniInt("ReplayGain", "Mixer", m_cfg.nReplayGainMixer);
-	WASetIniInt("ReplayGain", "PreAmp", m_cfg.nReplayGainPreAmp);
-	WASetIniInt("ReplayGain", "PostAmp", m_cfg.nReplayGainPostAmp);
 
 	WASetIniStr("Main", "StartPath", &m_cfg.szStartPath);
 	WASetIniStr("Main", "FilerPath", &m_cfg.szFilerPath);
@@ -293,138 +268,6 @@ static void SaveConfig(){
 	WAFlushIni();
 }
 
-static BOOL WAOpenFilerPath(LPWASTR pPath, HWND hWnd, LPCSTR pszMsg, LPCSTR pszFilter, LPCSTR pszDefExt){
-	union {
-		OPENFILENAMEA A;
-		OPENFILENAMEW W;
-	} ofn;
-	int i;
-	WASTR msg, filter, defext, file, title;
-	WAstrcpyA(&msg, pszMsg);
-	WAstrcpyA(&filter, pszFilter);
-	WAstrcpyA(&defext, pszDefExt);
-	WAstrcpyA(&file, "");
-	WAstrcpyA(&title, "");
-
-	ZeroMemory(&ofn, sizeof(ofn));
-	if (WAIsUnicode) {
-		for (i = 0; filter.W[i]; i++) if (filter.W[i] == L';') filter.W[i] = L'\0';
-		ofn.W.lStructSize = sizeof(OPENFILENAMEW);
-		ofn.W.hwndOwner = hWnd;
-		ofn.W.lpstrFilter = filter.W;
-		ofn.W.lpstrFile = file.W;
-		ofn.W.lpstrFileTitle = title.W;
-		ofn.W.lpstrInitialDir = pPath->W;
-		ofn.W.nFilterIndex = 1;
-		ofn.W.nMaxFile = WA_MAX_SIZE;
-		ofn.W.nMaxFileTitle = WA_MAX_SIZE;
-		ofn.W.Flags = OFN_HIDEREADONLY;
-		ofn.W.lpstrDefExt = defext.W;
-		ofn.W.lpstrTitle = msg.W;
-		if(GetOpenFileNameW(&ofn.W)==0) return FALSE;
-	} else {
-		for (i = 0; filter.A[i]; i++) if (filter.A[i] == L';') filter.A[i] = L'\0';
-		ofn.A.lStructSize = sizeof(OPENFILENAMEA);
-		ofn.A.hwndOwner = hWnd;
-		ofn.A.lpstrFilter = filter.A;
-		ofn.A.lpstrFile = file.A;
-		ofn.A.lpstrFileTitle = title.A;
-		ofn.A.lpstrInitialDir = pPath->A;
-		ofn.A.nFilterIndex = 1;
-		ofn.A.nMaxFile = WA_MAX_SIZE;
-		ofn.A.nMaxFileTitle = WA_MAX_SIZE;
-		ofn.A.Flags = OFN_HIDEREADONLY;
-		ofn.A.lpstrDefExt = defext.A;
-		ofn.A.lpstrTitle = msg.A;
-		if(GetOpenFileNameA(&ofn.A)==0) return FALSE;
-	}
-
-	WAstrcpy(pPath, &file);
-	return TRUE;
-}
-
-static BOOL WABrowseForFolder(LPWASTR pPath, HWND hWnd, LPCSTR pszMsg){
-	union {
-		BROWSEINFOA A;
-		BROWSEINFOW W;
-	} bi;
-	WASTR msg;
-	LPITEMIDLIST pidl;
-	WAstrcpyA(&msg, pszMsg);
-
-	ZeroMemory(&bi, sizeof(bi));
-	if (WAIsUnicode) {
-		bi.W.hwndOwner = hWnd;
-		bi.W.lpszTitle = msg.W;
-		pidl = SHBrowseForFolderW(&bi.W);
-	} else {
-		bi.A.hwndOwner = hWnd;
-		bi.A.lpszTitle = msg.A;
-		pidl = SHBrowseForFolderA(&bi.A);
-	}
-	if (!pidl) return FALSE;
-	if (WAIsUnicode)
-		SHGetPathFromIDListW(pidl, pPath->W);
-	else
-		SHGetPathFromIDListA(pidl, pPath->A);
-	CoTaskMemFree(pidl);
-	return TRUE;
-}
-
-static BOOL WAChooseFont(LPWASTR pFontName, int *pFontHeight, int *pFontStyle, HWND hWnd){
-	union {
-		CHOOSEFONTW W;
-		CHOOSEFONTA A;
-	} cf;
-	union {
-		LOGFONTW W;
-		LOGFONTA A;
-	} lf;
-	HDC hDC;
-
-	hDC = GetDC(hWnd);
-	if (!hDC) return FALSE;
-	ZeroMemory(&lf, sizeof(lf));
-	if (WAIsUnicode) {
-		lstrcpynW(lf.W.lfFaceName, pFontName->W, LF_FACESIZE);
-		lf.W.lfHeight = -MulDiv(*pFontHeight, GetDeviceCaps(hDC, LOGPIXELSY), 72);
-		lf.W.lfItalic = (m_cfg.nFontStyle&ITALIC_FONTTYPE?TRUE:FALSE);
-		lf.W.lfWeight = (m_cfg.nFontStyle&BOLD_FONTTYPE?FW_BOLD:0);
-	} else {
-		lstrcpynA(lf.A.lfFaceName, pFontName->A, LF_FACESIZE);
-		lf.A.lfHeight = -MulDiv(*pFontHeight, GetDeviceCaps(hDC, LOGPIXELSY), 72);
-		lf.A.lfItalic = (m_cfg.nFontStyle&ITALIC_FONTTYPE?TRUE:FALSE);
-		lf.A.lfWeight = (m_cfg.nFontStyle&BOLD_FONTTYPE?FW_BOLD:0);
-	}
-	ReleaseDC(hWnd, hDC);
-
-	ZeroMemory(&cf, sizeof(cf));
-	if (WAIsUnicode) {
-		lf.W.lfCharSet = SHIFTJIS_CHARSET;
-		cf.W.lStructSize = sizeof(CHOOSEFONTW);
-		cf.W.hwndOwner = hWnd;
-		cf.W.lpLogFont = &lf.W;
-		cf.W.Flags = CF_SCREENFONTS | CF_INITTOLOGFONTSTRUCT | CF_NOSCRIPTSEL;
-		cf.W.nFontType = SCREEN_FONTTYPE;
-		if(!ChooseFontW(&cf.W)) return FALSE;
-		lstrcpynW(pFontName->W, lf.W.lfFaceName, LF_FACESIZE);
-		*pFontStyle = cf.W.nFontType;
-		*pFontHeight = cf.W.iPointSize / 10;
-	} else {
-		lf.A.lfCharSet = SHIFTJIS_CHARSET;
-		cf.A.lStructSize = sizeof(CHOOSEFONTA);
-		cf.A.hwndOwner = hWnd;
-		cf.A.lpLogFont = &lf.A;
-		cf.A.Flags = CF_SCREENFONTS | CF_INITTOLOGFONTSTRUCT | CF_NOSCRIPTSEL;
-		cf.A.nFontType = SCREEN_FONTTYPE;
-		if(!ChooseFontA(&cf.A)) return FALSE;
-		lstrcpynA(pFontName->A, lf.A.lfFaceName, LF_FACESIZE);
-		*pFontStyle = cf.A.nFontType;
-		*pFontHeight = cf.A.iPointSize / 10;
-	}
-	return TRUE;
-}
-
 static BOOL GeneralCheckChanged(HWND hDlg){
 	if (m_cfg.nExistCheck != (int)SendDlgItemMessage(hDlg, IDC_CHECK12, BM_GETCHECK, 0, 0)) return TRUE;
 	if (m_cfg.nTimeInList != (int)SendDlgItemMessage(hDlg, IDC_CHECK1, BM_GETCHECK, 0, 0)) return TRUE;
@@ -435,11 +278,6 @@ static BOOL GeneralCheckChanged(HWND hDlg){
 	if (m_cfg.nCloseMin != (int)SendDlgItemMessage(hDlg, IDC_CHECK5, BM_GETCHECK, 0, 0)) return TRUE;
 	if (m_cfg.nZipSearch != (int)SendDlgItemMessage(hDlg, IDC_CHECK6, BM_GETCHECK, 0, 0)) return TRUE;
 	if (m_cfg.nSeekAmount != GetDlgItemInt(hDlg, IDC_COMBO1, NULL, FALSE)) return TRUE;
-	if (m_cfg.nOut32bit != (int)SendDlgItemMessage(hDlg, IDC_CHECK13, BM_GETCHECK, 0, 0)) return TRUE;
-	if (m_cfg.nReplayGainMode != SendDlgItemMessage(hDlg, IDC_COMBO2, CB_GETCURSEL, (WPARAM)0, (LPARAM)0)) return TRUE;
-	if (m_cfg.nReplayGainMixer != SendDlgItemMessage(hDlg, IDC_COMBO3, CB_GETCURSEL, (WPARAM)0, (LPARAM)0)) return TRUE;
-	if (m_cfg.nReplayGainPostAmp != SendDlgItemMessage(hDlg, IDC_SPIN1, UDM_GETPOS, (WPARAM)0, (LPARAM)0)) return TRUE;
-	if (m_cfg.nFadeOut != (int)SendDlgItemMessage(hDlg, IDC_CHECK14, BM_GETCHECK, 0, 0)) return TRUE;
 	return FALSE;
 }
 
@@ -472,30 +310,6 @@ static BOOL CALLBACK GeneralSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 			}
 			SendDlgItemMessage(hDlg, IDC_COMBO1, CB_SETCURSEL, (WPARAM)m_cfg.nSeekAmount-1, (LPARAM)0);
 
-			if (SendF4B24Message(WM_F4B24_IPC_GET_CAPABLE, WM_F4B24_IPC_GET_CAPABLE_LP_FLOATOUTPUT) == WM_F4B24_IPC_GET_CAPABLE_RET_NOT_SUPPORTED){
-				EnableWindow(GetDlgItem(hDlg, IDC_CHECK13), FALSE);
-			}
-
-			SendDlgItemMessage(hDlg, IDC_CHECK13, BM_SETCHECK, (WPARAM)m_cfg.nOut32bit, 0);
-
-			SendDlgItemMessage(hDlg, IDC_COMBO2, CB_INSERTSTRING, (WPARAM)0, (LPARAM)TEXT("off"));
-			SendDlgItemMessage(hDlg, IDC_COMBO2, CB_INSERTSTRING, (WPARAM)1, (LPARAM)TEXT("album gain"));
-			SendDlgItemMessage(hDlg, IDC_COMBO2, CB_INSERTSTRING, (WPARAM)2, (LPARAM)TEXT("album peak"));
-			SendDlgItemMessage(hDlg, IDC_COMBO2, CB_INSERTSTRING, (WPARAM)3, (LPARAM)TEXT("track gain"));
-			SendDlgItemMessage(hDlg, IDC_COMBO2, CB_INSERTSTRING, (WPARAM)4, (LPARAM)TEXT("track peak"));
-			SendDlgItemMessage(hDlg, IDC_COMBO2, CB_INSERTSTRING, (WPARAM)5, (LPARAM)TEXT("album gain limited by peak"));
-			SendDlgItemMessage(hDlg, IDC_COMBO2, CB_INSERTSTRING, (WPARAM)6, (LPARAM)TEXT("track gain limited by peak"));
-			SendDlgItemMessage(hDlg, IDC_COMBO2, CB_SETCURSEL, (WPARAM)m_cfg.nReplayGainMode, (LPARAM)0);
-
-			SendDlgItemMessage(hDlg, IDC_COMBO3, CB_INSERTSTRING, (WPARAM)0, (LPARAM)TEXT("内蔵"));
-			SendDlgItemMessage(hDlg, IDC_COMBO3, CB_INSERTSTRING, (WPARAM)1, (LPARAM)TEXT("増幅のみ内蔵"));
-			SendDlgItemMessage(hDlg, IDC_COMBO3, CB_INSERTSTRING, (WPARAM)2, (LPARAM)TEXT("BASS(増幅不可)"));
-			SendDlgItemMessage(hDlg, IDC_COMBO3, CB_SETCURSEL, (WPARAM)m_cfg.nReplayGainMixer, (LPARAM)0);
-
-			SendDlgItemMessage(hDlg, IDC_SPIN1, UDM_SETRANGE, (WPARAM)0, (LPARAM)MAKELONG(999, 1));
-			SendDlgItemMessage(hDlg, IDC_SPIN1, UDM_SETPOS, (WPARAM)0, (LPARAM)MAKELONG(m_cfg.nReplayGainPostAmp, 0));
-
-			SendDlgItemMessage(hDlg, IDC_CHECK14, BM_SETCHECK, (WPARAM)m_cfg.nFadeOut, 0);
 			return TRUE;
 
 		case WM_NOTIFY:
@@ -511,11 +325,6 @@ static BOOL CALLBACK GeneralSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 				m_cfg.nZipSearch = (int)SendDlgItemMessage(hDlg, IDC_CHECK6, BM_GETCHECK, 0, 0);
 
 				m_cfg.nSeekAmount = GetDlgItemInt(hDlg, IDC_COMBO1, NULL, FALSE);
-				m_cfg.nOut32bit = (int)SendDlgItemMessage(hDlg, IDC_CHECK13, BM_GETCHECK, 0, 0);
-				m_cfg.nReplayGainMode = (int)SendDlgItemMessage(hDlg, IDC_COMBO2, CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
-				m_cfg.nReplayGainMixer = (int)SendDlgItemMessage(hDlg, IDC_COMBO3, CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
-				m_cfg.nReplayGainPostAmp = (int)SendDlgItemMessage(hDlg, IDC_SPIN1, UDM_GETPOS, (WPARAM)0, (LPARAM)0);
-				m_cfg.nFadeOut = (int)SendDlgItemMessage(hDlg, IDC_CHECK14, BM_GETCHECK, 0, 0);
 				SaveConfig();
 				ApplyFittle();
 				return TRUE;
@@ -530,13 +339,7 @@ static BOOL CALLBACK GeneralSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 					}else{
 						EnableWindow(GetDlgItem(hDlg, IDC_CHECK10), FALSE);
 					}
-				}/*else if(LOWORD(wp)==IDC_CHECK12){
-					if(SendDlgItemMessage(hDlg, IDC_CHECK12, BM_GETCHECK, 0, 0)){
-						EnableWindow(GetDlgItem(hDlg, IDC_CHECK1), TRUE);
-					}else{
-						EnableWindow(GetDlgItem(hDlg, IDC_CHECK1), FALSE);
-					}
-				}*/
+				}
 			}
 			if (GeneralCheckChanged(hDlg))
 				PropSheet_Changed(GetParent(hDlg) , hDlg);
