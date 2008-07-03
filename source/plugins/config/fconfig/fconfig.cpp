@@ -7,6 +7,7 @@
 #include <shlwapi.h>
 #include <prsht.h>
 
+#include "../../../fittle/src/plugin.h"
 #include "../cplugin.h"
 
 #if defined(_MSC_VER)
@@ -22,7 +23,16 @@
 #pragma comment(linker,"/OPT:NOWIN98")
 #endif
 
+#ifndef MAX_FITTLE_PATH
 #define MAX_FITTLE_PATH 260*2
+#endif
+
+#ifndef IDM_VER
+#define IDM_VER 40023
+#endif
+#ifndef IDM_SETTING
+#define IDM_SETTING 40050
+#endif
 
 #define FCONFIG_MAPPING_NAME "fconfig.exe - <shared memory>"
 
@@ -39,6 +49,12 @@ typedef struct {
 /* 共有メモリ */
 static HANDLE hsm = NULL;
 static SHARED_MEMORY *psm = NULL;
+
+#define SIMALISTEX 0
+
+#if SIMALISTEX
+static HWND hwndSimalistWork[4] = { NULL, NULL, NULL, NULL };
+#endif
 
 /* プラグインリスト */
 static CONFIG_PLUGIN_INFO *pTop = NULL;
@@ -92,8 +108,77 @@ static BOOL CALLBACK RegisterPlugin(HMODULE hPlugin){
 	return FALSE;
 }
 
+#if SIMALISTEX
+static WNDPROC SimaWndProc2Old;
+static LRESULT CALLBACK SimaWndProc2(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
+	return SimaWndProc2Old(hWnd, msg, wp, lp);
+//	return CallWindowProc(SimaWndProc2Old, hWnd, msg, wp, lp);
+}
+
+static WNDPROC SimaWndProc3Old;
+static LRESULT CALLBACK SimaWndProc3(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
+	if (msg == WM_ACTIVATEAPP)
+		PostMessage(hwndSimalistWork[0], WM_COMMAND, MAKEWPARAM(IDM_SETTING, 0), 0);
+	return CallWindowProc(SimaWndProc3Old, hWnd, msg, wp, lp);
+}
+
+
+static LRESULT CALLBACK SimaWndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
+	if (msg == WM_USER + 2) {
+		if (wp == 107) {
+			return (LRESULT)hwndSimalistWork[1];
+		}
+		if (wp == 108) {
+			return (LRESULT)hwndSimalistWork[2];
+		}
+	}
+	return CallWindowProc((WNDPROC)GetWindowLong(hWnd, GWL_USERDATA), hWnd, msg, wp, lp);
+}
+
+static HWND CreateSimaWork(int i){
+	LPCTSTR pszClass = (i == 3) ? WC_LISTVIEW : (i == 2) ? WC_TABCONTROL : (i == 1) ? TRACKBAR_CLASS : TEXT("STATIC");
+	HWND hwnd = CreateWindow(pszClass,TEXT(""),0,0,0,0,0,NULL,NULL,GetModuleHandle(NULL),NULL);
+	if (hwnd) {
+		SetWindowLong(hwnd, GWL_USERDATA, SetWindowLong(hwnd, GWL_WNDPROC, (LONG)SimaWndProc));
+	}
+	return hwnd;
+}
+
+
+static BOOL CALLBACK SimalistEx(HMODULE hPlugin){
+	FARPROC lpfnProc = GetProcAddress(hPlugin, "GetPluginInfo");
+	if (lpfnProc){
+		FITTLE_PLUGIN_INFO *pNewPlugin= ((GetPluginInfoFunc)lpfnProc)();
+		if (pNewPlugin) {
+			int i;
+			TCITEM item;
+			for (i = 0; i < 4; i++)
+				if (!hwndSimalistWork[i])
+					hwndSimalistWork[i] = CreateSimaWork(i);
+			item.mask = TCIF_TEXT;
+			item.pszText = TEXT("x");
+
+			TabCtrl_InsertItem(hwndSimalistWork[2], 0, &item);
+
+			pNewPlugin->hParent = hwndSimalistWork[0];
+			pNewPlugin->hDllInst = hPlugin;
+			i = pNewPlugin->OnInit();
+			pNewPlugin->OnTrackChange();
+			pNewPlugin->OnStatusChange();
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+#endif
+
 static void InitPlugins(){
 	WAEnumPlugins(NULL, "", "*.fcp", RegisterPlugin);
+#if SIMALISTEX
+	if (!WAEnumPlugins(NULL, "", "simalist.dll", SimalistEx)){
+		WAEnumPlugins(NULL, "Plugins\\", "simalist.dll", SimalistEx);
+	}
+#endif
 }
 
 static void *HAlloc(DWORD dwSize){
@@ -133,7 +218,7 @@ static void SheetActivate(LPPROPSHEETHEADER ppsh){
 
 static void SheetInvoke(LPPROPSHEETHEADER ppsh){
 	if (ppsh->phpage && ppsh->nPages > 0){
-		int i;
+		unsigned i;
 		PropertySheet(ppsh);
 		/* ページはPropertySheet内で開放されるため二重開放を防止する */
 		for (i = 0; i < ppsh->nPages; i++){
@@ -143,7 +228,7 @@ static void SheetInvoke(LPPROPSHEETHEADER ppsh){
 }
 static void SheetFree(LPPROPSHEETHEADER ppsh){
 	if (ppsh->phpage){
-		int i;
+		unsigned i;
 		for (i = 0; i < ppsh->nPages; i++){
 			if (ppsh->phpage[i]) DestroyPropertySheetPage(ppsh->phpage[i]);
 		}
@@ -155,6 +240,12 @@ static void SheetFree(LPPROPSHEETHEADER ppsh){
 static int CALLBACK PropSheetProc(HWND hwndDlg, UINT uMsg, LPARAM lParam){
 	if (uMsg == PSCB_INITIALIZED){
 		if (psm) psm->hwnd = hwndDlg;
+#if SIMALISTEX
+		if (hwndSimalistWork[0]) {
+			SimaWndProc2Old = (WNDPROC)SetWindowLong(hwndSimalistWork[0], GWL_WNDPROC, (LONG)SimaWndProc2);
+			SimaWndProc3Old = (WNDPROC)SetWindowLong(hwndDlg, GWL_WNDPROC, (LONG)SimaWndProc3);
+		}
+#endif
 	}
 	return 0;
 }
@@ -235,6 +326,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		SheetFree(&psh);
 		CloseSharedMemory();
 	}
+#if SIMALISTEX
+	{
+		int i;
+		for (i = 0; i < 4; i++)
+		if (hwndSimalistWork[i]) DestroyWindow(hwndSimalistWork[i]);
+	}
+#endif
 	ExitProcess(0);
 	return 0;
 }

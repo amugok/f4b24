@@ -7,6 +7,7 @@
 #include <shlwapi.h>
 
 #include "../../../fittle/src/f4b24.h"
+#include "../../../fittle/src/oplugin.h"
 #include "../cplugin.h"
 #include "output.rh"
 
@@ -30,6 +31,57 @@
 // ウィンドウをサブクラス化、プロシージャハンドルをウィンドウに関連付ける
 #define SET_SUBCLASS(hWnd, Proc) \
 	SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)Proc))
+
+/* プラグインリスト */
+static struct OUTPUT_PLUGIN_NODE {
+	struct OUTPUT_PLUGIN_NODE *pNext;
+	OUTPUT_PLUGIN_INFO *pInfo;
+	HMODULE hDll;
+} *pTop = NULL;
+
+void *HAlloc(DWORD dwSize){
+	return HeapAlloc(GetProcessHeap(), 0, dwSize);
+}
+
+void HFree(LPVOID pPtr){
+	HeapFree(GetProcessHeap(), 0, pPtr);
+}
+
+static void FreePlugins(){
+	struct OUTPUT_PLUGIN_NODE *pList = pTop;
+	while (pList) {
+		struct OUTPUT_PLUGIN_NODE *pNext = pList->pNext;
+		FreeLibrary(pList->hDll);
+		HFree(pList);
+		pList = pNext;
+	}
+	pTop = NULL;
+}
+
+/* プラグインを登録 */
+static BOOL CALLBACK RegisterOutputPlugin(HMODULE hPlugin){
+	FARPROC lpfnProc = GetProcAddress(hPlugin, "GetOPluginInfo");
+	if (lpfnProc){
+		struct OUTPUT_PLUGIN_NODE *pNewNode = (struct OUTPUT_PLUGIN_NODE *)HAlloc(sizeof(struct OUTPUT_PLUGIN_NODE));
+		if (pNewNode) {
+			pNewNode->pInfo = ((GetOPluginInfoFunc)lpfnProc)();
+			pNewNode->pNext = NULL;
+			pNewNode->hDll = hPlugin;
+			if (pNewNode->pInfo){
+				if (pTop) {
+					struct OUTPUT_PLUGIN_NODE *pList;
+					for (pList = pTop; pList->pNext; pList = pList->pNext);
+					pList->pNext = pNewNode;
+				} else {
+					pTop = pNewNode;
+				}
+				return TRUE;
+			}
+			HFree(pNewNode);
+		}
+	}
+	return FALSE;
+}
 
 static BOOL fIsUnicode = FALSE;
 static HMODULE hDLL = 0;
@@ -72,6 +124,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 	if (fdwReason == DLL_PROCESS_ATTACH){
 		hDLL = hinstDLL;
 		DisableThreadLibraryCalls(hinstDLL);
+	} else if (fdwReason == DLL_PROCESS_DETACH){
+		FreePlugins();
 	}
 	return TRUE;
 }
@@ -196,6 +250,30 @@ static BOOL CALLBACK OutputSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			SendDlgItemMessage(hDlg, IDC_SPIN2, UDM_SETPOS, (WPARAM)0, (LPARAM)MAKELONG(m_cfg.nReplayGainPreAmp, 0));
 
 			UpdatePreAmp(hDlg);
+
+			if (pTop){
+				struct OUTPUT_PLUGIN_NODE *pList = pTop;
+				DWORD dwDefaultDevice = 0xffffffff;
+				do {
+					int i;
+					OUTPUT_PLUGIN_INFO *pPlugin = pList->pInfo;
+					DWORD dwDefaultId = pPlugin->GetDefaultDeviceID();
+					if (dwDefaultDevice > dwDefaultId) dwDefaultDevice = dwDefaultId;
+					int n = pPlugin->GetDeviceCount();
+					for (i = 0; i < n; i++) {
+						CHAR name[100];
+						DWORD dwId = pPlugin->GetDeviceID(i);
+						if (pPlugin->GetDeviceNameA(dwId, name, 100)) {
+							int nIndex = SendDlgItemMessageA(hDlg, IDC_COMBO5, CB_ADDSTRING, (WPARAM)0, (LPARAM)name);
+							if (nIndex != CB_ERR && nIndex != CB_ERRSPACE) {
+								SendDlgItemMessage(hDlg, IDC_COMBO5, CB_SETITEMDATA, (WPARAM)nIndex, (LPARAM)dwId);
+							}
+						}
+					}
+					pList = pList->pNext;
+				} while (pList);
+			}
+
 			return TRUE;
 
 		case WM_NOTIFY:
@@ -245,6 +323,7 @@ static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel, LPSTR pszCo
 	LPCSTR lpszTemplate, lpszPath;
 	DLGPROC lpfnDlgProc = 0;
 	fIsUnicode = ((GetVersion() & 0x80000000) == 0);
+	if (!pTop) WAEnumPlugins(NULL, "", "*.fop", RegisterOutputPlugin);
 	if (nLevel == 1){
 		if (nIndex == 0){
 			lpszTemplate = "OUTPUT_SHEET";

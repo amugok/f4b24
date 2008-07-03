@@ -23,7 +23,9 @@
 #pragma comment(linker,"/OPT:NOWIN98")
 #endif
 
+#ifndef MAX_FITTLE_PATH
 #define MAX_FITTLE_PATH 260*2
+#endif
 
 typedef enum {CUECHAR_DEFAULT,CUECHAR_UTF8,CUECHAR_UTF16LE,CUECHAR_UTF16BE,CUECHAR_NA} CueCharset;
 

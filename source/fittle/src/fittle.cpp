@@ -2642,6 +2642,27 @@ static void ToggleWindowView(HWND hWnd){
 	return;
 }
 
+static void AddType(LPTSTR lpszType){
+	LPTSTR e = StrStr(lpszType, TEXT("."));
+	AddTypelist(e ? e + 1 : lpszType);
+}
+static void AddTypes(LPCSTR lpszTypes) {
+	TCHAR szTemp[MAX_FITTLE_PATH] = {0};
+	LPTSTR q = szTemp;
+	lstrcpynAt(q, lpszTypes, MAX_FITTLE_PATH);
+	while(*q){
+		LPTSTR p = StrStr(q, TEXT(";"));
+		if(p){
+			*p = TEXT('\0');
+			AddType(q);
+			q = p + 1;
+		}else{
+			AddType(q);
+			break;
+		}
+	}
+}
+
 // DLL郡初期化、対応形式決定
 static int InitFileTypes(){
 	int i = 0;
@@ -2650,13 +2671,8 @@ static int InitFileTypes(){
 	WIN32_FIND_DATA wfd;
 
 	ClearTypelist();
-	AddTypelist(TEXT("mp3"));
-	AddTypelist(TEXT("mp2"));
-	AddTypelist(TEXT("mp1"));
-	AddTypelist(TEXT("wav"));
-	AddTypelist(TEXT("ogg"));
-	AddTypelist(TEXT("aif"));
-	AddTypelist(TEXT("aiff"));
+	AddTypes("mp3;mp2;mp1;wav;ogg;aif;aiff");
+	AddTypes("mod;mo3;xm;it;s3m;mtm;umx");
 
 	GetModuleFileName(NULL, szPath, MAX_PATH);
 	lstrcpyn(PathFindFileName(szPath), TEXT("bass*.dll"), MAX_PATH);
@@ -2672,20 +2688,7 @@ static int InitFileTypes(){
 			if(hPlugin){
 				const BASS_PLUGININFO *info = BASS_PluginGetInfo(hPlugin);
 				for(DWORD d=0;d<info->formatc;d++){
-					TCHAR szTemp[100] = {0};
-					LPTSTR q = szTemp;
-					lstrcpynAt(q, info->formats[d].exts, 100);
-					while(*q){
-						LPTSTR p = StrStr(q, TEXT(";"));
-						if(p){
-							*p = TEXT('\0');
-							AddTypelist(q + 2);
-							q = p + 1;
-						}else{
-							AddTypelist(q + 2);
-							break;
-						}
-					}
+					AddTypes(info->formats[d].exts);
 				}
 			}
 		}while(FindNextFile(hFind, &wfd));
@@ -2757,6 +2760,15 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 												(g_cInfo[bFlag].pBuff?0:BASS_UNICODE) |
 #endif
 												BASS_STREAM_DECODE | m_bFLoat*BASS_SAMPLE_FLOAT);
+	if(!g_cInfo[bFlag].hChan){
+	g_cInfo[bFlag].hChan = BASS_MusicLoad((BOOL)g_cInfo[bFlag].pBuff,
+												(g_cInfo[bFlag].pBuff?(void *)g_cInfo[bFlag].pBuff:(void *)szFilePath),
+												0, (DWORD)g_cInfo[bFlag].qDuration,
+#ifdef UNICODE
+												(g_cInfo[bFlag].pBuff?0:BASS_UNICODE) |
+#endif
+												BASS_MUSIC_DECODE | m_bFLoat*BASS_SAMPLE_FLOAT | BASS_MUSIC_PRESCAN, 0);
+	}
 	if(g_cInfo[bFlag].hChan){
 		if(!IsArchivePath(pInfo->szFilePath) || !GetArchiveGain(pInfo->szFilePath, &g_cInfo[bFlag].sGain, g_cInfo[bFlag].hChan)){
 			DWORD dwGain = SendMessage(GetParent(m_hStatus), WM_F4B24_IPC, WM_F4B24_HOOK_REPLAY_GAIN, (LPARAM)g_cInfo[bFlag].hChan);
@@ -2773,6 +2785,9 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 			BASS_ChannelSetSync(g_cInfo[bFlag].hChan, BASS_SYNC_POS, qEnd, &EventSync, (void *)1);
 		}else{
 			g_cInfo[bFlag].qDuration = BASS_ChannelGetLength(g_cInfo[bFlag].hChan, BASS_POS_BYTE);
+			if(g_cInfo[bFlag].qDuration==-1){
+				g_cInfo[bFlag].qDuration = 0;
+			}
 			// 曲を99%再生後、イベントが起こるように。
 			if(lstrcmpi(PathFindExtension(szFilePath), TEXT(".CDA"))){
 				BASS_ChannelSetSync(g_cInfo[bFlag].hChan, BASS_SYNC_POS, (g_cInfo[bFlag].qDuration)*99/100, &EventSync, 0);
@@ -2794,7 +2809,7 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 			g_cInfo[bFlag].sGain = dwGain ? *(float *)&dwGain : (float)1;
 			SendMessage(GetParent(m_hStatus), WM_F4B24_IPC, WM_F4B24_HOOK_CREATE_DECODE_STREAM, (LPARAM)g_cInfo[bFlag].hChan);
 			g_cInfo[bFlag].qDuration = BASS_ChannelGetLength(g_cInfo[bFlag].hChan, BASS_POS_BYTE);
-			if(g_cInfo[bFlag].qDuration<0){
+			if(g_cInfo[bFlag].qDuration==-1){
 				g_cInfo[bFlag].qDuration = 0;
 			}
 			BASS_ChannelSetSync(g_cInfo[bFlag].hChan, BASS_SYNC_END, 0, &EventSync, 0);
@@ -2807,7 +2822,9 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 static void FreeChannelInfo(BOOL bFlag){
 	if (g_cInfo[bFlag].hChan){
 		BASS_ChannelStop(g_cInfo[bFlag].hChan);
-		BASS_StreamFree(g_cInfo[bFlag].hChan);	// BASS_STREAM_AUTOFREEにすればいらないかも
+		if (!BASS_StreamFree(g_cInfo[bFlag].hChan)){
+			BASS_MusicFree(g_cInfo[bFlag].hChan);
+		}
 		g_cInfo[bFlag].hChan = 0;
 	}
 
@@ -2926,7 +2943,7 @@ static void SetFadeOut(HSTREAM h, DWORD dwTime){
 // メインストリームを作成
 static HSTREAM CreateMainStream(BASS_CHANNELINFO *info){
 	HSTREAM hRet;
-	DWORD dwFlag = info->flags & ~BASS_STREAM_DECODE;
+	DWORD dwFlag = info->flags & ~(BASS_STREAM_DECODE | BASS_MUSIC_DECODE);
 	if (m_bFLoat) dwFlag = (dwFlag & ~BASS_SAMPLE_8BITS) | BASS_SAMPLE_FLOAT;
 	hRet = BASS_StreamCreate(info->freq, info->chans, dwFlag, &MainStreamProc, 0);
 

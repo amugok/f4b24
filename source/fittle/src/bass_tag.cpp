@@ -188,16 +188,28 @@ BOOL BASS_TAG_Read(DWORD handle, TAGINFO *pTagInfo){
 		case BASS_CTYPE_STREAM_AAC:
 			return ReadTagSub((LPBYTE)BASS_ChannelGetTags(handle, BASS_TAG_MP4), pTagInfo);
 
-		case BASS_CTYPE_STREAM_AC3:
-			return FALSE;
+//		case BASS_CTYPE_STREAM_AC3:
+//			return FALSE;
 
-		case BASS_CTYPE_STREAM_CD:
-			return FALSE;
+//		case BASS_CTYPE_STREAM_CD:
+//			return FALSE;
 
-		case BASS_CTYPE_STREAM:
-			p = BASS_ChannelGetTags(handle, BASS_TAG_ICY);
+//		case BASS_CTYPE_STREAM:
+//			p = BASS_ChannelGetTags(handle, BASS_TAG_ICY);
+//			return FALSE;
+		
+		case BASS_CTYPE_MUSIC_MOD:
+		case BASS_CTYPE_MUSIC_MTM:
+		case BASS_CTYPE_MUSIC_S3M:
+		case BASS_CTYPE_MUSIC_XM:
+		case BASS_CTYPE_MUSIC_IT:
+		case BASS_CTYPE_MUSIC_MO3:
+			p = BASS_ChannelGetTags(handle, BASS_TAG_MUSIC_NAME);
+			if (p && *p) ID3_ReadFrameText(0, (LPBYTE)p, lstrlenA(p), pTagInfo->szTitle, 256);
+			//p = BASS_ChannelGetTags(handle, BASS_TAG_MUSIC_MESSAGE);
+			//if (p && *p) ID3_ReadFrameText(0, (LPBYTE)p, lstrlenA(p), pTagInfo->szArtist, 256);
+			if(*pTagInfo->szTitle || *pTagInfo->szArtist) return TRUE;
 			return FALSE;
-
 	}
 	return FALSE;
 }

@@ -13,10 +13,7 @@
 #endif
 
 typedef struct OUTPUT_PLUGIN_INFO_TAG {
-	struct OUTPUT_PLUGIN_INFO_TAG *pNext;
 	int nOPDKVer;
-
-	DWORD dwOutputID;
 
 	/* v0 */
 	int (CALLBACK * GetDeviceCount)(void);

@@ -24,7 +24,9 @@
 #pragma comment(linker,"/OPT:NOWIN98")
 #endif
 
+#ifndef MAX_FITTLE_PATH
 #define MAX_FITTLE_PATH 260*2
+#endif
 
 #define FCONFIG_MAPPING_NAME "fconfig.exe - <shared memory>"
 

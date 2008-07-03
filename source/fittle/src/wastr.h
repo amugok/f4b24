@@ -41,7 +41,7 @@ static void WAstrcpyA(LPWASTR pBuf, LPCSTR pValue){
 
 static void WAstrcatWX(LPWASTR pBuf, LPCWSTR pValue){
 	int l = lstrlenW(pBuf->W);
-	lstrcpynW(pBuf->W, pValue, WA_MAX_SIZE - l);
+	lstrcpynW(pBuf->W + l, pValue, WA_MAX_SIZE - l);
 }
 
 static void WAstrcatA(LPWASTR pBuf, LPCSTR pValue){
@@ -289,13 +289,14 @@ static HPROPSHEETPAGE WACreatePropertySheetPage(HMODULE hmod, LPCWASTR pTemplate
 #endif
 
 typedef BOOL (CALLBACK * LPFNWAREGISTERPLUGIN)(HMODULE hPlugin);
-static void WAEnumPlugins(HMODULE hParent, LPCSTR lpszSubDir, LPCSTR lpszMask, LPFNWAREGISTERPLUGIN lpfnRegProc){
-	HANDLE hFind;
+static BOOL WAEnumPlugins(HMODULE hParent, LPCSTR lpszSubDir, LPCSTR lpszMask, LPFNWAREGISTERPLUGIN lpfnRegProc){
 	WASTR szDir, szPath;
 	union {
 		WIN32_FIND_DATAA A;
 		WIN32_FIND_DATAW W;
 	} wfd;
+	HANDLE hFind;
+	BOOL fRet = FALSE;
 	WAGetModuleParentDir(hParent, &szDir);
 	WAstrcatA(&szDir, lpszSubDir);
 	WAstrcpy(&szPath, &szDir);
@@ -315,12 +316,17 @@ static void WAEnumPlugins(HMODULE hParent, LPCSTR lpszSubDir, LPCSTR lpszMask, L
 				WAstrcatA(&szPath, wfd.A.cFileName);
 				hPlugin = LoadLibraryA(szPath.A);
 			}
-			if(hPlugin && !lpfnRegProc(hPlugin)){
-				FreeLibrary(hPlugin);
+			if(hPlugin) {
+				if (lpfnRegProc(hPlugin)){
+					fRet = TRUE;
+				}else{
+					FreeLibrary(hPlugin);
+				}
 			}
 		}while(WAIsUnicode ? FindNextFileW(hFind, &wfd.W) : FindNextFileA(hFind, &wfd.A));
 		FindClose(hFind);
 	}
+	return fRet;
 }
 
 #endif

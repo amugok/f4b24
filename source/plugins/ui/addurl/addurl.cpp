@@ -20,7 +20,10 @@
 #pragma comment(linker,"/OPT:NOWIN98")
 #endif
 
+#ifndef MAX_FITTLE_PATH
 #define MAX_FITTLE_PATH 260*2
+#endif
+
 #define FILE_EXISTA(X) (GetFileAttributesA(X)==0xFFFFFFFF ? FALSE : TRUE)
 #define FILE_EXISTW(X) (GetFileAttributesW(X)==0xFFFFFFFF ? FALSE : TRUE)
 #define IsURLPathA(X) StrStrA(X, "://")
