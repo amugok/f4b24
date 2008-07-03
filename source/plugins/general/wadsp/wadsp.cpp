@@ -210,9 +210,9 @@ static void FreeBassWaDsp(){
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 	switch(msg){
 	case WM_F4B24_IPC:
-		if (wp == WM_F4B24_HOOK_CREATE_STREAM) {
+		if (wp == WM_F4B24_HOOK_CREATE_DECODE_STREAM) {
 			SetBassWaDsp((DWORD)lp, TRUE);
-		} else if (wp == WM_F4B24_HOOK_FREE_STREAM) {
+		} else if (wp == WM_F4B24_HOOK_FREE_DECODE_STREAM) {
 			SetBassWaDsp((DWORD)lp, FALSE);
 		} else if (F4B24_WADSP_INVOKE_CONFIG && wp == F4B24_WADSP_INVOKE_CONFIG){
 			int i;

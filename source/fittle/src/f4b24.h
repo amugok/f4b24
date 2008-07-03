@@ -46,3 +46,4 @@
 #define WM_F4B24_HOOK_FREE_STREAM 501			/* test25 or later */
 #define WM_F4B24_HOOK_REPLAY_GAIN 502			/* test25 or later */
 #define WM_F4B24_HOOK_CREATE_DECODE_STREAM 503	/* test25 or later */
+#define WM_F4B24_HOOK_FREE_DECODE_STREAM 504	/* test28 or later */

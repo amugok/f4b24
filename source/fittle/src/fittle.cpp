@@ -2993,6 +2993,7 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 static void FreeChannelInfo(BOOL bFlag){
 	if (g_cInfo[bFlag].hChan){
 		BASS_ChannelStop(g_cInfo[bFlag].hChan);
+		SendMessage(GetParent(m_hStatus), WM_F4B24_IPC, WM_F4B24_HOOK_FREE_DECODE_STREAM, (LPARAM)g_cInfo[bFlag].hChan);
 		if (!BASS_StreamFree(g_cInfo[bFlag].hChan)){
 			BASS_MusicFree(g_cInfo[bFlag].hChan);
 		}
