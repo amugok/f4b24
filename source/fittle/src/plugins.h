@@ -7,7 +7,10 @@
 
 #include <windows.h>
 
-void InitPlugins(LPTSTR, HWND);
+void InitPlugins(HWND);
 void QuitPlugins();
 void OnStatusChangePlugins();
 void OnTrackChagePlugins();
+BOOL EnumPlugins(HMODULE hParent, LPCTSTR lpszSubDir, LPCTSTR lpszMask, BOOL (CALLBACK * lpfnPluginProc)(HMODULE hPlugin, HWND hWnd), HWND hWnd);
+BOOL EnumFiles(HMODULE hParent, LPCTSTR lpszSubDir, LPCTSTR lpszMask, BOOL (CALLBACK * lpfnFileProc)(LPCTSTR lpszPath, HWND hWnd), HWND hWnd);
+

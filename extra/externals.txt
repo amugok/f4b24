@@ -7,6 +7,14 @@ bass24/
 		http://www.un4seen.com/
 
 
+bassasio/
+	bassasio.h
+	bassasio.lib
+
+		BASSASIO 1.0
+		http://www.un4seen.com/
+
+
 cabsdk/
 	FDI.H
 

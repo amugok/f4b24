@@ -11,6 +11,7 @@
 #define IDC_EDIT2                       1005
 #define IDC_EDIT4                       1005
 #define IDC_RADIO4                      1006
+#define IDC_EDIT5                       1006
 #define IDC_RADIO5                      1007
 #define IDC_RADIO6                      1008
 #define IDC_HOTKEY1                     1009

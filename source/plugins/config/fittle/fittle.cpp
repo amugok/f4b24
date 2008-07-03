@@ -373,8 +373,8 @@ static BOOL CALLBACK PathSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			WASetDlgItemText(hDlg, IDC_EDIT1, &m_cfg.szStartPath);
 			WASetDlgItemText(hDlg, IDC_EDIT3, &m_cfg.szFilerPath);
 			WASetDlgItemText(hDlg, IDC_EDIT4, &m_cfg.szToolPath);
-			SetDlgItemText(hDlg, IDC_STATIC4, TEXT(""));
-			PostF4B24Message(WM_F4B24_IPC_GET_SUPPORT_LIST, (LPARAM)GetDlgItem(hDlg, IDC_STATIC4));
+			SetDlgItemText(hDlg, IDC_EDIT5, TEXT(""));
+			PostF4B24Message(WM_F4B24_IPC_GET_SUPPORT_LIST, (LPARAM)GetDlgItem(hDlg, IDC_EDIT5));
 
 			return TRUE;
 

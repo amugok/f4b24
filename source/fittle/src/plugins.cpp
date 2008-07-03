@@ -7,54 +7,33 @@
 
 #include "plugins.h"
 #include "plugin.h"
+#include <shlwapi.h>
 
 static FITTLE_PLUGIN_INFO *m_fpis[256] = {0};
 static int m_nPluginCount = 0;
 
-void InitPlugins(LPTSTR pszPath, HWND hWnd){
-	TCHAR szPathW[MAX_PATH];
-	TCHAR szDllPath[MAX_PATH];
-	HANDLE hFind;
-	WIN32_FIND_DATA wfd = {0};
-	HINSTANCE hDll;
-	GetPluginInfoFunc GetPluginInfo;
-	FITTLE_PLUGIN_INFO *fpi;
-
-	//lstrcat(pszPath, TEXT("Plugins"));
-	wsprintf(szPathW, TEXT("%s*.dll"), pszPath);
-
-	hFind = FindFirstFile(szPathW, &wfd);
-	if(hFind!=INVALID_HANDLE_VALUE){
-		do{
-			wsprintf(szDllPath, TEXT("%s%s"), pszPath, wfd.cFileName);
-			hDll = LoadLibrary(szDllPath);
-			if(hDll){
-				/*
-					TAR32.DLLがGetPluginInfoをエクスポートしている問題に対処	
-				*/
-				FARPROC fnTarCheck = GetProcAddress(hDll, "TarGetVersion");
-				GetPluginInfo = (GetPluginInfoFunc)GetProcAddress(hDll, "GetPluginInfo");
-				if(!fnTarCheck && GetPluginInfo){
-
-					fpi = GetPluginInfo();
-					if(fpi->nPDKVer==PDK_VER){
-						m_fpis[m_nPluginCount++] = fpi;
-						fpi->hParent = hWnd;
-						fpi->hDllInst = hDll;
-						if(!fpi->OnInit()){
-							FreeLibrary(hDll);
-							m_nPluginCount--;
-						}
-					}
-				}else{
-					FreeLibrary(hDll);
+static BOOL CALLBACK RegisterPlugin(HMODULE hPlugin, HWND hWnd){
+	if (m_nPluginCount < 256) {
+		GetPluginInfoFunc GetPluginInfo;
+		FITTLE_PLUGIN_INFO *fpi;
+		FARPROC fnTarCheck = GetProcAddress(hPlugin, "TarGetVersion");
+		GetPluginInfo = (GetPluginInfoFunc)GetProcAddress(hPlugin, "GetPluginInfo");
+		if(!fnTarCheck && GetPluginInfo){
+			fpi = GetPluginInfo();
+			if(fpi->nPDKVer==PDK_VER){
+				fpi->hParent = hWnd;
+				fpi->hDllInst = hPlugin;
+				if(fpi->OnInit()){
+					m_fpis[m_nPluginCount++] = fpi;
+					return TRUE;
 				}
 			}
-		}while(FindNextFile(hFind, &wfd));
-		FindClose(hFind);
+		}
 	}
-
-	return;
+	return FALSE;
+}
+void InitPlugins(HWND hWnd){
+	EnumPlugins(NULL, TEXT(""), TEXT("*.dll"), RegisterPlugin, hWnd);
 }
 
 void QuitPlugins(){
@@ -84,3 +63,46 @@ void OnStatusChangePlugins(){
 	return;
 }
 
+static BOOL EnumFilesAndPlugins(HMODULE hParent, LPCTSTR lpszSubDir, LPCTSTR lpszMask, BOOL (CALLBACK * lpfnFileProc)(LPCTSTR lpszPath, HWND hWnd), BOOL (CALLBACK * lpfnPluginProc)(HMODULE hPlugin, HWND hWnd), HWND hWnd){
+	TCHAR szDir[MAX_PATH];
+	TCHAR szPath[MAX_PATH];
+	WIN32_FIND_DATA wfd;
+	HANDLE hFind;
+	BOOL fRet = FALSE;
+	GetModuleFileName(hParent, szPath, MAX_PATH);
+	*PathFindFileName(szPath) = TEXT('\0');
+	PathCombine(szDir, szPath, lpszSubDir);
+	PathCombine(szPath, szDir, lpszMask);
+
+	hFind = FindFirstFile(szPath, &wfd);
+
+	if(hFind!=INVALID_HANDLE_VALUE){
+		do{
+			HMODULE hPlugin;
+			PathCombine(szPath, szDir, wfd.cFileName);
+			if (lpfnFileProc && lpfnFileProc(szPath, hWnd)) {
+				fRet = TRUE;
+			}
+			if (lpfnPluginProc) {
+				hPlugin = LoadLibrary(szPath);
+				if(hPlugin) {
+					if (lpfnPluginProc(hPlugin, hWnd)){
+						fRet = TRUE;
+					}else{
+						FreeLibrary(hPlugin);
+					}
+				}
+			}
+		}while(FindNextFile(hFind, &wfd));
+		FindClose(hFind);
+	}
+	return fRet;
+}
+
+BOOL EnumPlugins(HMODULE hParent, LPCTSTR lpszSubDir, LPCTSTR lpszMask, BOOL (CALLBACK * lpfnPluginProc)(HMODULE hPlugin, HWND hWnd), HWND hWnd){
+	return EnumFilesAndPlugins(hParent, lpszSubDir, lpszMask, 0, lpfnPluginProc, hWnd);
+}
+
+BOOL EnumFiles(HMODULE hParent, LPCTSTR lpszSubDir, LPCTSTR lpszMask, BOOL (CALLBACK * lpfnFileProc)(LPCTSTR lpszPath, HWND hWnd), HWND hWnd){
+	return EnumFilesAndPlugins(hParent, lpszSubDir, lpszMask, lpfnFileProc, 0, hWnd);
+}

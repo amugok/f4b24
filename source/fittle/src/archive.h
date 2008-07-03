@@ -10,7 +10,7 @@
 
 #include "fittle.h"
 
-BOOL InitArchive(LPTSTR pszPath, HWND hWnd);
+BOOL InitArchive(HWND hWnd);
 BOOL ReadArchive(struct FILEINFO **, LPTSTR);
 BOOL AnalyzeArchivePath(CHANNELINFO *, LPTSTR, LPTSTR, LPTSTR);
 BOOL IsArchive(LPTSTR);

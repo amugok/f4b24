@@ -1,3 +1,4 @@
+
 /*
  * Fittle.cpp
  *
@@ -17,6 +18,7 @@
 #include "plugins.h"
 #include "plugin.h"
 #include "f4b24.h"
+#include "oplugin.h"
 
 #if defined(_MSC_VER) && defined(_DEBUG)
 #define _CRTDBG_MAP_ALLOC
@@ -85,7 +87,6 @@ static LRESULT CALLBACK NewSliderProc(HWND, UINT, WPARAM, LPARAM);
 static LRESULT CALLBACK NewTabProc(HWND, UINT, WPARAM, LPARAM);
 static LRESULT CALLBACK NewTreeProc(HWND, UINT, WPARAM, LPARAM);
 static LRESULT CALLBACK NewSplitBarProc(HWND, UINT, WPARAM, LPARAM);
-static DWORD CALLBACK MainStreamProc(HSTREAM, void *, DWORD, void *);
 static void CALLBACK EventSync(HSYNC, DWORD, DWORD, void *);
 // 設定関係
 static void LoadState();
@@ -93,7 +94,6 @@ static void LoadConfig();
 static void SaveState(HWND);
 static void ApplyConfig(HWND hWnd);
 static void SendSupportList(HWND hWnd);
-static BOOL IsSupportFloatOutput();
 // コントロール関係
 static void DoTrayClickAction(HWND, int);
 static void PopupTrayMenu(HWND);
@@ -118,7 +118,7 @@ static void SetStatusbarIcon(LPTSTR, BOOL);
 static void ShowSettingDialog(HWND, int);
 static LPTSTR MallocAndConcatPath(LISTTAB *);
 static void MyShellExecute(HWND, LPTSTR, LPTSTR, BOOL);
-static int InitFileTypes();
+static void InitFileTypes();
 static int SaveFileDialog(LPTSTR, LPTSTR);
 static LONG GetToolbarTrueWidth(HWND);
 static int GetMenuPosFromString(HMENU hMenu, LPTSTR lpszText);
@@ -150,7 +150,8 @@ static TCHAR m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
 static TCHAR m_szTime[100];			// 再生時間
 static TCHAR m_szTag[MAX_FITTLE_PATH];	// タグ
 static TCHAR m_szTreePath[MAX_FITTLE_PATH];	// ツリーのパス
-static BOOL m_bFLoat = FALSE;
+static BOOL m_bFloat = FALSE;
+
 static TAGINFO m_taginfo = {0};
 #ifdef UNICODE
 typedef struct{
@@ -179,9 +180,10 @@ static HIMAGELIST m_hDrgImg = NULL;	// ドラッグイメージ
 static HHOOK m_hHook = NULL;		// ローカルフックハンドル
 static HFONT m_hBoldFont = NULL;	// 太文字フォントハンドル
 static HFONT m_hFont = NULL;		// フォントハンドル
-static HSTREAM m_hChanOut = NULL;	// ストリームハンドル
 static HTREEITEM m_hHitTree = NULL;	// ツリーのヒットアイテム
 static HMENU m_hMainMenu = NULL;	// メインメニューハンドル
+
+static OUTPUT_PLUGIN_INFO *m_pOutputPlugin = NULL;
 
 // 起動引数
 static int XARGC = 0;
@@ -199,6 +201,181 @@ typedef struct StringList {
 } STRING_LIST, *LPSTRING_LIST;
 
 static LPSTRING_LIST lpTypelist = NULL;
+
+/* 出力プラグインリスト */
+static struct OUTPUT_PLUGIN_NODE {
+	struct OUTPUT_PLUGIN_NODE *pNext;
+	OUTPUT_PLUGIN_INFO *pInfo;
+	HMODULE hDll;
+} *pOutputPluginList = NULL;
+
+/* 出力プラグインを開放 */
+static void FreeOutputPlugins(){
+	struct OUTPUT_PLUGIN_NODE *pList = pOutputPluginList;
+	while (pList) {
+		struct OUTPUT_PLUGIN_NODE *pNext = pList->pNext;
+		FreeLibrary(pList->hDll);
+		HFree(pList);
+		pList = pNext;
+	}
+	pOutputPluginList = NULL;
+}
+
+/* 出力プラグインを登録 */
+static BOOL CALLBACK RegisterOutputPlugin(HMODULE hPlugin, HWND hWnd){
+	FARPROC lpfnProc = GetProcAddress(hPlugin, "GetOPluginInfo");
+	if (lpfnProc){
+		struct OUTPUT_PLUGIN_NODE *pNewNode = (struct OUTPUT_PLUGIN_NODE *)HAlloc(sizeof(struct OUTPUT_PLUGIN_NODE));
+		if (pNewNode) {
+			pNewNode->pInfo = ((GetOPluginInfoFunc)lpfnProc)();
+			pNewNode->pNext = NULL;
+			pNewNode->hDll = hPlugin;
+			if (pNewNode->pInfo){
+				if (pOutputPluginList) {
+					struct OUTPUT_PLUGIN_NODE *pList;
+					for (pList = pOutputPluginList; pList->pNext; pList = pList->pNext);
+					pList->pNext = pNewNode;
+				} else {
+					pOutputPluginList = pNewNode;
+				}
+				return TRUE;
+			}
+			HFree(pNewNode);
+		}
+	}
+	return FALSE;
+}
+
+static BOOL CALLBACK OPCBIsEndCue(void){
+	BOOL fRet = m_bCueEnd;
+	return fRet;
+}
+
+static void CALLBACK OPCBPlayNext(HWND hWnd){
+	m_bCueEnd = FALSE;
+	PostMessage(hWnd, WM_F4B24_IPC, WM_F4B24_INTERNAL_PLAY_NEXT, 0);
+}
+
+static DWORD CALLBACK OPCBGetDecodeChannel(float *pGain) {
+	CHANNELINFO *pCh = &g_cInfo[g_bNow];
+	*pGain = pCh->sAmp;
+	return pCh->hChan;
+}
+
+static int OPInit(OUTPUT_PLUGIN_INFO *pPlugin, DWORD dwId, HWND hWnd){
+	m_pOutputPlugin = pPlugin;
+	m_pOutputPlugin->hWnd = hWnd;
+	m_pOutputPlugin->IsEndCue = OPCBIsEndCue;
+	m_pOutputPlugin->PlayNext = OPCBPlayNext;
+	m_pOutputPlugin->GetDecodeChannel = OPCBGetDecodeChannel;
+	return m_pOutputPlugin->Init(dwId); 
+}
+
+static int InitOutputPlugin(HWND hWnd){
+	EnumPlugins(NULL, TEXT(""), TEXT("*.fop"), RegisterOutputPlugin, hWnd);
+
+	if (pOutputPluginList){
+		struct OUTPUT_PLUGIN_NODE *pList = pOutputPluginList;
+		DWORD dwDefaultDevice = 0xffffffff;
+		OUTPUT_PLUGIN_INFO *pDefaultPlugin = 0;
+		do {
+			int i;
+			OUTPUT_PLUGIN_INFO *pPlugin = pList->pInfo;
+			DWORD dwDefaultId = pPlugin->GetDefaultDeviceID();
+			if (dwDefaultDevice > dwDefaultId)
+			{
+				dwDefaultDevice = dwDefaultId;
+				pDefaultPlugin = pPlugin;
+			}
+			int n = pPlugin->GetDeviceCount();
+			for (i = 0; i < n; i++) {
+				DWORD dwId = pPlugin->GetDeviceID(i);
+				if (g_cfg.dwOutputDevice != 0 && dwId == g_cfg.dwOutputDevice) {
+					return OPInit(pPlugin, dwId, hWnd); 
+				}
+			}
+			pList = pList->pNext;
+		} while (pList);
+		if (pDefaultPlugin) {
+			return OPInit(pDefaultPlugin, dwDefaultDevice, hWnd); 
+		}
+	}
+	return 0;
+}
+
+static int OPGetStatus(){
+	return m_pOutputPlugin ? m_pOutputPlugin->GetStatus() : OUTPUT_PLUGIN_STATUS_STOP;
+}
+
+static float CalcBassVolume(DWORD dwVol){
+	float fVol = g_cfg.nReplayGainPostAmp * g_cInfo[g_bNow].sGain * dwVol / (float)(SLIDER_DIVIDED * 100);
+	switch (g_cfg.nReplayGainMixer) {
+	case 0:
+		/*  内蔵 */
+		g_cInfo[g_bNow].sAmp = (fVol == (float)1) ? 0 : fVol;
+		fVol = 1;
+		break;
+	case 1:
+		/*  増幅のみ内蔵 */
+		if (fVol > 1){
+			g_cInfo[g_bNow].sAmp = fVol;
+			fVol = 1;
+		}else{
+			g_cInfo[g_bNow].sAmp = 0;
+		}
+		break;
+	case 2:
+		/*  BASS */
+		g_cInfo[g_bNow].sAmp = 0;
+		if (fVol > 1) fVol = 1;
+		break;
+	}
+	return fVol;
+}
+
+static void OPStart(BASS_CHANNELINFO *info, DWORD dwVol, BOOL fFloat){
+	if (m_pOutputPlugin) m_pOutputPlugin->Start(info, CalcBassVolume(dwVol), fFloat);
+}
+
+static void OPEnd(){
+	if (m_pOutputPlugin) m_pOutputPlugin->End();
+}
+
+static void OPPlay(){
+	if (m_pOutputPlugin) m_pOutputPlugin->Play();
+}
+
+static void OPPause(){
+	if (m_pOutputPlugin) m_pOutputPlugin->Pause();
+}
+
+static void OPStop(){
+	if (m_pOutputPlugin) m_pOutputPlugin->Stop();
+}
+static void OPSetVolume(DWORD dwVol){
+	float sVolume = CalcBassVolume(dwVol);
+	if (m_pOutputPlugin) m_pOutputPlugin->SetVolume(sVolume);
+}
+
+static void OPSetFadeIn(DWORD dwVol, DWORD dwTime){
+	if(g_cfg.nFadeOut){
+		float sVolume = CalcBassVolume(dwVol);
+		if (m_pOutputPlugin) m_pOutputPlugin->FadeIn(sVolume, dwTime);
+	} else {
+		OPSetVolume(dwVol);
+	}
+}
+
+static void OPSetFadeOut(DWORD dwTime){
+	if(g_cfg.nFadeOut){
+		if (m_pOutputPlugin) m_pOutputPlugin->FadeOut(dwTime);
+	}
+}
+
+static BOOL OPIsSupportFloatOutput(){
+	if (m_pOutputPlugin) return m_pOutputPlugin->IsSupportFloatOutput();
+	return FALSE;
+}
 
 static void StringListFree(LPSTRING_LIST *pList){
 	LPSTRING_LIST pCur = *pList;
@@ -544,6 +721,7 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 	if (XARGD) FreeLibrary(XARGD);
 #endif
 	ClearTypelist();
+	FreeOutputPlugins();
 
 	return (int)msg.wParam;
 }
@@ -578,6 +756,7 @@ static void UniFix(HWND hWnd){
 }
 #endif
 
+
 // ウィンドウプロシージャ
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 	static HWND s_hRebar = NULL;			// レバーハンドル
@@ -608,7 +787,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			TIMESTART
 
 			// BASS初期化
-			if(!BASS_Init(1, 44100, 0, hWnd, NULL)){
+			if(!BASS_Init(InitOutputPlugin(hWnd), 44100, 0, hWnd, NULL)){
 				MessageBox(hWnd, TEXT("BASSの初期化に失敗しました。"), TEXT("Fittle"), MB_OK);
 				BASS_Free();
 				ExitProcess(1);
@@ -616,7 +795,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 			TIMECHECK("BASS初期化")
 
-			m_bFLoat = (g_cfg.nOut32bit && IsSupportFloatOutput()) ? TRUE : FALSE;
+			m_bFloat = (g_cfg.nOut32bit && OPIsSupportFloatOutput()) ? TRUE : FALSE;
 			g_cInfo[0].sGain = 1;
 			g_cInfo[1].sGain = 1;
 
@@ -634,7 +813,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			TIMECHECK("EXEパスの取得")
 
 			// 書庫プラグイン初期化
-			InitArchive(szLastPath, hWnd);
+			InitArchive(hWnd);
 			TIMECHECK("書庫プラグイン初期化")
 
 			// 検索拡張子の決定
@@ -992,7 +1171,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			TIMECHECK("コマンドラインの処理")
 
 			// プラグインを呼び出す
-			InitPlugins(szLastPath, hWnd);
+			InitPlugins(hWnd);
 
 			TIMECHECK("プラグインの初期化")
 
@@ -1064,7 +1243,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			break;
 
 		case WM_DESTROY:
-			if(BASS_ChannelIsActive(m_hChanOut)){
+			if(OPGetStatus() != OUTPUT_PLUGIN_STATUS_STOP){
 				g_cfg.nResPos = (int)(BASS_ChannelGetPosition(g_cInfo[g_bNow].hChan, BASS_POS_BYTE) - g_cInfo[g_bNow].qStart);
 			}else{
 				g_cfg.nResPos = 0;
@@ -1292,7 +1471,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					int nLBIndex;
 
 					nLBIndex = ListView_GetNextItem(GetCurListTab(m_hTab)->hList, -1, LVNI_SELECTED);
-					if(BASS_ChannelIsActive(m_hChanOut)==BASS_ACTIVE_PAUSED &&  nLBIndex==GetCurListTab(m_hTab)->nPlaying)
+					if(OPGetStatus() == OUTPUT_PLUGIN_STATUS_PAUSE &&  nLBIndex==GetCurListTab(m_hTab)->nPlaying)
 					{
 						FilePause();	// ポーズ中なら再開
 					}else{ // それ以外なら選択ファイルを再生
@@ -1304,14 +1483,14 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case IDM_PLAYPAUSE:
- 					switch(BASS_ChannelIsActive(m_hChanOut)){
-						case BASS_ACTIVE_PLAYING:
-						case BASS_ACTIVE_PAUSED:
-							SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_PAUSE, 0), 0);
-							break;
-						case BASS_ACTIVE_STOPPED:
-							SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_PLAY, 0), 0);
-							break;
+ 					switch(OPGetStatus()){
+					case OUTPUT_PLUGIN_STATUS_PLAY:
+					case OUTPUT_PLUGIN_STATUS_PAUSE:
+						SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_PAUSE, 0), 0);
+						break;
+					case OUTPUT_PLUGIN_STATUS_STOP:
+						SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_PLAY, 0), 0);
+						break;
 					}
 					break;
 
@@ -2187,7 +2366,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					return (LRESULT)GetCurListTab(m_hTab)->nPlaying;
 
 				case GET_STATUS:
-					return (LRESULT)BASS_ChannelIsActive(m_hChanOut);
+					return (LRESULT)OPGetStatus();
 
 				case GET_POSITION:
 					return (LRESULT)BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, BASS_ChannelGetPosition(g_cInfo[g_bNow].hChan, BASS_POS_BYTE) - g_cInfo[g_bNow].qStart);
@@ -2326,7 +2505,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 			case WM_F4B24_IPC_GET_CAPABLE:
 				if (lp == WM_F4B24_IPC_GET_CAPABLE_LP_FLOATOUTPUT){
-					return IsSupportFloatOutput() ? WM_F4B24_IPC_GET_CAPABLE_RET_SUPPORTED : WM_F4B24_IPC_GET_CAPABLE_RET_NOT_SUPPORTED;
+					return OPIsSupportFloatOutput() ? WM_F4B24_IPC_GET_CAPABLE_RET_SUPPORTED : WM_F4B24_IPC_GET_CAPABLE_RET_NOT_SUPPORTED;
 				}
 				break;
 			
@@ -2504,6 +2683,8 @@ static void LoadConfig(){
 	g_cfg.nZipSearch = GetPrivateProfileInt(TEXT("Main"), TEXT("ZipSearch"), 0, m_szINIPath);
 	// タブが一つの時はタブを隠す
 	g_cfg.nTabHide = GetPrivateProfileInt(TEXT("Main"), TEXT("TabHide"), 0, m_szINIPath);
+	// 音声出力デバイス
+	g_cfg.dwOutputDevice = GetPrivateProfileInt(TEXT("Main"), TEXT("OutputDevice"), 0, m_szINIPath);
 	// 32bit(float)で出力する
 	g_cfg.nOut32bit = GetPrivateProfileInt(TEXT("Main"), TEXT("Out32bit"), 0, m_szINIPath);
 	// 停止時にフェードアウトする
@@ -2663,38 +2844,28 @@ static void AddTypes(LPCSTR lpszTypes) {
 	}
 }
 
-// DLL郡初期化、対応形式決定
-static int InitFileTypes(){
-	int i = 0;
-	TCHAR szPath[MAX_PATH] = {0};
-	HANDLE hFind = NULL;
-	WIN32_FIND_DATA wfd;
+static BOOL CALLBACK FileProc(LPCTSTR lpszPath, HWND hWnd){
+#ifdef UNICODE
+	HPLUGIN hPlugin = BASS_PluginLoad((LPSTR)lpszPath, BASS_UNICODE);
+#else
+	HPLUGIN hPlugin = BASS_PluginLoad(lpszPath, 0);
+#endif
+	if(hPlugin){
+		const BASS_PLUGININFO *info = BASS_PluginGetInfo(hPlugin);
+		for(DWORD d=0;d<info->formatc;d++){
+			AddTypes(info->formats[d].exts);
+		}
+	}
+	return TRUE;
+}
 
+// DLL郡初期化、対応形式決定
+static void InitFileTypes(){
 	ClearTypelist();
 	AddTypes("mp3;mp2;mp1;wav;ogg;aif;aiff");
 	AddTypes("mod;mo3;xm;it;s3m;mtm;umx");
 
-	GetModuleFileName(NULL, szPath, MAX_PATH);
-	lstrcpyn(PathFindFileName(szPath), TEXT("bass*.dll"), MAX_PATH);
-
-	hFind = FindFirstFile(szPath, &wfd);
-	if(hFind!=INVALID_HANDLE_VALUE){
-		do{
-#ifdef UNICODE
-			HPLUGIN hPlugin = BASS_PluginLoad((LPSTR)wfd.cFileName, BASS_UNICODE);
-#else
-			HPLUGIN hPlugin = BASS_PluginLoad(wfd.cFileName, 0);
-#endif
-			if(hPlugin){
-				const BASS_PLUGININFO *info = BASS_PluginGetInfo(hPlugin);
-				for(DWORD d=0;d<info->formatc;d++){
-					AddTypes(info->formats[d].exts);
-				}
-			}
-		}while(FindNextFile(hFind, &wfd));
-		FindClose(hFind);
-	}
-	return i;
+	EnumFiles(NULL, TEXT(""), TEXT("bass*.dll"), FileProc, 0);
 }
 
 static int XATOI(LPCTSTR p){
@@ -2759,7 +2930,7 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 #ifdef UNICODE
 												(g_cInfo[bFlag].pBuff?0:BASS_UNICODE) |
 #endif
-												BASS_STREAM_DECODE | m_bFLoat*BASS_SAMPLE_FLOAT);
+												BASS_STREAM_DECODE | m_bFloat*BASS_SAMPLE_FLOAT);
 	if(!g_cInfo[bFlag].hChan){
 	g_cInfo[bFlag].hChan = BASS_MusicLoad((BOOL)g_cInfo[bFlag].pBuff,
 												(g_cInfo[bFlag].pBuff?(void *)g_cInfo[bFlag].pBuff:(void *)szFilePath),
@@ -2767,7 +2938,7 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 #ifdef UNICODE
 												(g_cInfo[bFlag].pBuff?0:BASS_UNICODE) |
 #endif
-												BASS_MUSIC_DECODE | m_bFLoat*BASS_SAMPLE_FLOAT | BASS_MUSIC_PRESCAN, 0);
+												BASS_MUSIC_DECODE | m_bFloat*BASS_SAMPLE_FLOAT | BASS_MUSIC_PRESCAN, 0);
 	}
 	if(g_cInfo[bFlag].hChan){
 		if(!IsArchivePath(pInfo->szFilePath) || !GetArchiveGain(pInfo->szFilePath, &g_cInfo[bFlag].sGain, g_cInfo[bFlag].hChan)){
@@ -2799,10 +2970,10 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 		CHAR szAnsi[MAX_FITTLE_PATH];
 		WideCharToMultiByte(CP_ACP, 0, szFilePath, -1, szAnsi, MAX_FITTLE_PATH, NULL, NULL);
 		BASS_SetConfig(BASS_CONFIG_NET_TIMEOUT, 60000); // 5secは短いので60secにする
-		g_cInfo[bFlag].hChan = BASS_StreamCreateURL(szAnsi, 0, BASS_STREAM_BLOCK | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT * m_bFLoat, NULL, 0);
+		g_cInfo[bFlag].hChan = BASS_StreamCreateURL(szAnsi, 0, BASS_STREAM_BLOCK | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT * m_bFloat, NULL, 0);
 #else
 		BASS_SetConfig(BASS_CONFIG_NET_TIMEOUT, 60000); // 5secは短いので60secにする
-		g_cInfo[bFlag].hChan = BASS_StreamCreateURL(szFilePath, 0, BASS_STREAM_BLOCK | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT * m_bFLoat, NULL, 0);
+		g_cInfo[bFlag].hChan = BASS_StreamCreateURL(szFilePath, 0, BASS_STREAM_BLOCK | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT * m_bFloat, NULL, 0);
 #endif
 		if(g_cInfo[bFlag].hChan){
 			DWORD dwGain = SendMessage(GetParent(m_hStatus), WM_F4B24_IPC, WM_F4B24_HOOK_REPLAY_GAIN, (LPARAM)g_cInfo[bFlag].hChan);
@@ -2836,124 +3007,6 @@ static void FreeChannelInfo(BOOL bFlag){
 	return;
 }
 
-// メインストリームプロシージャ
-static DWORD CALLBACK MainStreamProc(HSTREAM handle, void *buf, DWORD len, void * /*user*/){
-	DWORD r;
-	CHANNELINFO *pCh = &g_cInfo[g_bNow];
-	BASS_CHANNELINFO bci;
-	if(BASS_ChannelGetInfo(handle ,&bci) && BASS_ChannelIsActive(pCh->hChan)){
-		BOOL fFloat = bci.flags & BASS_SAMPLE_FLOAT;
-		r = BASS_ChannelGetData(pCh->hChan, buf, fFloat ? len | BASS_DATA_FLOAT : len);
-		if (pCh->sAmp > 0 && r > 0 && r < BASS_STREAMPROC_END) {
-			DWORD i;
-			if (BASS_ChannelGetInfo(pCh->hChan ,&bci)) {
-				if (fFloat || (bci.flags & BASS_SAMPLE_FLOAT)){
-					float *p = (float *)buf;
-					float v = pCh->sAmp;
-					DWORD l = r >> 2;
-					for (i = 0; i < l; i++){
-						p[i] *= v;
-					}
-				}else if (bci.flags & BASS_SAMPLE_8BITS){
-					unsigned char *p = (unsigned char *)buf;
-					int v = (int)(pCh->sAmp * 256);
-					DWORD l = r;
-					int s;
-					for (i = 0; i < l; i++){
-						s = ((((int)p[i]) - 128) * v) >> 8;
-						if (s < -128)
-							s = -128;
-						else if (s > 127)
-							s = 127;
-						p[i] = (unsigned char)(s + 128);
-					}
-				}else{
-					signed short *p = (signed short *)buf;
-					int v = (int)(pCh->sAmp * 256);
-					DWORD l = r >> 1;
-					int s;
-					for (i = 0; i < l; i++){
-						s = (((int)p[i]) * v) >> 8;
-						if (s < -32768)
-							s = -32768;
-						else if (s > 32767)
-							s = 32767;
-						p[i] = (signed short)s;
-					}
-				}
-			}
-		}
-		if(m_bCueEnd || !BASS_ChannelIsActive(pCh->hChan)){
-			m_bCueEnd = FALSE;
-
-			PostMessage(GetParent(m_hStatus), WM_F4B24_IPC, WM_F4B24_INTERNAL_PLAY_NEXT, 0);
-		}
-	}else{
-		r = BASS_STREAMPROC_END;
-	}
-	return r;
-}
-
-static float CalcBassVolume(DWORD dwVol){
-	float fVol = g_cfg.nReplayGainPostAmp * g_cInfo[g_bNow].sGain * dwVol / (float)(SLIDER_DIVIDED * 100);
-	switch (g_cfg.nReplayGainMixer) {
-	case 0:
-		/*  内蔵 */
-		g_cInfo[g_bNow].sAmp = (fVol == (float)1) ? 0 : fVol;
-		fVol = 1;
-		break;
-	case 1:
-		/*  増幅のみ内蔵 */
-		if (fVol > 1){
-			g_cInfo[g_bNow].sAmp = fVol;
-			fVol = 1;
-		}else{
-			g_cInfo[g_bNow].sAmp = 0;
-		}
-		break;
-	case 2:
-		/*  BASS */
-		g_cInfo[g_bNow].sAmp = 0;
-		if (fVol > 1) fVol = 1;
-		break;
-	}
-	return fVol;
-}
-
-static void SetVolumeAndGain(HSTREAM h, DWORD dwVol){
-	BASS_ChannelSetAttribute(h, BASS_ATTRIB_VOL, CalcBassVolume(dwVol));
-}
-
-static void SetFadeIn(HSTREAM h, DWORD dwVol, DWORD dwTime){
-	if(g_cfg.nFadeOut){
-		BASS_ChannelSlideAttribute(h, BASS_ATTRIB_VOL, CalcBassVolume(dwVol), dwTime);
-		while (BASS_ChannelIsSliding(h, BASS_ATTRIB_VOL)) Sleep(1);
-	} else {
-		SetVolumeAndGain(h, dwVol);
-	}
-}
-
-static void SetFadeOut(HSTREAM h, DWORD dwTime){
-	if(g_cfg.nFadeOut){
-		BASS_ChannelSlideAttribute(h, BASS_ATTRIB_VOL, 0.0f, dwTime);
-		while (BASS_ChannelIsSliding(h, BASS_ATTRIB_VOL)) Sleep(1);
-	}
-}
-
-// メインストリームを作成
-static HSTREAM CreateMainStream(BASS_CHANNELINFO *info){
-	HSTREAM hRet;
-	DWORD dwFlag = info->flags & ~(BASS_STREAM_DECODE | BASS_MUSIC_DECODE);
-	if (m_bFLoat) dwFlag = (dwFlag & ~BASS_SAMPLE_8BITS) | BASS_SAMPLE_FLOAT;
-	hRet = BASS_StreamCreate(info->freq, info->chans, dwFlag, &MainStreamProc, 0);
-
-	SendMessage(GetParent(m_hStatus), WM_F4B24_IPC, WM_F4B24_HOOK_CREATE_STREAM, (LPARAM)hRet);
-
-	SetVolumeAndGain(hRet, SendMessage(m_hVolume, TBM_GETPOS, 0, 0));
-	BASS_ChannelPlay(hRet, FALSE);
-
-	return hRet;
-}
 
 // 指定ファイルを再生
 static BOOL PlayByUser(HWND hWnd, struct FILEINFO *pPlayFile){
@@ -2965,7 +3018,7 @@ static BOOL PlayByUser(HWND hWnd, struct FILEINFO *pPlayFile){
 	if(SetChannelInfo(g_bNow, pPlayFile)){
 		// ストリーム作成
 		BASS_ChannelGetInfo(g_cInfo[g_bNow].hChan, &info);
-		m_hChanOut = CreateMainStream(&info);
+		OPStart(&info, SendMessage(m_hVolume, TBM_GETPOS, 0, 0), m_bFloat);
 
 		OnStatusChangePlugins();
 
@@ -3023,10 +3076,10 @@ static void OnChangeTrack(){
 	//周波数が変わるときは開きなおす
 	BASS_ChannelGetInfo(g_cInfo[g_bNow].hChan, &info);
 	if(m_nGaplessState==GS_NEWFREQ){
-		BASS_ChannelStop(m_hChanOut);
-		m_hChanOut = CreateMainStream(&info);
+		OPStop();
+		OPStart(&info, SendMessage(m_hVolume, TBM_GETPOS, 0, 0), m_bFloat);
 	}else{
-		SetVolumeAndGain(m_hChanOut, SendMessage(m_hVolume, TBM_GETPOS, 0, 0));
+		OPSetVolume(SendMessage(m_hVolume, TBM_GETPOS, 0, 0));
 	}
 
 	// 切り替わったファイルのインデックスを取得
@@ -3255,21 +3308,21 @@ static BOOL _BASS_ChannelSetPosition(DWORD handle, int nPos){
 	QWORD qPos;
 	BOOL bRet;
 
-	DWORD dwMode = BASS_ChannelIsActive(m_hChanOut);
+	int nStatus = OPGetStatus();
 
 	qPos = g_cInfo[g_bNow].qDuration;
 	qPos = qPos*nPos/1000 + g_cInfo[g_bNow].qStart;
 
-	SetFadeOut(m_hChanOut, 150);
+	OPSetFadeOut(150);
 
-	BASS_ChannelStop(m_hChanOut);
+	OPStop();
 	bRet = BASS_ChannelSetPosition(handle, qPos, BASS_POS_BYTE);
 
-	SetVolumeAndGain(m_hChanOut, SendMessage(m_hVolume, TBM_GETPOS, 0, 0));
+	OPSetVolume(SendMessage(m_hVolume, TBM_GETPOS, 0, 0));
 
-	BASS_ChannelPlay(m_hChanOut, FALSE);
+	OPPlay();
 
-	if(dwMode != BASS_ChannelIsActive(m_hChanOut)){
+	if(nStatus != OPGetStatus()){
 		OnStatusChangePlugins();
 	}
 
@@ -3291,9 +3344,9 @@ static void _BASS_ChannelSeekSecond(DWORD handle, float fSecond, int nSign){
 	}else{
 		qSet = qPos + nSign*qSeek;
 	}
-	BASS_ChannelStop(m_hChanOut);
+	OPStop();
 	BASS_ChannelSetPosition(handle, qSet + g_cInfo[g_bNow].qStart, BASS_POS_BYTE);
-	BASS_ChannelPlay(m_hChanOut, FALSE);
+	OPPlay();
 
 	return;
 }
@@ -3302,17 +3355,17 @@ static void _BASS_ChannelSeekSecond(DWORD handle, float fSecond, int nSign){
 static int FilePause(){
 	DWORD dMode;
 
-	dMode = BASS_ChannelIsActive(m_hChanOut);
-	if(dMode==BASS_ACTIVE_PLAYING){
-		SetFadeOut(m_hChanOut, 250);
-		BASS_ChannelPause(m_hChanOut);
+	dMode = OPGetStatus();
+	if(dMode==OUTPUT_PLUGIN_STATUS_PLAY){
+		OPSetFadeOut(250);
+		OPPause();
 		SendMessage(m_hToolBar,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(TRUE, 0));
-	}else if(dMode==BASS_ACTIVE_PAUSED){
-		BASS_ChannelPlay(m_hChanOut, FALSE);
-		SetFadeIn(m_hChanOut, SendMessage(m_hVolume, TBM_GETPOS, 0, 0), 250);
+	}else if(dMode==OUTPUT_PLUGIN_STATUS_PAUSE){
+		OPPlay();
+		OPSetFadeIn(SendMessage(m_hVolume, TBM_GETPOS, 0, 0), 250);
 		SendMessage(m_hToolBar,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(FALSE, 0));
 	}else{
-		SetVolumeAndGain(m_hChanOut, SendMessage(m_hVolume, TBM_GETPOS, 0, 0));
+		OPSetVolume(SendMessage(m_hVolume, TBM_GETPOS, 0, 0));
 		SendMessage(m_hToolBar,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(FALSE, 0));
 	}
 
@@ -3324,14 +3377,12 @@ static int FilePause(){
 
 // アウトプットストリームを停止、表示を初期化
 static int StopOutputStream(HWND hWnd){
-	SetFadeOut(m_hChanOut, 250);
+	OPSetFadeOut(250);
 
 	// ストリームを削除
 	KillTimer(hWnd, ID_SEEKTIMER);
-	BASS_ChannelStop(m_hChanOut);
-	SendMessage(hWnd, WM_F4B24_IPC, WM_F4B24_HOOK_FREE_STREAM, (LPARAM)m_hChanOut);
-	BASS_StreamFree(m_hChanOut);
-	m_hChanOut = 0;
+	OPStop();
+	OPEnd();
 
 	FreeChannelInfo(!g_bNow);
 	FreeChannelInfo(g_bNow);
@@ -3833,7 +3884,7 @@ static LRESULT CALLBACK NewSliderProc(HWND hSB, UINT msg, WPARAM wp, LPARAM lp){
 					(LPARAM)(DWORD)MAKELONG(pt.x,  pt.y + 20));	// スライダの20Pixel下に表示
 
 				if(hSB==m_hVolume){
-					SetVolumeAndGain(m_hChanOut, nPos);
+					OPSetVolume(nPos);
 				}
 
 			}
@@ -3868,7 +3919,7 @@ static LRESULT CALLBACK NewSliderProc(HWND hSB, UINT msg, WPARAM wp, LPARAM lp){
 
 		case TBM_SETPOS:
 			if(hSB==m_hVolume){
-				SetVolumeAndGain(m_hChanOut, lp);
+				OPSetVolume(lp);
 			}
 			break;
 
@@ -4131,7 +4182,7 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 							if (lplvcd->nmcd.dwDrawStage == CDDS_ITEMPREPAINT) {
 								if(m_nPlayTab==TabCtrl_GetCurSel(hTC)
 									&& GetCurListTab(hTC)->nPlaying==(signed int)lplvcd->nmcd.dwItemSpec
-									&& BASS_ChannelIsActive(m_hChanOut)/*>=BASS_ACTIVE_PLAYING*/ ){
+									&& OPGetStatus() != OUTPUT_PLUGIN_STATUS_STOP){
 										switch(g_cfg.nPlayView){
 											case 1:
 												if(!m_hBoldFont){
@@ -4726,16 +4777,6 @@ static void SendSupportList(HWND hWnd){
 	}
 	if (p < MAX_FITTLE_PATH) szList[p] = 0;
 	SendMessage(hWnd, WM_SETTEXT, 0, (LPARAM)szList);
-}
-
-// 音声出力デバイスが浮動小数点出力をサポートしているか調べる
-static BOOL IsSupportFloatOutput(){
-	DWORD floatable = BASS_StreamCreate(44100, 1, BASS_SAMPLE_FLOAT, NULL, 0); // try creating FP stream
-	if (floatable){
-		BASS_StreamFree(floatable); // floating-point channels are supported!
-		return TRUE;
-	}
-	return FALSE;
 }
 
 // 指定した文字列を持つメニュー項目を探す

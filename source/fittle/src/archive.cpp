@@ -11,6 +11,7 @@
 #include "func.h"
 #define APDK_VER 3
 #include "aplugin.h"
+#include "plugins.h"
 
 static ARCHIVE_PLUGIN_INFO *pTop = NULL;
 
@@ -168,35 +169,17 @@ BOOL AnalyzeArchivePath(CHANNELINFO *pInfo, LPTSTR pszArchivePath, LPTSTR pszSta
 	return FALSE;
 }
 
-BOOL InitArchive(LPTSTR pszPath, HWND hWnd){
-	TCHAR szPathW[MAX_PATH];
-	TCHAR szDllPath[MAX_PATH];
-	HANDLE hFind;
-	WIN32_FIND_DATA wfd = {0};
-
-	//lstrcat(pszPath, "Plugins");
-	wsprintf(szPathW, TEXT("%s*.fap"), pszPath);
-
-	hFind = FindFirstFile(szPathW, &wfd);
-	if(hFind!=INVALID_HANDLE_VALUE){
-		do{
-			HINSTANCE hDll;
-			wsprintf(szDllPath, TEXT("%s%s"), pszPath, wfd.cFileName);
-			hDll = LoadLibrary(szDllPath);
-			if(hDll){
+static BOOL CALLBACK RegisterPluginProc(HMODULE hPlugin, HWND hWnd){
 #ifdef UNICODE
-				FARPROC pfnAPlugin = GetProcAddress(hDll, "GetAPluginInfoW");
+	FARPROC pfnAPlugin = GetProcAddress(hPlugin, "GetAPluginInfoW");
 #else
-				FARPROC pfnAPlugin = GetProcAddress(hDll, "GetAPluginInfo");
+	FARPROC pfnAPlugin = GetProcAddress(hPlugin, "GetAPluginInfo");
 #endif
-				if (!pfnAPlugin || !RegisterArchivePlugin(pfnAPlugin, hWnd, hDll)){
-					FreeLibrary(hDll);
-				}
-			}
-		}while(FindNextFile(hFind, &wfd));
-		FindClose(hFind);
-	}
+	return pfnAPlugin && RegisterArchivePlugin(pfnAPlugin, hWnd, hPlugin);
+}
 
+BOOL InitArchive(HWND hWnd){
+	EnumPlugins(NULL, TEXT(""), TEXT("*.fap"), RegisterPluginProc, hWnd);
 	return TRUE;
 }
 

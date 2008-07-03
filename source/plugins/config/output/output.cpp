@@ -32,13 +32,6 @@
 #define SET_SUBCLASS(hWnd, Proc) \
 	SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)Proc))
 
-/* プラグインリスト */
-static struct OUTPUT_PLUGIN_NODE {
-	struct OUTPUT_PLUGIN_NODE *pNext;
-	OUTPUT_PLUGIN_INFO *pInfo;
-	HMODULE hDll;
-} *pTop = NULL;
-
 void *HAlloc(DWORD dwSize){
 	return HeapAlloc(GetProcessHeap(), 0, dwSize);
 }
@@ -47,7 +40,15 @@ void HFree(LPVOID pPtr){
 	HeapFree(GetProcessHeap(), 0, pPtr);
 }
 
-static void FreePlugins(){
+/* 出力プラグインリスト */
+static struct OUTPUT_PLUGIN_NODE {
+	struct OUTPUT_PLUGIN_NODE *pNext;
+	OUTPUT_PLUGIN_INFO *pInfo;
+	HMODULE hDll;
+} *pTop = NULL;
+
+/* 出力プラグインを開放 */
+static void FreeOutputPlugins(){
 	struct OUTPUT_PLUGIN_NODE *pList = pTop;
 	while (pList) {
 		struct OUTPUT_PLUGIN_NODE *pNext = pList->pNext;
@@ -58,7 +59,7 @@ static void FreePlugins(){
 	pTop = NULL;
 }
 
-/* プラグインを登録 */
+/* 出力プラグインを登録 */
 static BOOL CALLBACK RegisterOutputPlugin(HMODULE hPlugin){
 	FARPROC lpfnProc = GetProcAddress(hPlugin, "GetOPluginInfo");
 	if (lpfnProc){
@@ -83,22 +84,23 @@ static BOOL CALLBACK RegisterOutputPlugin(HMODULE hPlugin){
 	return FALSE;
 }
 
-static BOOL fIsUnicode = FALSE;
-static HMODULE hDLL = 0;
+static BOOL m_fIsUnicode = FALSE;
+static HMODULE m_hDLL = 0;
+static DWORD m_dwDefualtDeviceId = 0;
 
 #define WA_MAX_SIZE MAX_PATH
-#define WAIsUnicode fIsUnicode
+#define WAIsUnicode m_fIsUnicode
 #include "../../../fittle/src/wastr.h"
 
 
 static struct {
+	DWORD dwOutputDevice;		// 出力デバイス
 	int nOut32bit;				// 32bit(float)で出力する
 	int nFadeOut;				// 停止時にフェードアウトする
 	int nReplayGainMode;		// ReplayGainの適用方法
 	int nReplayGainMixer;		// 音量増幅方法
 	int nReplayGainPreAmp;		// PreAmp(%)
 	int nReplayGainPostAmp;		// PostAmp(%)
-
 } m_cfg;				// 設定構造体
 
 static DWORD CALLBACK GetConfigPageCount(void);
@@ -122,10 +124,10 @@ CONFIG_PLUGIN_INFO * CALLBACK GetCPluginInfo(void){
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 	(void)lpvReserved;
 	if (fdwReason == DLL_PROCESS_ATTACH){
-		hDLL = hinstDLL;
+		m_hDLL = hinstDLL;
 		DisableThreadLibraryCalls(hinstDLL);
 	} else if (fdwReason == DLL_PROCESS_DETACH){
-		FreePlugins();
+		FreeOutputPlugins();
 	}
 	return TRUE;
 }
@@ -157,6 +159,8 @@ static void LoadConfig(){
 
 	WASetIniFile(NULL, "fittle.ini");
 
+	// 音声出力デバイス
+	m_cfg.dwOutputDevice = WAGetIniInt("Main", "OutputDevice", 0);
 	// 32bit(float)で出力する
 	m_cfg.nOut32bit = WAGetIniInt("Main", "Out32bit", 0);
 	// 停止時にフェードアウトする
@@ -179,6 +183,7 @@ static void SaveConfig(){
 
 	WASetIniFile(NULL, "fittle.ini");
 
+	WASetIniInt("Main", "OutputDevice", m_cfg.dwOutputDevice);
 	WASetIniInt("Main", "Out32bit", m_cfg.nOut32bit);
 	WASetIniInt("Main", "FadeOut", m_cfg.nFadeOut);
 	WASetIniInt("ReplayGain", "Mode", m_cfg.nReplayGainMode);
@@ -190,6 +195,11 @@ static void SaveConfig(){
 }
 
 static BOOL OutputCheckChanged(HWND hDlg){
+	int dwSelectDeviceId = SendDlgItemMessage(hDlg, IDC_COMBO5, CB_GETITEMDATA, (WPARAM)SendDlgItemMessage(hDlg, IDC_COMBO5, CB_GETCURSEL, (WPARAM)0, (LPARAM)0), (LPARAM)0);
+	if (m_cfg.dwOutputDevice != dwSelectDeviceId){
+		if (m_cfg.dwOutputDevice != 0 || m_dwDefualtDeviceId != dwSelectDeviceId)
+			return TRUE;
+	}
 	if (m_cfg.nOut32bit != (int)SendDlgItemMessage(hDlg, IDC_CHECK13, BM_GETCHECK, 0, 0)) return TRUE;
 	if (m_cfg.nFadeOut != (int)SendDlgItemMessage(hDlg, IDC_CHECK14, BM_GETCHECK, 0, 0)) return TRUE;
 	if (m_cfg.nReplayGainMode != SendDlgItemMessage(hDlg, IDC_COMBO2, CB_GETCURSEL, (WPARAM)0, (LPARAM)0)) return TRUE;
@@ -253,6 +263,8 @@ static BOOL CALLBACK OutputSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 
 			if (pTop){
 				struct OUTPUT_PLUGIN_NODE *pList = pTop;
+				int nSelextIndex = -1;
+				int nDefaultIndex = -1;
 				DWORD dwDefaultDevice = 0xffffffff;
 				do {
 					int i;
@@ -267,17 +279,30 @@ static BOOL CALLBACK OutputSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 							int nIndex = SendDlgItemMessageA(hDlg, IDC_COMBO5, CB_ADDSTRING, (WPARAM)0, (LPARAM)name);
 							if (nIndex != CB_ERR && nIndex != CB_ERRSPACE) {
 								SendDlgItemMessage(hDlg, IDC_COMBO5, CB_SETITEMDATA, (WPARAM)nIndex, (LPARAM)dwId);
+								if (dwId == dwDefaultDevice) {
+									nDefaultIndex = nIndex;
+									m_dwDefualtDeviceId = dwId;
+								}
+								if (m_cfg.dwOutputDevice != 0 && dwId == m_cfg.dwOutputDevice) {
+									nSelextIndex = nIndex;
+								}
 							}
 						}
 					}
 					pList = pList->pNext;
 				} while (pList);
+				SendDlgItemMessage(hDlg, IDC_COMBO5, CB_SETCURSEL, (WPARAM)(nSelextIndex >= 0) ? nSelextIndex : (nDefaultIndex >= 0) ? nDefaultIndex : 0, (LPARAM)0);
 			}
 
 			return TRUE;
 
 		case WM_NOTIFY:
 			if(((NMHDR *)lp)->code==PSN_APPLY){
+				DWORD dwSelectDeviceId = SendDlgItemMessage(hDlg, IDC_COMBO5, CB_GETITEMDATA, (WPARAM)SendDlgItemMessage(hDlg, IDC_COMBO5, CB_GETCURSEL, (WPARAM)0, (LPARAM)0), (LPARAM)0);
+				if (m_dwDefualtDeviceId != dwSelectDeviceId)
+					m_cfg.dwOutputDevice = dwSelectDeviceId;
+				else
+					m_cfg.dwOutputDevice = 0;
 				m_cfg.nOut32bit = (int)SendDlgItemMessage(hDlg, IDC_CHECK13, BM_GETCHECK, 0, 0);
 				m_cfg.nFadeOut = (int)SendDlgItemMessage(hDlg, IDC_CHECK14, BM_GETCHECK, 0, 0);
 				m_cfg.nReplayGainMode = (int)SendDlgItemMessage(hDlg, IDC_COMBO2, CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
@@ -322,7 +347,7 @@ static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel, LPSTR pszCo
 	WASTR dlgtemp;
 	LPCSTR lpszTemplate, lpszPath;
 	DLGPROC lpfnDlgProc = 0;
-	fIsUnicode = ((GetVersion() & 0x80000000) == 0);
+	m_fIsUnicode = ((GetVersion() & 0x80000000) == 0);
 	if (!pTop) WAEnumPlugins(NULL, "", "*.fop", RegisterOutputPlugin);
 	if (nLevel == 1){
 		if (nIndex == 0){
@@ -337,14 +362,14 @@ static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel, LPSTR pszCo
 	if (WAIsUnicode) {
 		psp.W.dwSize = sizeof (PROPSHEETPAGEW_V1);
 		psp.W.dwFlags = PSP_DEFAULT;
-		psp.W.hInstance = hDLL;
+		psp.W.hInstance = m_hDLL;
 		psp.W.pszTemplate = dlgtemp.W;
 		psp.W.pfnDlgProc = (DLGPROC)lpfnDlgProc;
 		return CreatePropertySheetPageW(&psp.W);
 	} else {
 		psp.A.dwSize = sizeof (PROPSHEETPAGEA_V1);
 		psp.A.dwFlags = PSP_DEFAULT;
-		psp.A.hInstance = hDLL;
+		psp.A.hInstance = m_hDLL;
 		psp.A.pszTemplate = dlgtemp.A;
 		psp.A.pfnDlgProc = (DLGPROC)lpfnDlgProc;
 		return CreatePropertySheetPageA(&psp.A);

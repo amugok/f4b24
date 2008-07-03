@@ -188,10 +188,10 @@ BEGIN
                     95,123,59,13
 END
 
-PATH_SHEET DIALOGEX 0, 0, 215, 220
+PATH_SHEET DIALOG DISCARDABLE  0, 0, 215, 220
 STYLE DS_CONTROL | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "パス"
-FONT 9, "MS UI Gothic", 400, 0, 0x80
+FONT 9, "MS UI Gothic"
 BEGIN
     GROUPBOX        "スタートアップフォルダ",IDC_STATIC,7,7,198,51
     EDITTEXT        IDC_EDIT1,15,19,182,12,ES_AUTOHSCROLL
@@ -199,8 +199,8 @@ BEGIN
                     IDC_STATIC,16,35,145,18
     PUSHBUTTON      "参照(&R)...",IDC_BUTTON1,151,37,46,15
     GROUPBOX        "検索する拡張子",IDC_STATIC,7,62,198,33
-    LTEXT           "スタティック",IDC_STATIC4,15,75,182,12,0,
-                    WS_EX_CLIENTEDGE
+    EDITTEXT        IDC_EDIT5,15,75,182,12,ES_AUTOHSCROLL | ES_READONLY | 
+                    NOT WS_TABSTOP
     GROUPBOX        "ファイラのパス",IDC_STATIC,7,99,198,51
     EDITTEXT        IDC_EDIT3,15,111,182,12,ES_AUTOHSCROLL
     LTEXT           "フォルダを開くソフトを指定してください\n空白にするとエクスプローラを使用します。",

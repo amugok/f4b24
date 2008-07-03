@@ -114,6 +114,8 @@ struct CONFIG{
 	int nCloseMin;				// 閉じるボタンで最小化する
 	int nZipSearch;				// サブフォルダを検索で圧縮ファイルも検索する
 	int nTabHide;				// タブが一つの時はタブを隠す
+
+	DWORD dwOutputDevice;		// 出力デバイス
 	int nOut32bit;				// 32bit(float)で出力する
 	int nFadeOut;				// 停止時にフェードアウトする
 	int nReplayGainMode;		// ReplayGainの適用方法
