@@ -290,7 +290,7 @@ static int InitOutputPlugin(HWND hWnd){
 			int n = pPlugin->GetDeviceCount();
 			for (i = 0; i < n; i++) {
 				DWORD dwId = pPlugin->GetDeviceID(i);
-				if (g_cfg.dwOutputDevice != 0 && dwId == g_cfg.dwOutputDevice) {
+				if (g_cfg.nOutputDevice != 0 && dwId == g_cfg.nOutputDevice) {
 					return OPInit(pPlugin, dwId, hWnd); 
 				}
 			}
@@ -2684,7 +2684,7 @@ static void LoadConfig(){
 	// タブが一つの時はタブを隠す
 	g_cfg.nTabHide = GetPrivateProfileInt(TEXT("Main"), TEXT("TabHide"), 0, m_szINIPath);
 	// 音声出力デバイス
-	g_cfg.dwOutputDevice = GetPrivateProfileInt(TEXT("Main"), TEXT("OutputDevice"), 0, m_szINIPath);
+	g_cfg.nOutputDevice = GetPrivateProfileInt(TEXT("Main"), TEXT("OutputDevice"), 0, m_szINIPath);
 	// 32bit(float)で出力する
 	g_cfg.nOut32bit = GetPrivateProfileInt(TEXT("Main"), TEXT("Out32bit"), 0, m_szINIPath);
 	// 停止時にフェードアウトする

@@ -86,7 +86,7 @@ static BOOL CALLBACK RegisterOutputPlugin(HMODULE hPlugin){
 
 static BOOL m_fIsUnicode = FALSE;
 static HMODULE m_hDLL = 0;
-static DWORD m_dwDefualtDeviceId = 0;
+static int m_nDefualtDeviceId = 0;
 
 #define WA_MAX_SIZE MAX_PATH
 #define WAIsUnicode m_fIsUnicode
@@ -94,7 +94,7 @@ static DWORD m_dwDefualtDeviceId = 0;
 
 
 static struct {
-	DWORD dwOutputDevice;		// 出力デバイス
+	int nOutputDevice;		// 出力デバイス
 	int nOut32bit;				// 32bit(float)で出力する
 	int nFadeOut;				// 停止時にフェードアウトする
 	int nReplayGainMode;		// ReplayGainの適用方法
@@ -160,7 +160,7 @@ static void LoadConfig(){
 	WASetIniFile(NULL, "fittle.ini");
 
 	// 音声出力デバイス
-	m_cfg.dwOutputDevice = WAGetIniInt("Main", "OutputDevice", 0);
+	m_cfg.nOutputDevice = WAGetIniInt("Main", "OutputDevice", 0);
 	// 32bit(float)で出力する
 	m_cfg.nOut32bit = WAGetIniInt("Main", "Out32bit", 0);
 	// 停止時にフェードアウトする
@@ -183,7 +183,7 @@ static void SaveConfig(){
 
 	WASetIniFile(NULL, "fittle.ini");
 
-	WASetIniInt("Main", "OutputDevice", m_cfg.dwOutputDevice);
+	WASetIniInt("Main", "OutputDevice", m_cfg.nOutputDevice);
 	WASetIniInt("Main", "Out32bit", m_cfg.nOut32bit);
 	WASetIniInt("Main", "FadeOut", m_cfg.nFadeOut);
 	WASetIniInt("ReplayGain", "Mode", m_cfg.nReplayGainMode);
@@ -195,9 +195,10 @@ static void SaveConfig(){
 }
 
 static BOOL OutputCheckChanged(HWND hDlg){
-	int dwSelectDeviceId = SendDlgItemMessage(hDlg, IDC_COMBO5, CB_GETITEMDATA, (WPARAM)SendDlgItemMessage(hDlg, IDC_COMBO5, CB_GETCURSEL, (WPARAM)0, (LPARAM)0), (LPARAM)0);
-	if (m_cfg.dwOutputDevice != dwSelectDeviceId){
-		if (m_cfg.dwOutputDevice != 0 || m_dwDefualtDeviceId != dwSelectDeviceId)
+	int nSelectDeviceId = SendDlgItemMessage(hDlg, IDC_COMBO5, CB_GETITEMDATA, (WPARAM)SendDlgItemMessage(hDlg, IDC_COMBO5, CB_GETCURSEL, (WPARAM)0, (LPARAM)0), (LPARAM)0);
+	if (nSelectDeviceId == -1) nSelectDeviceId = 0;
+	if (nSelectDeviceId != m_cfg.nOutputDevice){
+		if (m_cfg.nOutputDevice != 0 || m_nDefualtDeviceId != nSelectDeviceId)
 			return TRUE;
 	}
 	if (m_cfg.nOut32bit != (int)SendDlgItemMessage(hDlg, IDC_CHECK13, BM_GETCHECK, 0, 0)) return TRUE;
@@ -281,9 +282,9 @@ static BOOL CALLBACK OutputSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 								SendDlgItemMessage(hDlg, IDC_COMBO5, CB_SETITEMDATA, (WPARAM)nIndex, (LPARAM)dwId);
 								if (dwId == dwDefaultDevice) {
 									nDefaultIndex = nIndex;
-									m_dwDefualtDeviceId = dwId;
+									m_nDefualtDeviceId = dwId;
 								}
-								if (m_cfg.dwOutputDevice != 0 && dwId == m_cfg.dwOutputDevice) {
+								if (m_cfg.nOutputDevice != 0 && dwId == m_cfg.nOutputDevice) {
 									nSelextIndex = nIndex;
 								}
 							}
@@ -298,11 +299,12 @@ static BOOL CALLBACK OutputSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 
 		case WM_NOTIFY:
 			if(((NMHDR *)lp)->code==PSN_APPLY){
-				DWORD dwSelectDeviceId = SendDlgItemMessage(hDlg, IDC_COMBO5, CB_GETITEMDATA, (WPARAM)SendDlgItemMessage(hDlg, IDC_COMBO5, CB_GETCURSEL, (WPARAM)0, (LPARAM)0), (LPARAM)0);
-				if (m_dwDefualtDeviceId != dwSelectDeviceId)
-					m_cfg.dwOutputDevice = dwSelectDeviceId;
+				int nSelectDeviceId = SendDlgItemMessage(hDlg, IDC_COMBO5, CB_GETITEMDATA, (WPARAM)SendDlgItemMessage(hDlg, IDC_COMBO5, CB_GETCURSEL, (WPARAM)0, (LPARAM)0), (LPARAM)0);
+				if (nSelectDeviceId == -1) nSelectDeviceId = 0;
+				if (nSelectDeviceId != m_nDefualtDeviceId)
+					m_cfg.nOutputDevice = nSelectDeviceId;
 				else
-					m_cfg.dwOutputDevice = 0;
+					m_cfg.nOutputDevice = 0;
 				m_cfg.nOut32bit = (int)SendDlgItemMessage(hDlg, IDC_CHECK13, BM_GETCHECK, 0, 0);
 				m_cfg.nFadeOut = (int)SendDlgItemMessage(hDlg, IDC_CHECK14, BM_GETCHECK, 0, 0);
 				m_cfg.nReplayGainMode = (int)SendDlgItemMessage(hDlg, IDC_COMBO2, CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
