@@ -7,7 +7,6 @@
 #include <shlwapi.h>
 
 #include "../../../../extra/bass24/bass.h"
-#include "../../../../extra/bassasio10/bassasio.h"
 #include "../../../fittle/src/oplugin.h"
 #include "../../../fittle/src/f4b24.h"
 
@@ -21,7 +20,6 @@
 #pragma comment(lib,"shlwapi.lib")
 #pragma comment(lib,"shell32.lib")
 #pragma comment(lib,"../../../../extra/bass24/bass.lib")
-#pragma comment(lib,"../../../../extra/bassasio10/bassasio.lib")
 #pragma comment(linker, "/EXPORT:GetOPluginInfo=_GetOPluginInfo@0")
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
@@ -30,9 +28,65 @@
 #pragma comment(linker,"/OPT:NOWIN98")
 #endif
 
+#define BASSASIODEF(f) (WINAPI * f)
+
+
+#define BASS_ASIO_FORMAT_FLOAT  19 // 32-bit floating-point
+#define BASS_ASIO_RESET_PAUSE	4 // unpause channel
+#define BASS_ASIO_ACTIVE_DISABLED	0
+#define BASS_ASIO_ACTIVE_ENABLED	1
+#define BASS_ASIO_ACTIVE_PAUSED		2
+typedef struct {
+	const char *name;	// description
+	const char *driver;	// driver
+} BASS_ASIO_DEVICEINFO;
+typedef DWORD (CALLBACK ASIOPROC)(BOOL input, DWORD channel, void *buffer, DWORD length, void *user);
+
+BOOL BASSASIODEF(BASS_ASIO_ChannelEnable)(BOOL input, DWORD channel, ASIOPROC *proc, void *user);
+DWORD BASSASIODEF(BASS_ASIO_ChannelIsActive)(BOOL input, DWORD channel);
+BOOL BASSASIODEF(BASS_ASIO_ChannelJoin)(BOOL input, DWORD channel, int channel2);
+BOOL BASSASIODEF(BASS_ASIO_ChannelPause)(BOOL input, DWORD channel);
+BOOL BASSASIODEF(BASS_ASIO_ChannelReset)(BOOL input, int channel, DWORD flags);
+BOOL BASSASIODEF(BASS_ASIO_ChannelSetFormat)(BOOL input, DWORD channel, DWORD format);
+BOOL BASSASIODEF(BASS_ASIO_ChannelSetRate)(BOOL input, DWORD channel, double rate);
+BOOL BASSASIODEF(BASS_ASIO_ChannelSetVolume)(BOOL input, int channel, float volume);
+BOOL BASSASIODEF(BASS_ASIO_ControlPanel)();
+BOOL BASSASIODEF(BASS_ASIO_Free)();
+BOOL BASSASIODEF(BASS_ASIO_GetDeviceInfo)(DWORD device, BASS_ASIO_DEVICEINFO *info);
+BOOL BASSASIODEF(BASS_ASIO_Init)(DWORD device);
+BOOL BASSASIODEF(BASS_ASIO_SetRate)(double rate);
+BOOL BASSASIODEF(BASS_ASIO_Start)(DWORD buflen);
+BOOL BASSASIODEF(BASS_ASIO_Stop)();
+
+
+#define FUNC_PREFIXA "BASS_ASIO_"
+static CHAR szDllNameA[] = "bassasio.dll";
+static struct IMPORT_FUNC_TABLE {
+	LPSTR lpszFuncName;
+	FARPROC * ppFunc;
+} functbl[] = {
+	{ "ChannelEnable", (FARPROC *)&BASS_ASIO_ChannelEnable },
+	{ "ChannelIsActive", (FARPROC *)&BASS_ASIO_ChannelIsActive },
+	{ "ChannelJoin", (FARPROC *)&BASS_ASIO_ChannelJoin },
+	{ "ChannelPause", (FARPROC *)&BASS_ASIO_ChannelPause },
+	{ "ChannelReset", (FARPROC *)&BASS_ASIO_ChannelReset },
+	{ "ChannelSetFormat", (FARPROC *)&BASS_ASIO_ChannelSetFormat },
+	{ "ChannelSetRate", (FARPROC *)&BASS_ASIO_ChannelSetRate },
+	{ "ChannelSetVolume", (FARPROC *)&BASS_ASIO_ChannelSetVolume },
+	{ "ControlPanel", (FARPROC *)&BASS_ASIO_ControlPanel },
+	{ "Free", (FARPROC *)&BASS_ASIO_Free },
+	{ "GetDeviceInfo", (FARPROC *)&BASS_ASIO_GetDeviceInfo },
+	{ "Init", (FARPROC *)&BASS_ASIO_Init },
+	{ "SetRate", (FARPROC *)&BASS_ASIO_SetRate },
+	{ "Start", (FARPROC *)&BASS_ASIO_Start },
+	{ "Stop", (FARPROC *)&BASS_ASIO_Stop },
+	{ 0, (FARPROC *)0 }
+};
+
 
 static HMODULE m_hDLL = 0;
 static int m_nDevice = 0;
+static HMODULE m_hBASSASIO = 0;
 
 #define OUTPUT_PLUGIN_ID_BASE (0x20000)
 
@@ -42,7 +96,6 @@ static DWORD CALLBACK GetDeviceID(int nIndex);
 static BOOL CALLBACK GetDeviceNameA(DWORD dwID, LPSTR szBuf, int nBufSize);
 static int CALLBACK Init(DWORD dwID);
 static void CALLBACK Term(void);
-static int CALLBACK GetRate(void);
 static BOOL CALLBACK Setup(HWND hWnd);
 static int CALLBACK GetStatus(void);
 static void CALLBACK Start(void *pchinfo, float sVolume, BOOL fFloat);
@@ -75,16 +128,35 @@ static OUTPUT_PLUGIN_INFO opinfo = {
 	FadeOut,
 	IsSupportFloatOutput,
 	0,0,0,0
-/*
-	,GetRate
-*/
 };
+
+static BOOL LoadBASSASIO(void){
+	const struct IMPORT_FUNC_TABLE *pft;
+	CHAR funcname[32];
+	int l;
+	lstrcpynA(funcname, FUNC_PREFIXA, 32);
+	l = lstrlenA(funcname);
+	if (m_hBASSASIO) return TRUE;
+	m_hBASSASIO = LoadLibraryA(szDllNameA);
+	if(!m_hBASSASIO) return FALSE;
+	for (pft = functbl; pft->lpszFuncName; pft++){
+		lstrcpynA(funcname + l, pft->lpszFuncName, 32 - l);
+		FARPROC fp = GetProcAddress(m_hBASSASIO, funcname);
+		if (!fp){
+			FreeLibrary(m_hBASSASIO);
+			m_hBASSASIO = NULL;
+			return FALSE;
+		}
+		*pft->ppFunc = fp;
+	}
+	return TRUE;
+}
 
 #ifdef __cplusplus
 extern "C"
 #endif
 OUTPUT_PLUGIN_INFO * CALLBACK GetOPluginInfo(void){
-	return &opinfo;
+	return LoadBASSASIO() ? &opinfo : 0;
 }
 
 
@@ -126,15 +198,6 @@ static int CALLBACK Init(DWORD dwID){
 }
 
 static void CALLBACK Term(void){
-}
-
-static int CALLBACK GetRate(void){
-	if (BASS_ASIO_Init(m_nDevice)) {
-		float freq = BASS_ASIO_GetRate();
-		BASS_ASIO_Free();
-		if (freq > 0) return freq;
-	}
-	return 44100;
 }
 
 static BOOL CALLBACK Setup(HWND hWnd){

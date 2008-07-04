@@ -51,7 +51,6 @@ static LPBASS_WADSP_GetName BASS_WADSP_GetName = NULL;
 
 #define FUNC_PREFIXA "BASS_WADSP_"
 static /*const*/ CHAR szDllNameA[] = "bass_wadsp.dll";
-static /*const*/ WCHAR szDllNameW[] =L"bass_wadsp.dll";
 static /*const*/ struct IMPORT_FUNC_TABLE {
 	LPSTR lpszFuncName;
 	FARPROC * ppFunc;
@@ -126,7 +125,7 @@ static BOOL InitBassWaDsp(HWND hWnd){
 		WIN32_FIND_DATAW W;
 	} wfd;
 	int i = 0;
-	hWaDsp = fIsUnicode ? LoadLibraryW(szDllNameW) : LoadLibraryA(szDllNameA);
+	hWaDsp = LoadLibraryA(szDllNameA);
 	if(!hWaDsp){
 		return FALSE;
 	}

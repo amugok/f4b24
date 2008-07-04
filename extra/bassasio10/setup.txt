@@ -1,4 +1,0 @@
-PUT
-	bassasio.h
-	bassasio.lib
-HERE

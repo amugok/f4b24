@@ -4698,6 +4698,7 @@ static void ApplyConfig(HWND hWnd){
 	BOOL fIsIconic = IsIconic(hWnd);
 	BOOL fOldTrayVisible = m_bTrayFlag;
 	BOOL fNewTrayVisible = FALSE;
+	int nCurTab;
 
 	UnRegHotKey(hWnd);
 
@@ -4737,11 +4738,17 @@ static void ApplyConfig(HWND hWnd){
 			SetTaskTray(GetParent(m_hStatus));
 	}
 
+	nCurTab = TabCtrl_GetCurSel(m_hTab);
+
 	lstrcpyn(szNowDir, m_szTreePath, MAX_FITTLE_PATH);
 	MakeTreeFromPath(m_hTree, m_hCombo, szNowDir); 
 
+	TabCtrl_SetCurFocus(m_hTab, nCurTab);
+
 	RegHotKey(hWnd);
 	InvalidateRect(hWnd, NULL, TRUE);
+
+	OPSetVolume(SendMessage(m_hVolume, TBM_GETPOS, 0, 0));
 }
 
 // 外部設定プログラムを起動する
