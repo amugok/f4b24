@@ -91,6 +91,7 @@ BEGIN
     LISTBOX         IDC_LIST1,5,5,195,185,LBS_SORT | LBS_NOINTEGRALHEIGHT | 
                     WS_VSCROLL | WS_TABSTOP
     PUSHBUTTON      "ê›íË",IDC_BUTTON1,5,200,35,15
+    LTEXT           "Static",IDC_STATIC1,60,200,115,10,NOT WS_VISIBLE
 END
 
 #endif    // ì˙ñ{åÍ resources

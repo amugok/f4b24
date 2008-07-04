@@ -64,7 +64,7 @@ static BOOL CALLBACK WADSPPageProc(HWND hWnd , UINT msg , WPARAM wp , LPARAM lp)
 		if (LOWORD(wp) == IDC_BUTTON1){
 			LRESULT lSel = SendDlgItemMessage(hWnd, IDC_LIST1, LB_GETCURSEL, 0, 0);
 			if (lSel != LB_ERR){
-				lSel = SendMessage((HWND)lp, LB_GETITEMDATA, (WPARAM)lSel, (LPARAM)0);
+				lSel = SendDlgItemMessage(hWnd, IDC_LIST1, LB_GETITEMDATA, (WPARAM)lSel, (LPARAM)0);
 				if (F4B24_WADSP_INVOKE_CONFIG)
 					PostF4B24Message((WPARAM)F4B24_WADSP_INVOKE_CONFIG, (LPARAM)lSel);
 			}
