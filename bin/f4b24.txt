@@ -1,7 +1,7 @@
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test27
+              for BASS 2.4 test28
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
@@ -18,7 +18,7 @@ All rights reserved.
 
 主な変更点
 	bass 2.4専用
-	zip書庫機能、ミニパネル、設定、URLを追加、CUEシート読み込み機能、しおり、WinampDSPプラグイン対応機能を削除
+	zip書庫機能、ミニパネル、設定、URLを追加、CUEシート読み込み機能、しおり、WinampDSPプラグイン対応機能、音声出力機能を削除
 
 追加したプラグイン(公式でも利用可能)
 	minipane.dll    ミニパネル
@@ -41,6 +41,9 @@ All rights reserved.
 	replaygainu.dll 廃止 replaygain.dllに統合
 	wadsp.dll       WinampDSPプラグイン対応 Ansi/Unicode両対応 要test25以降 要bass_wadsp.dll
 	wadsp.fcp       wadsp.dll 設定
+	bass.fop        要test28以降 
+	bassasio.fop    要test28以降 要bassasio.dll
+	output.fcp      bass.fop bassasio.fop replaygain.dll cue.fap cueu.fap 設定
 	cue.fap         cueシート対応 Ansi版専用 要test14以降
 	arj.fap         arj書庫対応 Ansi版専用 要統合アーカイバプロジェクト版unarj32j.dll
 	cab.fap         cab書庫対応 Ansi版専用 要IE5以降(cabinet.dll又はfdi.dll)
@@ -60,6 +63,9 @@ All rights reserved.
 	fittle.fcp      fittle.exe 設定
 
 実験履歴
+	test28/test28u
+		音声出力機能を削除してみた
+
 	test27/test27u
 		Ansi版でもWindows98で起動できなかった問題を修正
 
