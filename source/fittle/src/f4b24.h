@@ -22,6 +22,7 @@
 #define WM_F4B24_IPC_GET_CURPATH 208			/* test18 or later */
 #define WM_F4B24_IPC_SET_CURPATH 209			/* test18 or later */
 #define WM_F4B24_IPC_GET_PLAYING_TRACK 210		/* test25 or later */
+#define WM_F4B24_IPC_GET_WADSP_LIST 211			/* wadsp */
 
 /* WPARAM:function code LPARAM:number */
 #define WM_F4B24_IPC_SETTING 300				/* test13 or later */
@@ -37,6 +38,7 @@
 #define  WM_F4B24_IPC_GET_CAPABLE_LP_FLOATOUTPUT 0
 #define  WM_F4B24_IPC_GET_CAPABLE_RET_SUPPORTED 0x202
 #define  WM_F4B24_IPC_GET_CAPABLE_RET_NOT_SUPPORTED 0x101
+#define WM_F4B24_IPC_INVOKE_WADSP_SETUP 302		/* wadsp */
 
 /* WPARAM:function code LPARAM:HWND */
 #define WM_F4B24_HOOK_UPDATE_DRIVELISTE 400		/* test18 or later */

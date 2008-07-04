@@ -71,9 +71,6 @@ static HMODULE hWaDsp = NULL;
 static WADSPNODE *pDspListTop = NULL;
 static int nCount = 0;
 
-static ATOM F4B24_WADSP_INVOKE_CONFIG = 0;
-static ATOM F4B24_WADSP_GET_LIST = 0;
-
 static HMODULE hDLL = 0;
 static BOOL fIsUnicode = FALSE;
 static WNDPROC hOldProc = 0;
@@ -213,7 +210,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			SetBassWaDsp((DWORD)lp, TRUE);
 		} else if (wp == WM_F4B24_HOOK_FREE_DECODE_STREAM) {
 			SetBassWaDsp((DWORD)lp, FALSE);
-		} else if (F4B24_WADSP_INVOKE_CONFIG && wp == F4B24_WADSP_INVOKE_CONFIG){
+		} else if (wp == WM_F4B24_IPC_INVOKE_WADSP_SETUP){
 			int i;
 			WADSPNODE *pDsp = pDspListTop;
 			for (i = 0; pDsp; i++){
@@ -224,16 +221,31 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				}
 				pDsp = pNext;
 			}
-		} else if (F4B24_WADSP_GET_LIST && wp == F4B24_WADSP_GET_LIST){
-			int i;
+		} else if (wp == WM_F4B24_IPC_GET_WADSP_LIST){
+			int i, l = 1;
 			WADSPNODE *pDsp = pDspListTop;
+			char *p;
 			for (i = 0; pDsp; i++){
 				WADSPNODE *pNext = pDsp->pNext;
-				LRESULT lRet = SendMessageA((HWND)lp, LB_ADDSTRING, (WPARAM)0, (LPARAM)BASS_WADSP_GetName(pDsp->h));
-				if (lRet != LB_ERR && lRet != LB_ERRSPACE){
-					lRet = SendMessage((HWND)lp, LB_SETITEMDATA, (WPARAM)lRet, (LPARAM)i);
-				}
+				LPCSTR n = BASS_WADSP_GetName(pDsp->h);
+				l += lstrlenA(n) + 1;
 				pDsp = pNext;
+			}
+			p = (char *)HAlloc(l);
+			if (p){
+				int s = 0;
+				pDsp = pDspListTop;
+				for (i = 0; pDsp; i++){
+					WADSPNODE *pNext = pDsp->pNext;
+					LPCSTR n = BASS_WADSP_GetName(pDsp->h);
+					lstrcpyA(p + s, n);
+					s += lstrlenA(n);
+					p[s++] = '\n';
+					p[s] = '\0';
+					pDsp = pNext;
+				}
+				SendMessageA((HWND)lp, WM_SETTEXT, (WPARAM)0, (LPARAM)p);
+				HFree(p);
 			}
 		}
 		break;
@@ -244,8 +256,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 /* 起動時に一度だけ呼ばれます */
 static BOOL OnInit(){
 	fIsUnicode = ((GetVersion() & 0x80000000) == 0) || IsWindowUnicode(fpi.hParent);
-	F4B24_WADSP_INVOKE_CONFIG = AddAtom(TEXT("F4B24_WADSP_INVOKE_CONFIG"));
-	F4B24_WADSP_GET_LIST = AddAtom(TEXT("F4B24_WADSP_GET_LIST"));
 	InitBassWaDsp(fpi.hParent);
 	hOldProc = (WNDPROC)(fIsUnicode ? SetWindowLongW : SetWindowLongA)(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
 	return TRUE;
@@ -254,14 +264,6 @@ static BOOL OnInit(){
 /* 終了時に一度だけ呼ばれます */
 static void OnQuit(){
 	FreeBassWaDsp();
-	if (F4B24_WADSP_INVOKE_CONFIG){
-		DeleteAtom(F4B24_WADSP_INVOKE_CONFIG);
-		F4B24_WADSP_INVOKE_CONFIG = 0;
-	}
-	if (F4B24_WADSP_GET_LIST){
-		DeleteAtom(F4B24_WADSP_GET_LIST);
-		F4B24_WADSP_GET_LIST = 0;
-	}
 }
 
 /* 曲が変わる時に呼ばれます */
