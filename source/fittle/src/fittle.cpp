@@ -289,9 +289,9 @@ static int InitOutputPlugin(HWND hWnd){
 			}
 			int n = pPlugin->GetDeviceCount();
 			for (i = 0; i < n; i++) {
-				DWORD dwId = pPlugin->GetDeviceID(i);
-				if (g_cfg.nOutputDevice != 0 && dwId == g_cfg.nOutputDevice) {
-					return OPInit(pPlugin, dwId, hWnd); 
+				int nId = pPlugin->GetDeviceID(i);
+				if (g_cfg.nOutputDevice != 0 && nId == g_cfg.nOutputDevice) {
+					return OPInit(pPlugin, nId, hWnd); 
 				}
 			}
 			pList = pList->pNext;
@@ -301,6 +301,22 @@ static int InitOutputPlugin(HWND hWnd){
 		}
 	}
 	return 0;
+}
+
+static void OPTerm(){
+	if (m_pOutputPlugin) m_pOutputPlugin->Term();
+}
+
+static int OPGetRate(){
+/*
+	if (m_pOutputPlugin) return m_pOutputPlugin->GetRate();
+*/
+	return 44100;
+}
+
+static BOOL OPSetup(HWND hWnd){
+	if (m_pOutputPlugin) return m_pOutputPlugin->Setup(hWnd);
+	return FALSE;
 }
 
 static int OPGetStatus(){
@@ -361,9 +377,8 @@ static void OPSetFadeIn(DWORD dwVol, DWORD dwTime){
 	if(g_cfg.nFadeOut){
 		float sVolume = CalcBassVolume(dwVol);
 		if (m_pOutputPlugin) m_pOutputPlugin->FadeIn(sVolume, dwTime);
-	} else {
-		OPSetVolume(dwVol);
 	}
+	OPSetVolume(dwVol);
 }
 
 static void OPSetFadeOut(DWORD dwTime){
@@ -786,8 +801,12 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 			TIMESTART
 
+			i = InitOutputPlugin(hWnd);
+
+			TIMECHECK("出力プラグイン初期化")
+
 			// BASS初期化
-			if(!BASS_Init(InitOutputPlugin(hWnd), 44100, 0, hWnd, NULL)){
+			if(!BASS_Init(i, OPGetRate(), 0, hWnd, NULL)){
 				MessageBox(hWnd, TEXT("BASSの初期化に失敗しました。"), TEXT("Fittle"), MB_OK);
 				BASS_Free();
 				ExitProcess(1);
@@ -799,7 +818,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			g_cInfo[0].sGain = 1;
 			g_cInfo[1].sGain = 1;
 
-			TIMECHECK("BASS32bit出力確認")
+			TIMECHECK("出力形式確認")
 
 			// 優先度
 			if(g_cfg.nHighTask){
@@ -1249,6 +1268,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				g_cfg.nResPos = 0;
 			}
 			StopOutputStream(hWnd);
+			OPTerm();
 
 			// クリティカルセクションを削除
 			DeleteCriticalSection(&m_cs);
@@ -2473,6 +2493,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				return g_cfg.nReplayGainMode;
 			case WM_F4B24_IPC_GET_PREAMP:
 				return g_cfg.nReplayGainPreAmp;
+			case WM_F4B24_IPC_INVOKE_OUTPUT_PLUGIN_SETUP:
+				return OPSetup(hWnd);
 
 			case WM_F4B24_IPC_GET_VERSION_STRING:
 				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)FITTLE_VERSION);

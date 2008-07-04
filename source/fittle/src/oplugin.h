@@ -27,9 +27,11 @@ typedef struct OUTPUT_PLUGIN_INFO_TAG {
 	DWORD (CALLBACK * GetDeviceID)(int nIndex);
 	BOOL (CALLBACK * GetDeviceNameA)(DWORD dwID, LPSTR szBuf, int nBufSize);
 	int (CALLBACK * Init)(DWORD dwID);
+	void (CALLBACK * Term)(void);
+	BOOL (CALLBACK * Setup)(HWND hWnd);
 	int (CALLBACK * GetStatus)(void);
 
-	void (CALLBACK * Start)(BASS_CHANNELINFO *info, float sVolume, BOOL fFloat);
+	void (CALLBACK * Start)(void *pchinfo, float sVolume, BOOL fFloat);
 	void (CALLBACK * End)(void);
 	void (CALLBACK * Play)(void);
 	void (CALLBACK * Pause)(void);
@@ -46,6 +48,9 @@ typedef struct OUTPUT_PLUGIN_INFO_TAG {
 
 #if OPDK_VER >= 1
 #endif
+/*
+	int (CALLBACK * GetRate)(void);
+*/
 } OUTPUT_PLUGIN_INFO;
 
 /* インターフェースの宣言 */

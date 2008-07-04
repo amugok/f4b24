@@ -318,6 +318,10 @@ static BOOL CALLBACK OutputSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			return FALSE;
 
 		case WM_COMMAND:
+			if(LOWORD(wp)==IDC_BUTTON1){
+				PostF4B24Message(WM_F4B24_IPC_INVOKE_OUTPUT_PLUGIN_SETUP, 0);
+				return TRUE;
+			}
 			if(LOWORD(wp)==IDC_COMBO2){
 				UpdatePreAmp(hDlg);
 			}

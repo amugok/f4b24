@@ -38,8 +38,11 @@ static DWORD CALLBACK GetDefaultDeviceID(void);
 static DWORD CALLBACK GetDeviceID(int nIndex);
 static BOOL CALLBACK GetDeviceNameA(DWORD dwID, LPSTR szBuf, int nBufSize);
 static int CALLBACK Init(DWORD dwID);
+static void CALLBACK Term(void);
+static int CALLBACK GetRate(void);
+static BOOL CALLBACK Setup(HWND hWnd);
 static int CALLBACK GetStatus(void);
-static void CALLBACK Start(BASS_CHANNELINFO *info, float sVolume, BOOL fFloat);
+static void CALLBACK Start(void *pchinfo, float sVolume, BOOL fFloat);
 static void CALLBACK End(void);
 static void CALLBACK Play(void);
 static void CALLBACK Pause(void);
@@ -56,6 +59,8 @@ static OUTPUT_PLUGIN_INFO opinfo = {
 	GetDeviceID,
 	GetDeviceNameA,
 	Init,
+	Term,
+	Setup,
 	GetStatus,
 	Start,
 	End,
@@ -65,7 +70,11 @@ static OUTPUT_PLUGIN_INFO opinfo = {
 	SetVolume,
 	FadeIn,
 	FadeOut,
-	IsSupportFloatOutput
+	IsSupportFloatOutput,
+	0,0,0,0
+/*
+	,GetRate
+*/
 };
 
 #ifdef __cplusplus
@@ -119,6 +128,22 @@ static int CALLBACK Init(DWORD dwID){
 	return dwID & 0xFFF;
 }
 
+static void CALLBACK Term(void){
+}
+
+static int CALLBACK GetRate(void){
+	return 44100;
+}
+
+static BOOL CALLBACK Setup(HWND hWnd){
+	return FALSE;
+}
+
+
+/*
+	-------------------------------------------------------------------------------------------------------------------------
+*/
+
 static HSTREAM m_hChanOut = NULL;	// ストリームハンドル
 
 static int CALLBACK GetStatus(void){
@@ -144,6 +169,7 @@ static DWORD CALLBACK MainStreamProc(HSTREAM handle, void *buf, DWORD len, void 
 	if(BASS_ChannelGetInfo(handle ,&bci) && BASS_ChannelIsActive(hChan)){
 		BOOL fFloat = bci.flags & BASS_SAMPLE_FLOAT;
 		r = BASS_ChannelGetData(hChan, buf, fFloat ? len | BASS_DATA_FLOAT : len);
+		if (r == (DWORD)-1) r = 0;
 		if (sAmp > 0 && r > 0 && r < BASS_STREAMPROC_END) {
 			DWORD i;
 			if (BASS_ChannelGetInfo(hChan ,&bci)) {
@@ -193,7 +219,8 @@ static DWORD CALLBACK MainStreamProc(HSTREAM handle, void *buf, DWORD len, void 
 }
 
 // メインストリームを作成
-static void CALLBACK Start(BASS_CHANNELINFO *info, float sVolume, BOOL fFloat){
+static void CALLBACK Start(void *pchinfo, float sVolume, BOOL fFloat){
+	BASS_CHANNELINFO *info = (BASS_CHANNELINFO *)pchinfo;
 	DWORD dwFlag = info->flags & ~(BASS_STREAM_DECODE | BASS_MUSIC_DECODE);
 	if (fFloat) dwFlag = (dwFlag & ~BASS_SAMPLE_8BITS) | BASS_SAMPLE_FLOAT;
 

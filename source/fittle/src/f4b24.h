@@ -3,12 +3,13 @@
 #define WM_F4B24_IPC (WM_USER + 88)
 
 /* WPARAM:function code LPARAM:ignore  */
-#define WM_F4B24_IPC_GET_VERSION 100			/* test12 or later */
-#define WM_F4B24_IPC_GET_IF_VERSION 101			/* test12 or later */
-#define WM_F4B24_IPC_APPLY_CONFIG 102			/* test12 or later */
-#define WM_F4B24_IPC_UPDATE_DRIVELIST 103		/* test18 or later */
-#define WM_F4B24_IPC_GET_REPLAYGAIN_MODE 104	/* test25 or later */
-#define WM_F4B24_IPC_GET_PREAMP 105				/* test28 or later */
+#define WM_F4B24_IPC_GET_VERSION 100				/* test12 or later */
+#define WM_F4B24_IPC_GET_IF_VERSION 101				/* test12 or later */
+#define WM_F4B24_IPC_APPLY_CONFIG 102				/* test12 or later */
+#define WM_F4B24_IPC_UPDATE_DRIVELIST 103			/* test18 or later */
+#define WM_F4B24_IPC_GET_REPLAYGAIN_MODE 104		/* test25 or later */
+#define WM_F4B24_IPC_GET_PREAMP 105					/* test28 or later */
+#define WM_F4B24_IPC_INVOKE_OUTPUT_PLUGIN_SETUP 106	/* test28 or later */
 
 /* WPARAM:function code LPARAM:HWND */
 #define WM_F4B24_IPC_GET_VERSION_STRING 200		/* test12 or later */
