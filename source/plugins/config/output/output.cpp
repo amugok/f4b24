@@ -1,10 +1,17 @@
 #define WINVER		0x0400	// 98以降
 #define _WIN32_WINNT	0x0400
-#define _WIN32_IE	0x0400	// IE4以降
+#define _WIN32_IE	0x0500	// IE5以降
 #include <windows.h>
 #include <commctrl.h>
 #include <shlobj.h>
 #include <shlwapi.h>
+
+#ifndef UDM_SETPOS32
+#define UDM_SETPOS32            (WM_USER+113)
+#endif
+#ifndef UDM_GETPOS32
+#define UDM_GETPOS32            (WM_USER+114)
+#endif
 
 #include "../../../fittle/src/f4b24.h"
 #include "../../../fittle/src/oplugin.h"
@@ -94,7 +101,8 @@ static int m_nDefualtDeviceId = 0;
 
 
 static struct {
-	int nOutputDevice;		// 出力デバイス
+	int nOutputDevice;			// 出力デバイス
+	int nOutputRate;			// BASSを初期化する時のサンプリングレート
 	int nOut32bit;				// 32bit(float)で出力する
 	int nFadeOut;				// 停止時にフェードアウトする
 	int nReplayGainMode;		// ReplayGainの適用方法
@@ -161,6 +169,8 @@ static void LoadConfig(){
 
 	// 音声出力デバイス
 	m_cfg.nOutputDevice = WAGetIniInt("Main", "OutputDevice", 0);
+	// BASSを初期化する時のサンプリングレート
+	m_cfg.nOutputRate = WAGetIniInt("Main", "OutputRate", 44100);
 	// 32bit(float)で出力する
 	m_cfg.nOut32bit = WAGetIniInt("Main", "Out32bit", 0);
 	// 停止時にフェードアウトする
@@ -184,6 +194,7 @@ static void SaveConfig(){
 	WASetIniFile(NULL, "fittle.ini");
 
 	WASetIniInt("Main", "OutputDevice", m_cfg.nOutputDevice);
+	WASetIniInt("Main", "OutputRate", m_cfg.nOutputRate);
 	WASetIniInt("Main", "Out32bit", m_cfg.nOut32bit);
 	WASetIniInt("Main", "FadeOut", m_cfg.nFadeOut);
 	WASetIniInt("ReplayGain", "Mode", m_cfg.nReplayGainMode);
@@ -201,6 +212,7 @@ static BOOL OutputCheckChanged(HWND hDlg){
 		if (m_cfg.nOutputDevice != 0 || m_nDefualtDeviceId != nSelectDeviceId)
 			return TRUE;
 	}
+	if (m_cfg.nOutputRate != SendDlgItemMessage(hDlg, IDC_SPIN3, UDM_GETPOS32, (WPARAM)0, (LPARAM)0)) return TRUE;
 	if (m_cfg.nOut32bit != (int)SendDlgItemMessage(hDlg, IDC_CHECK13, BM_GETCHECK, 0, 0)) return TRUE;
 	if (m_cfg.nFadeOut != (int)SendDlgItemMessage(hDlg, IDC_CHECK14, BM_GETCHECK, 0, 0)) return TRUE;
 	if (m_cfg.nReplayGainMode != SendDlgItemMessage(hDlg, IDC_COMBO2, CB_GETCURSEL, (WPARAM)0, (LPARAM)0)) return TRUE;
@@ -238,6 +250,8 @@ static BOOL CALLBACK OutputSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			if (SendF4B24Message(WM_F4B24_IPC_GET_CAPABLE, WM_F4B24_IPC_GET_CAPABLE_LP_FLOATOUTPUT) == WM_F4B24_IPC_GET_CAPABLE_RET_NOT_SUPPORTED){
 				EnableWindow(GetDlgItem(hDlg, IDC_CHECK13), FALSE);
 			}
+			SendDlgItemMessage(hDlg, IDC_SPIN3, UDM_SETRANGE32, (WPARAM)1, (LPARAM)192000);
+			SendDlgItemMessage(hDlg, IDC_SPIN3, UDM_SETPOS32, (WPARAM)0, (LPARAM)m_cfg.nOutputRate);
 			SendDlgItemMessage(hDlg, IDC_CHECK13, BM_SETCHECK, (WPARAM)m_cfg.nOut32bit, 0);
 			SendDlgItemMessage(hDlg, IDC_CHECK14, BM_SETCHECK, (WPARAM)m_cfg.nFadeOut, 0);
 
@@ -305,6 +319,7 @@ static BOOL CALLBACK OutputSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 					m_cfg.nOutputDevice = nSelectDeviceId;
 				else
 					m_cfg.nOutputDevice = 0;
+				m_cfg.nOutputRate = (int)SendDlgItemMessage(hDlg, IDC_SPIN3, UDM_GETPOS32, (WPARAM)0, (LPARAM)0);
 				m_cfg.nOut32bit = (int)SendDlgItemMessage(hDlg, IDC_CHECK13, BM_GETCHECK, 0, 0);
 				m_cfg.nFadeOut = (int)SendDlgItemMessage(hDlg, IDC_CHECK14, BM_GETCHECK, 0, 0);
 				m_cfg.nReplayGainMode = (int)SendDlgItemMessage(hDlg, IDC_COMBO2, CB_GETCURSEL, (WPARAM)0, (LPARAM)0);

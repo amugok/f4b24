@@ -39,7 +39,6 @@ static DWORD CALLBACK GetDeviceID(int nIndex);
 static BOOL CALLBACK GetDeviceNameA(DWORD dwID, LPSTR szBuf, int nBufSize);
 static int CALLBACK Init(DWORD dwID);
 static void CALLBACK Term(void);
-static int CALLBACK GetRate(void);
 static BOOL CALLBACK Setup(HWND hWnd);
 static int CALLBACK GetStatus(void);
 static void CALLBACK Start(void *pchinfo, float sVolume, BOOL fFloat);
@@ -72,9 +71,6 @@ static OUTPUT_PLUGIN_INFO opinfo = {
 	FadeOut,
 	IsSupportFloatOutput,
 	0,0,0,0
-/*
-	,GetRate
-*/
 };
 
 #ifdef __cplusplus
@@ -131,14 +127,9 @@ static int CALLBACK Init(DWORD dwID){
 static void CALLBACK Term(void){
 }
 
-static int CALLBACK GetRate(void){
-	return 44100;
-}
-
 static BOOL CALLBACK Setup(HWND hWnd){
 	return FALSE;
 }
-
 
 /*
 	-------------------------------------------------------------------------------------------------------------------------
@@ -246,9 +237,7 @@ static void CALLBACK End(void){
 
 static void CALLBACK Play(void){
 	if (m_hChanOut) {
-		if (!BASS_ChannelPlay(m_hChanOut, FALSE)) {
-			int nErr = BASS_ErrorGetCode();
-		}
+		BASS_ChannelPlay(m_hChanOut, FALSE);
 	}
 }
 

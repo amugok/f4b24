@@ -39,11 +39,11 @@
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test28u")
+#define F4B24_VERSION_STRING TEXT("test29u")
 #else
-#define F4B24_VERSION_STRING TEXT("test28")
+#define F4B24_VERSION_STRING TEXT("test29")
 #endif
-#define F4B24_VERSION 28
+#define F4B24_VERSION 29
 #define F4B24_IF_VERSION 28
 #ifndef _DEBUG
 #define FITTLE_TITLE FITTLE_VERSION TEXT(" for BASS 2.4 ") F4B24_VERSION_STRING
@@ -51,6 +51,8 @@
 #define FITTLE_TITLE FITTLE_VERSION TEXT(" for BASS 2.4 ") F4B24_VERSION_STRING TEXT(" <Debug>")
 #endif
 
+/* 1:出力プラグインなしでも音声出力可能 0:音声出力はプラグインに任せる */
+#define DEFAULT_DEVICE_ENABLE 0
 
 //--マクロ--
 // 全ての選択状態を解除後、指定インデックスのアイテムを選択、表示
@@ -71,7 +73,7 @@
 	OutputDebugString(X); OutputDebugString(TEXT("\n"));
 
 enum {
-	WM_F4B24_INTERNAL_SETUP_NEXT = 1,
+	WM_F4B24_INTERNAL_PREPARE_NEXT_MUSIC = 1,
 	WM_F4B24_INTERNAL_PLAY_NEXT = 2
 };
 // --列挙型の宣言--
@@ -183,8 +185,6 @@ static HFONT m_hFont = NULL;		// フォントハンドル
 static HTREEITEM m_hHitTree = NULL;	// ツリーのヒットアイテム
 static HMENU m_hMainMenu = NULL;	// メインメニューハンドル
 
-static OUTPUT_PLUGIN_INFO *m_pOutputPlugin = NULL;
-
 // 起動引数
 static int XARGC = 0;
 static LPTSTR *XARGV = 0;
@@ -202,195 +202,7 @@ typedef struct StringList {
 
 static LPSTRING_LIST lpTypelist = NULL;
 
-/* 出力プラグインリスト */
-static struct OUTPUT_PLUGIN_NODE {
-	struct OUTPUT_PLUGIN_NODE *pNext;
-	OUTPUT_PLUGIN_INFO *pInfo;
-	HMODULE hDll;
-} *pOutputPluginList = NULL;
-
-/* 出力プラグインを開放 */
-static void FreeOutputPlugins(){
-	struct OUTPUT_PLUGIN_NODE *pList = pOutputPluginList;
-	while (pList) {
-		struct OUTPUT_PLUGIN_NODE *pNext = pList->pNext;
-		FreeLibrary(pList->hDll);
-		HFree(pList);
-		pList = pNext;
-	}
-	pOutputPluginList = NULL;
-}
-
-/* 出力プラグインを登録 */
-static BOOL CALLBACK RegisterOutputPlugin(HMODULE hPlugin, HWND hWnd){
-	FARPROC lpfnProc = GetProcAddress(hPlugin, "GetOPluginInfo");
-	if (lpfnProc){
-		struct OUTPUT_PLUGIN_NODE *pNewNode = (struct OUTPUT_PLUGIN_NODE *)HAlloc(sizeof(struct OUTPUT_PLUGIN_NODE));
-		if (pNewNode) {
-			pNewNode->pInfo = ((GetOPluginInfoFunc)lpfnProc)();
-			pNewNode->pNext = NULL;
-			pNewNode->hDll = hPlugin;
-			if (pNewNode->pInfo){
-				if (pOutputPluginList) {
-					struct OUTPUT_PLUGIN_NODE *pList;
-					for (pList = pOutputPluginList; pList->pNext; pList = pList->pNext);
-					pList->pNext = pNewNode;
-				} else {
-					pOutputPluginList = pNewNode;
-				}
-				return TRUE;
-			}
-			HFree(pNewNode);
-		}
-	}
-	return FALSE;
-}
-
-static BOOL CALLBACK OPCBIsEndCue(void){
-	BOOL fRet = m_bCueEnd;
-	return fRet;
-}
-
-static void CALLBACK OPCBPlayNext(HWND hWnd){
-	m_bCueEnd = FALSE;
-	PostMessage(hWnd, WM_F4B24_IPC, WM_F4B24_INTERNAL_PLAY_NEXT, 0);
-}
-
-static DWORD CALLBACK OPCBGetDecodeChannel(float *pGain) {
-	CHANNELINFO *pCh = &g_cInfo[g_bNow];
-	*pGain = pCh->sAmp;
-	return pCh->hChan;
-}
-
-static int OPInit(OUTPUT_PLUGIN_INFO *pPlugin, DWORD dwId, HWND hWnd){
-	m_pOutputPlugin = pPlugin;
-	m_pOutputPlugin->hWnd = hWnd;
-	m_pOutputPlugin->IsEndCue = OPCBIsEndCue;
-	m_pOutputPlugin->PlayNext = OPCBPlayNext;
-	m_pOutputPlugin->GetDecodeChannel = OPCBGetDecodeChannel;
-	return m_pOutputPlugin->Init(dwId); 
-}
-
-static int InitOutputPlugin(HWND hWnd){
-	EnumPlugins(NULL, TEXT(""), TEXT("*.fop"), RegisterOutputPlugin, hWnd);
-
-	if (pOutputPluginList){
-		struct OUTPUT_PLUGIN_NODE *pList = pOutputPluginList;
-		DWORD dwDefaultDevice = 0xffffffff;
-		OUTPUT_PLUGIN_INFO *pDefaultPlugin = 0;
-		do {
-			int i;
-			OUTPUT_PLUGIN_INFO *pPlugin = pList->pInfo;
-			DWORD dwDefaultId = pPlugin->GetDefaultDeviceID();
-			if (dwDefaultDevice > dwDefaultId)
-			{
-				dwDefaultDevice = dwDefaultId;
-				pDefaultPlugin = pPlugin;
-			}
-			int n = pPlugin->GetDeviceCount();
-			for (i = 0; i < n; i++) {
-				int nId = pPlugin->GetDeviceID(i);
-				if (g_cfg.nOutputDevice != 0 && nId == g_cfg.nOutputDevice) {
-					return OPInit(pPlugin, nId, hWnd); 
-				}
-			}
-			pList = pList->pNext;
-		} while (pList);
-		if (pDefaultPlugin) {
-			return OPInit(pDefaultPlugin, dwDefaultDevice, hWnd); 
-		}
-	}
-	return 0;
-}
-
-static void OPTerm(){
-	if (m_pOutputPlugin) m_pOutputPlugin->Term();
-}
-
-static int OPGetRate(){
-/*
-	if (m_pOutputPlugin) return m_pOutputPlugin->GetRate();
-*/
-	return 44100;
-}
-
-static BOOL OPSetup(HWND hWnd){
-	if (m_pOutputPlugin) return m_pOutputPlugin->Setup(hWnd);
-	return FALSE;
-}
-
-static int OPGetStatus(){
-	return m_pOutputPlugin ? m_pOutputPlugin->GetStatus() : OUTPUT_PLUGIN_STATUS_STOP;
-}
-
-static float CalcBassVolume(DWORD dwVol){
-	float fVol = g_cfg.nReplayGainPostAmp * g_cInfo[g_bNow].sGain * dwVol / (float)(SLIDER_DIVIDED * 100);
-	switch (g_cfg.nReplayGainMixer) {
-	case 0:
-		/*  内蔵 */
-		g_cInfo[g_bNow].sAmp = (fVol == (float)1) ? 0 : fVol;
-		fVol = 1;
-		break;
-	case 1:
-		/*  増幅のみ内蔵 */
-		if (fVol > 1){
-			g_cInfo[g_bNow].sAmp = fVol;
-			fVol = 1;
-		}else{
-			g_cInfo[g_bNow].sAmp = 0;
-		}
-		break;
-	case 2:
-		/*  BASS */
-		g_cInfo[g_bNow].sAmp = 0;
-		if (fVol > 1) fVol = 1;
-		break;
-	}
-	return fVol;
-}
-
-static void OPStart(BASS_CHANNELINFO *info, DWORD dwVol, BOOL fFloat){
-	if (m_pOutputPlugin) m_pOutputPlugin->Start(info, CalcBassVolume(dwVol), fFloat);
-}
-
-static void OPEnd(){
-	if (m_pOutputPlugin) m_pOutputPlugin->End();
-}
-
-static void OPPlay(){
-	if (m_pOutputPlugin) m_pOutputPlugin->Play();
-}
-
-static void OPPause(){
-	if (m_pOutputPlugin) m_pOutputPlugin->Pause();
-}
-
-static void OPStop(){
-	if (m_pOutputPlugin) m_pOutputPlugin->Stop();
-}
-static void OPSetVolume(DWORD dwVol){
-	float sVolume = CalcBassVolume(dwVol);
-	if (m_pOutputPlugin) m_pOutputPlugin->SetVolume(sVolume);
-}
-
-static void OPSetFadeIn(DWORD dwVol, DWORD dwTime){
-	if(g_cfg.nFadeOut){
-		float sVolume = CalcBassVolume(dwVol);
-		if (m_pOutputPlugin) m_pOutputPlugin->FadeIn(sVolume, dwTime);
-	}
-	OPSetVolume(dwVol);
-}
-
-static void OPSetFadeOut(DWORD dwTime){
-	if(g_cfg.nFadeOut){
-		if (m_pOutputPlugin) m_pOutputPlugin->FadeOut(dwTime);
-	}
-}
-
-static BOOL OPIsSupportFloatOutput(){
-	if (m_pOutputPlugin) return m_pOutputPlugin->IsSupportFloatOutput();
-	return FALSE;
-}
+#include "oplugins.h"
 
 static void StringListFree(LPSTRING_LIST *pList){
 	LPSTRING_LIST pCur = *pList;
@@ -2458,7 +2270,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				PostMessage(GetParent(m_hStatus), WM_USER+1, 0, 0); 
 				break;
 
-			case WM_F4B24_INTERNAL_SETUP_NEXT:
+			case WM_F4B24_INTERNAL_PREPARE_NEXT_MUSIC:
 				g_pNextFile = SelectNextFile(TRUE);
 				m_nGaplessState = GS_OK;
 
@@ -2707,6 +2519,8 @@ static void LoadConfig(){
 	g_cfg.nTabHide = GetPrivateProfileInt(TEXT("Main"), TEXT("TabHide"), 0, m_szINIPath);
 	// 音声出力デバイス
 	g_cfg.nOutputDevice = GetPrivateProfileInt(TEXT("Main"), TEXT("OutputDevice"), 0, m_szINIPath);
+	// BASSを初期化するときのサンプリングレート
+	g_cfg.nOutputRate = GetPrivateProfileInt(TEXT("Main"), TEXT("OutputRate"), 44100, m_szINIPath);
 	// 32bit(float)で出力する
 	g_cfg.nOut32bit = GetPrivateProfileInt(TEXT("Main"), TEXT("Out32bit"), 0, m_szINIPath);
 	// 停止時にフェードアウトする
@@ -2866,6 +2680,7 @@ static void AddTypes(LPCSTR lpszTypes) {
 	}
 }
 
+// BASS Addonをロードし 対応拡張子リストに追加
 static BOOL CALLBACK FileProc(LPCTSTR lpszPath, HWND hWnd){
 #ifdef UNICODE
 	HPLUGIN hPlugin = BASS_PluginLoad((LPSTR)lpszPath, BASS_UNICODE);
@@ -2881,7 +2696,7 @@ static BOOL CALLBACK FileProc(LPCTSTR lpszPath, HWND hWnd){
 	return TRUE;
 }
 
-// DLL郡初期化、対応形式決定
+// BASS Addonを探し 対応拡張子リストを作成する
 static void InitFileTypes(){
 	ClearTypelist();
 	AddTypes("mp3;mp2;mp1;wav;ogg;aif;aiff");
@@ -3063,7 +2878,7 @@ static BOOL PlayByUser(HWND hWnd, struct FILEINFO *pPlayFile){
 // 次のファイルをオープンする関数(99％地点で発動)
 static void CALLBACK EventSync(HSYNC /*handle*/, DWORD /*channel*/, DWORD /*data*/, void *user){
 	if(user==0){
-		PostMessage(GetParent(m_hStatus), WM_F4B24_IPC, WM_F4B24_INTERNAL_SETUP_NEXT, 0);
+		PostMessage(GetParent(m_hStatus), WM_F4B24_IPC, WM_F4B24_INTERNAL_PREPARE_NEXT_MUSIC, 0);
 	}else{
 		m_bCueEnd = TRUE;
 	}

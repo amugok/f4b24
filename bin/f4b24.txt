@@ -1,7 +1,7 @@
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test28
+              for BASS 2.4 test29
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
@@ -41,8 +41,8 @@ All rights reserved.
 	replaygainu.dll 廃止 replaygain.dllに統合
 	wadsp.dll       WinampDSPプラグイン対応 Ansi/Unicode両対応 要test25以降 要bass_wadsp.dll
 	wadsp.fcp       wadsp.dll 設定
-	bass.fop        要test28以降 
-	bassasio.fop    要test28以降 要bassasio.dll
+	bass.fop        bass.dllによる音声出力 要test28以降
+	bassasio.fop    bassasio.dllによる音声出力 要test28以降 要bassasio.dll
 	output.fcp      bass.fop bassasio.fop replaygain.dll cue.fap cueu.fap 設定
 	cue.fap         cueシート対応 Ansi版専用 要test14以降
 	arj.fap         arj書庫対応 Ansi版専用 要統合アーカイバプロジェクト版unarj32j.dll
@@ -63,6 +63,10 @@ All rights reserved.
 	fittle.fcp      fittle.exe 設定
 
 実験履歴
+	test29/test29u
+		設定の適用時に強制的にフォルダタブが選択されていた問題に対処
+		BASS初期化時のサンプリングレート指定を追加してみた
+
 	test28/test28u
 		音声出力機能を削除してみた
 
@@ -80,23 +84,23 @@ All rights reserved.
 		ID3V2の非同期化フラグなどに対応
 
 	test23/test23u
-		外部要因でタイトルバーのユニコード文字が表示できなくなる問題にさらに対処
+		タイトル文字化け改善(test22の問題にさらに対処)
 
 	test22/test22u
-		Unicode非対応プラグインによってタイトルバーのユニコード文字が表示できなくなる問題に対処
+		一部のUnicode非対応プラグインによってタイトルにユニコード文字が表示できなくなる可能性があった問題に対処
 		ID3V2.4の非同期化フレームなどに対応
 
 	test21/test21u
-		次に再生する予定の曲をリストから削除すると不正なメモリアクセスを行う可能性があった問題を修正
+		次に再生する予定の曲をリストから削除するとアクセス違反が発生する可能性があった問題に対処
 
 	test20/test20u
-		ファイル削除後に余計な処理をしていた問題の修正
+		ファイル削除処理完了後に余計な処理をしていた問題に対処
 
 	test19/test19u
-		ツリーアイコン非表示時に無駄なアイコン取得が発生し起動速度が低下していた問題対策
+		ツリーアイコン非表示時に無駄なアイコン取得が発生し起動速度が低下していた問題に対処
 
 	test18/test18u
-		終端文字の無いID3V2.2で末尾にゴミが付く問題対策
+		終端文字の無いID3V2.2から取得されたメタデータの末尾にゴミが付いていた問題に対処
 		しおり機能を削除してみた
 
 	test17/test17u
@@ -108,7 +112,7 @@ All rights reserved.
 		m3u8対応
 
 	test15
-		メニュー項目を削除したのが原因でtest13からプレイリストへ送るが正常動作しなかった問題の修正
+		メニュー項目を削除したのが原因でtest13からプレイリストへ送るが正常動作しなかった問題に対処
 
 	test14
 		CUEシート読み込み機能を削除してみた
@@ -120,18 +124,18 @@ All rights reserved.
 		設定を削除してみた
 
 	test11
-		次曲へ移る処理の安定性向上
+		次曲へ移る処理の安定性向上(test8の問題にさらに対処)
 
 	test10
 		ミニパネルを削除してみた
 
 	test9
-		mkimg.dll対策
+		mkimg.dllを利用している場合終了時にアクセス違反が発生する可能性があった問題に対処
 
 	test8
-		次曲ボタン連打対策
+		次曲へ移る処理時にアクセス違反やデッドロックが発生する可能性があった問題に対処
 
 	test7
 		書庫関連付け対策
-		巨大プレイリスト保存問題対策
+		巨大プレイリスト保存時に必要以上に時間がかかる可能性があった問題に対処
 
