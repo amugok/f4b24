@@ -26,7 +26,7 @@ if "%1.%2" == "perb.exe" goto selfperb
 if "%VER_STR%"=="" perb %1.%2
 if not "%VER_STR%"=="" perb /v %VER_STR% %1.%2
 editbin /release %1.%2
-if not "%PREFIX%"=="" move %1.%2 %PREFIX%%1.%2
+rem if exist %1.%2 move %1.%2 ..\..\..\..\bin\%1.%2
 
 goto exitcmd
 
@@ -48,11 +48,9 @@ goto exitcmd
 
 :buildall
 
-
-set PREFIX=..\..\..\..\bin\Plugins\fop\
-set CFLAGS=/GF /Gy /Ox /Os /MD
+set CFLAGS=/GF /O1 /MD
 set VER_STR=0807061_
 
-call %0 bass fop
+call %0 perb exe
 
 :exitcmd

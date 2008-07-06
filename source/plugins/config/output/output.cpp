@@ -91,13 +91,11 @@ static BOOL CALLBACK RegisterOutputPlugin(HMODULE hPlugin){
 	return FALSE;
 }
 
-static BOOL m_fIsUnicode = FALSE;
 static HMODULE m_hDLL = 0;
 static int m_nDefualtDeviceId = 0;
 
-#define WA_MAX_SIZE MAX_PATH
-#define WAIsUnicode m_fIsUnicode
 #include "../../../fittle/src/wastr.h"
+#include "../../../fittle/src/wastr.cpp"
 
 
 static struct {
@@ -356,20 +354,11 @@ static DWORD CALLBACK GetConfigPageCount(void){
 	return 1;
 }
 
-#ifndef PROPSHEETPAGE_V1
-#define PROPSHEETPAGEA_V1 PROPSHEETPAGEA
-#define PROPSHEETPAGEW_V1 PROPSHEETPAGEW
-#endif
 static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel, LPSTR pszConfigPath, int nConfigPathSize){
-	union {
-		PROPSHEETPAGEA_V1 A;
-		PROPSHEETPAGEW_V1 W;
-	} psp;
-	WASTR dlgtemp;
 	LPCSTR lpszTemplate, lpszPath;
 	DLGPROC lpfnDlgProc = 0;
-	m_fIsUnicode = ((GetVersion() & 0x80000000) == 0);
-	if (!pTop) WAEnumPlugins(NULL, "", "*.fop", RegisterOutputPlugin);
+	WAIsUnicode();
+	if (!pTop) WAEnumPlugins(NULL, "Plugins\\fop\\", "*.fop", RegisterOutputPlugin);
 	if (nLevel == 1){
 		if (nIndex == 0){
 			lpszTemplate = "OUTPUT_SHEET";
@@ -379,20 +368,5 @@ static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel, LPSTR pszCo
 	}
 	if (!lpfnDlgProc) return NULL;
 	lstrcpynA(pszConfigPath, lpszPath, nConfigPathSize);
-	WAstrcpyA(&dlgtemp, lpszTemplate);;
-	if (WAIsUnicode) {
-		psp.W.dwSize = sizeof (PROPSHEETPAGEW_V1);
-		psp.W.dwFlags = PSP_DEFAULT;
-		psp.W.hInstance = m_hDLL;
-		psp.W.pszTemplate = dlgtemp.W;
-		psp.W.pfnDlgProc = (DLGPROC)lpfnDlgProc;
-		return CreatePropertySheetPageW(&psp.W);
-	} else {
-		psp.A.dwSize = sizeof (PROPSHEETPAGEA_V1);
-		psp.A.dwFlags = PSP_DEFAULT;
-		psp.A.hInstance = m_hDLL;
-		psp.A.pszTemplate = dlgtemp.A;
-		psp.A.pfnDlgProc = (DLGPROC)lpfnDlgProc;
-		return CreatePropertySheetPageA(&psp.A);
-	}
+	return WACreatePropertySheetPage(m_hDLL, lpszTemplate, lpfnDlgProc);
 }

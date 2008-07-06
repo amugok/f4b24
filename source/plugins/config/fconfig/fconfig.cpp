@@ -14,8 +14,11 @@
 #pragma comment(lib,"kernel32.lib")
 #pragma comment(lib,"user32.lib")
 #pragma comment(lib,"comctl32.lib")
+#pragma comment(lib,"comdlg32.lib")
 #pragma comment(lib,"shlwapi.lib")
 #pragma comment(lib,"shell32.lib")
+#pragma comment(lib,"ole32.lib")
+#pragma comment(lib,"gdi32.lib")
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/MERGE:.rdata=.text")
@@ -23,9 +26,8 @@
 #pragma comment(linker,"/OPT:NOWIN98")
 #endif
 
-#ifndef MAX_FITTLE_PATH
-#define MAX_FITTLE_PATH 260*2
-#endif
+#include "../../../fittle/src/wastr.h"
+#include "../../../fittle/src/wastr.cpp"
 
 #ifndef IDM_VER
 #define IDM_VER 40023
@@ -58,13 +60,6 @@ static HWND hwndSimalistWork[4] = { NULL, NULL, NULL, NULL };
 
 /* プラグインリスト */
 static CONFIG_PLUGIN_INFO *pTop = NULL;
-
-static BOOL fIsUnicode = FALSE;
-
-#define WA_MAX_SIZE MAX_PATH
-#define WAIsUnicode fIsUnicode
-#include "../../../fittle/src/wastr.h"
-
 
 static void CloseSharedMemory(){
 	if (psm){
@@ -173,11 +168,9 @@ static BOOL CALLBACK SimalistEx(HMODULE hPlugin){
 #endif
 
 static void InitPlugins(){
-	WAEnumPlugins(NULL, "", "*.fcp", RegisterPlugin);
+	WAEnumPlugins(NULL, "Plugins\\fcp\\", "*.fcp", RegisterPlugin);
 #if SIMALISTEX
-	if (!WAEnumPlugins(NULL, "", "simalist.dll", SimalistEx)){
-		WAEnumPlugins(NULL, "Plugins\\", "simalist.dll", SimalistEx);
-	}
+	WAEnumPlugins(NULL, "Plugins\\Fittle\\", "simalist.dll", SimalistEx);
 #endif
 }
 
@@ -308,7 +301,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		int nNumPage;
 
-		fIsUnicode = ((GetVersion() & 0x80000000) == 0);
+		WAIsUnicode();
 
 		if (*lpArg1Top == '\"') lpArg1Top++;
 		if (lpArg1End > lpArg1Top && *(lpArg1End-1) == '\"') lpArg1End--;

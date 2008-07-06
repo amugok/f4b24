@@ -12,7 +12,7 @@
 
 #define WINVER		0x0400	// 98à»ç~
 #define _WIN32_WINNT	0x0400
-#define _WIN32_IE	0x0400	// IE4à»ç~
+#define _WIN32_IE	0x0400	// IE5à»ç~
 
 #include <windows.h>
 #include <commctrl.h>
@@ -34,7 +34,8 @@ typedef long LONG_PTR;
 
 #include "../resource/resource.h"
 
-#include "../../../extra/bass24/bass.h"
+#include "wastr.h"
+#include "bassload.h"
 
 // ÉzÉCÅ[Éã
 #ifndef WM_MOUSEWHEEL

@@ -20,6 +20,31 @@ All rights reserved.
 	bass 2.4専用
 	zip書庫機能、ミニパネル、設定、URLを追加、CUEシート読み込み機能、しおり、WinampDSPプラグイン対応機能、音声出力機能を削除
 
+Pluginsフォルダ
+	test29からプラグインはPluginsフォルダ内のサブフォルダから読み込むようにしました
+	これは整理などのためではなく起動時に発生する無駄なdll読み込みによる速度低下を目的としたものです
+
+	Plugins\bass\
+		bass.dllやbassasio.dll その他bassアドオンを入れる
+
+	Plugins\fap\
+		拡張子fapのプラグインを入れる
+
+	Plugins\fcp\
+		拡張子fcpのプラグインを入れる
+
+	Plugins\fgp\
+		拡張子fgpのプラグインを入れる
+
+	Plugins\Fittle\
+		公式Fittle用プラグインを入れる
+
+	Plugins\fop\
+		拡張子fopのプラグインを入れる
+
+	Plugins\wadsp\
+		Winamp用dspプラグインを入れる
+
 追加したプラグイン(公式でも利用可能)
 	minipane.dll    ミニパネル
 	minipane.fcp    minipane.dll/minipaneu.dll 設定
@@ -30,20 +55,6 @@ All rights reserved.
 	fconfig.exe     設定画面 fcpプラグインが無いと何もできない
 
 追加した専用プラグイン
-	addurl.dll      URLを追加 Ansi/Unicode両対応 text13以降推奨
-	addurlu.dll     廃止 addurl.dllに統合
-	bookmark.dll    しおり 要test18以降
-	bookmarku.dll   しおり Unicode対応 要test18以降
-	fconfig.dll     設定画面 fcpプラグインが無いと何もできない Ansi/Unicode両対応 要test12以降
-	fconfigu.dll    廃止 fconfig.dllに統合
-	minipaneu.dll   ミニパネル Unicode対応 要test17以降
-	replaygain.dll  ReplayGain Ansi/Unicode両対応 要test25以降
-	replaygainu.dll 廃止 replaygain.dllに統合
-	wadsp.dll       WinampDSPプラグイン対応 Ansi/Unicode両対応 要test25以降 要bass_wadsp.dll
-	wadsp.fcp       wadsp.dll 設定
-	bass.fop        bass.dllによる音声出力 要test28以降
-	bassasio.fop    bassasio.dllによる音声出力 要test28以降 要bassasio.dll
-	output.fcp      bass.fop bassasio.fop replaygain.dll cue.fap cueu.fap 設定
 	cue.fap         cueシート対応 Ansi版専用 要test14以降
 	arj.fap         arj書庫対応 Ansi版専用 要統合アーカイバプロジェクト版unarj32j.dll
 	cab.fap         cab書庫対応 Ansi版専用 要IE5以降(cabinet.dll又はfdi.dll)
@@ -61,11 +72,36 @@ All rights reserved.
 	taru.fap        tar書庫対応 Unicode版専用 ただしUnicode非対応 要統合アーカイバプロジェクト版tar32.dll
 	zipu.fap        zip書庫対応 Unicode版専用 ただしUnicode非対応 要統合アーカイバプロジェクト版unzip32.dll
 	fittle.fcp      fittle.exe 設定
+	output.fcp      bass.fop bassasio.fop replaygain.fgp cue.fap cueu.fap 設定
+	wadsp.fcp       wadsp.dll 設定
+	addurl.fgp      URLを追加 Ansi/Unicode両対応 test13以降推奨
+	bookmark.fgp    しおり 要test18以降
+	bookmarku.fgp   しおり Unicode対応 要test18以降
+	fconfig.fgp     設定画面 fcpプラグインが無いと何もできない Ansi/Unicode両対応 要test12以降
+	minipaneu.fgp   ミニパネル Unicode対応 要test17以降
+	replaygain.fgp  ReplayGain Ansi/Unicode両対応 要test25以降
+	wadsp.fgp       WinampDSPプラグイン対応 Ansi/Unicode両対応 要test25以降 要bass_wadsp.dll
+	bass.fop        bass.dllによる音声出力 要test28以降
+	bassasio.fop    bassasio.dllによる音声出力 要test28以降 要bassasio.dll
+
+廃止した専用プラグイン
+	addurl.dll      -> addurl.fgp
+	addurlu.dll     -> addurl.fgp
+	bookmark.dll    -> bookmark.fgp
+	bookmarku.dll   -> bookmarku.fgp
+	fconfig.dll     -> fconfig.fgp
+	fconfigu.dll    -> fconfig.fgp
+	minipaneu.dll   -> minipaneu.fgp
+	replaygain.dll  -> replaygain.fgp
+	replaygainu.dll -> replaygain.fgp
+	wadsp.dll       -> wadsp.fgp
 
 実験履歴
 	test29/test29u
 		設定の適用時に強制的にフォルダタブが選択されていた問題に対処
-		BASS初期化時のサンプリングレート指定を追加してみた
+		BASS初期化時のサンプリングレート指定を追加
+		プラグインフォルダを変更
+		ファイルヘッダにバージョンコードを埋め込んだ
 
 	test28/test28u
 		音声出力機能を削除してみた

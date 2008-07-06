@@ -27,12 +27,10 @@
 #pragma comment(linker,"/OPT:NOWIN98")
 #endif
 
-static BOOL fIsUnicode = FALSE;
-static HMODULE hDLL = 0;
+static HMODULE m_hDLL = 0;
 
-#define WA_MAX_SIZE MAX_PATH
-#define WAIsUnicode fIsUnicode
 #include "../../../fittle/src/wastr.h"
+#include "../../../fittle/src/wastr.cpp"
 
 /*ê›íËä÷åW*/
 static struct {
@@ -68,7 +66,7 @@ static CONFIG_PLUGIN_INFO cpinfo = {
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 	(void)lpvReserved;
 	if (fdwReason == DLL_PROCESS_ATTACH){
-		hDLL = hinstDLL;
+		m_hDLL = hinstDLL;
 		DisableThreadLibraryCalls(hinstDLL);
 	}
 	return TRUE;
@@ -224,33 +222,9 @@ static DWORD CALLBACK GetConfigPageCount(void){
 	return 1;
 }
 
-#ifndef PROPSHEETPAGE_V1
-#define PROPSHEETPAGEA_V1 PROPSHEETPAGEA
-#define PROPSHEETPAGEW_V1 PROPSHEETPAGEW
-#endif
 static HPROPSHEETPAGE CreateConfigPage(){
-	union {
-		PROPSHEETPAGEA_V1 A;
-		PROPSHEETPAGEW_V1 W;
-	} psp;
-	WASTR dlgtemp;
-	fIsUnicode = ((GetVersion() & 0x80000000) == 0);
-	WAstrcpyA(&dlgtemp, "MINIPANE_SHEET");;
-	if (WAIsUnicode) {
-		psp.W.dwSize = sizeof (PROPSHEETPAGEW_V1);
-		psp.W.dwFlags = PSP_DEFAULT;
-		psp.W.hInstance = hDLL;
-		psp.W.pszTemplate = dlgtemp.W;
-		psp.W.pfnDlgProc = (DLGPROC)MiniPanePageProc;
-		return CreatePropertySheetPageW(&psp.W);
-	} else {
-		psp.A.dwSize = sizeof (PROPSHEETPAGEA_V1);
-		psp.A.dwFlags = PSP_DEFAULT;
-		psp.A.hInstance = hDLL;
-		psp.A.pszTemplate = dlgtemp.A;
-		psp.A.pfnDlgProc = (DLGPROC)MiniPanePageProc;
-		return CreatePropertySheetPageA(&psp.A);
-	}
+	WAIsUnicode();
+	return WACreatePropertySheetPage(m_hDLL, "MINIPANE_SHEET", MiniPanePageProc);
 }
 
 static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel, char *pszConfigPath, int nConfigPathSize){

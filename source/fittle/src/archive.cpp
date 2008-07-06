@@ -179,7 +179,7 @@ static BOOL CALLBACK RegisterPluginProc(HMODULE hPlugin, HWND hWnd){
 }
 
 BOOL InitArchive(HWND hWnd){
-	EnumPlugins(NULL, TEXT(""), TEXT("*.fap"), RegisterPluginProc, hWnd);
+	EnumPlugins(NULL, TEXT("Plugins\\fap\\"), TEXT("*.fap"), RegisterPluginProc, hWnd);
 	return TRUE;
 }
 

@@ -243,7 +243,7 @@ static int OPInit(OUTPUT_PLUGIN_INFO *pPlugin, DWORD dwId, HWND hWnd){
 }
 
 static int InitOutputPlugin(HWND hWnd){
-	EnumPlugins(NULL, TEXT(""), TEXT("*.fop"), RegisterOutputPlugin, hWnd);
+	EnumPlugins(NULL, TEXT("Plugins\\fop\\"), TEXT("*.fop"), RegisterOutputPlugin, hWnd);
 
 	if (pOutputPluginList){
 		struct OUTPUT_PLUGIN_NODE *pList = pOutputPluginList;

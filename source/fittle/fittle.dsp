@@ -158,6 +158,10 @@ SOURCE=.\src\bass_tag.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\src\bassload.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\src\finddlg.cpp
 # End Source File
 # Begin Source File
@@ -188,6 +192,10 @@ SOURCE=.\src\plugins.cpp
 
 SOURCE=.\src\tree.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=.\src\wastr.cpp
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
@@ -203,6 +211,10 @@ SOURCE=.\src\archive.h
 # Begin Source File
 
 SOURCE=.\src\bass_tag.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\bassload.h
 # End Source File
 # Begin Source File
 
@@ -234,6 +246,14 @@ SOURCE=.\src\mt19937ar.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\src\oplugin.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\oplugins.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\src\plugin.h
 # End Source File
 # Begin Source File
@@ -242,7 +262,15 @@ SOURCE=.\src\plugins.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\src\readtag.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\src\tree.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\src\wastr.h
 # End Source File
 # End Group
 # Begin Group "Resource Files"

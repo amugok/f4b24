@@ -24,13 +24,10 @@
 #define SET_SUBCLASS(hWnd, Proc) \
 	SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)Proc))
 
-static BOOL fIsUnicode = FALSE;
-static HMODULE hDLL = 0;
+static HMODULE m_hDLL = 0;
 
-#define WA_MAX_SIZE MAX_FITTLE_PATH
-#define WAIsUnicode fIsUnicode
 #include "../../../fittle/src/wastr.h"
-
+#include "../../../fittle/src/wastr.cpp"
 
 static struct {
 	int nBkColor;				// îwåiÇÃêF
@@ -96,7 +93,7 @@ CONFIG_PLUGIN_INFO * CALLBACK GetCPluginInfo(void){
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 	(void)lpvReserved;
 	if (fdwReason == DLL_PROCESS_ATTACH){
-		hDLL = hinstDLL;
+		m_hDLL = hinstDLL;
 		DisableThreadLibraryCalls(hinstDLL);
 	}
 	return TRUE;
@@ -801,7 +798,7 @@ static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel, LPSTR pszCo
 	WASTR dlgtemp;
 	LPCSTR lpszTemplate, lpszPath;
 	DLGPROC lpfnDlgProc = 0;
-	fIsUnicode = ((GetVersion() & 0x80000000) == 0);
+	WAIsUnicode();
 	if (nLevel == 0){
 		if (nIndex == 0){
 			lpszTemplate = "GENERAL_SHEET";
@@ -833,6 +830,5 @@ static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel, LPSTR pszCo
 	}
 	if (!lpfnDlgProc) return NULL;
 	lstrcpynA(pszConfigPath, lpszPath, nConfigPathSize);
-	WAstrcpyA(&dlgtemp, lpszTemplate);
-	return WACreatePropertySheetPage(hDLL, &dlgtemp, lpfnDlgProc);
+	return WACreatePropertySheetPage(m_hDLL, lpszTemplate, lpfnDlgProc);
 }

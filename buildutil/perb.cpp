@@ -1,10 +1,11 @@
 /*
 	PE ReBuilder
 */
-#ifdef _MSC_VER
 #if _MSC_VER >= 1200
 #pragma comment(linker, "/OPT:NOWIN98")
 #endif
+#if defined(_MSC_VER) && !defined(_DEBUG)
+#pragma comment(linker,"/MERGE:.rdata=.text")
 #endif
 
 #include <stdio.h>
@@ -13,7 +14,7 @@
 
 static const unsigned char ministub[0x40] = {
 	0x4D, 0x5A, 0x40, 0x00, 0x01, 0x00, 0x00, 0x00, 
-	0x03, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 
+	0x02, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 
 	0x10, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 	0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
@@ -94,7 +95,7 @@ static void clearres(unsigned char *rdir, unsigned long rofs){
 	}
 }
 
-static int perb(const char *path, int s, int dctmin){
+static int perb(const char *path, int s, int dctmin, const char *v){
 	unsigned char *rbf = 0;
 	unsigned char *wbf = 0;
 	size_t rsz;
@@ -133,6 +134,7 @@ static int perb(const char *path, int s, int dctmin){
 	
 	wstubsz = sizeof(ministub);
 	memcpy(wbf, ministub, wstubsz);
+	if (v) memcpy(wbf + 0x20, v, strlen(v));
 	setdwordle(wbf + 0x3c, wstubsz);	/* peofs */
 	memcpy(wbf + wstubsz, "PE\0\0", 4);
 	wcoffofs = wstubsz + 4;
@@ -240,6 +242,7 @@ int main(int argc, char **argv){
 	int i = 1;
 	int s = 9;
 	int d = 16;
+	const char *v = 0;
 	for (; i < argc; i++) {
 		if (strcmpi(argv[i], "/s") == 0 && i + 1 < argc){
 			s = atoi(argv[++i]);
@@ -249,8 +252,11 @@ int main(int argc, char **argv){
 			d = atoi(argv[++i]);
 			if (!d) d = 16;
 			continue;
+		} else if (strcmpi(argv[i], "/v") == 0 && i + 1 < argc){
+			v = argv[++i];
+			continue;
 		} else {
-			perb(argv[i], s, d);
+			perb(argv[i], s, d, v);
 		}
 	}
 	return 0;

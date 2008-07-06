@@ -29,7 +29,6 @@
 #if defined(_MSC_VER)
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "shlwapi.lib")
-#pragma comment(lib, "../../extra/bass24/bass.lib")
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/MERGE:.rdata=.text")
@@ -124,6 +123,7 @@ static void InitFileTypes();
 static int SaveFileDialog(LPTSTR, LPTSTR);
 static LONG GetToolbarTrueWidth(HWND);
 static int GetMenuPosFromString(HMENU hMenu, LPTSTR lpszText);
+
 // ââëtêßå‰ä÷åW
 static BOOL SetChannelInfo(BOOL, struct FILEINFO *);
 static BOOL _BASS_ChannelSetPosition(DWORD, int);
@@ -512,15 +512,23 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 	HACCEL hAccel;
 	HMODULE XARGD = ExpandArgs(&XARGC, &XARGV);
 
+	WAIsUnicode();
+	if (!LoadBASS()) {
+		MessageBox(NULL, TEXT("bass.dllÇÃì«Ç›çûÇ›Ç…é∏îsÇµÇ‹ÇµÇΩÅB"), TEXT("Fittle"), MB_OK);
+		return 0;
+	}
+
 #if defined(_MSC_VER) && defined(_DEBUG)
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif
 
 #ifndef _DEBUG
-	BOOL bMulti = FALSE;
-	LRESULT lRet = CheckMultiInstance(&bMulti);
-	// ëΩèdãNìÆÇÃñhé~
-	if (bMulti) return lRet;
+	{
+		BOOL bMulti = FALSE;
+		LRESULT lRet = CheckMultiInstance(&bMulti);
+		// ëΩèdãNìÆÇÃñhé~
+		if (bMulti) return lRet;
+	}
 #endif
 
 	// èâä˙âª
@@ -2702,7 +2710,7 @@ static void InitFileTypes(){
 	AddTypes("mp3;mp2;mp1;wav;ogg;aif;aiff");
 	AddTypes("mod;mo3;xm;it;s3m;mtm;umx");
 
-	EnumFiles(NULL, TEXT(""), TEXT("bass*.dll"), FileProc, 0);
+	EnumFiles(NULL, TEXT("Plugins\\BASS\\"), TEXT("bass*.dll"), FileProc, 0);
 }
 
 static int XATOI(LPCTSTR p){
@@ -2716,7 +2724,7 @@ static int XATOI(LPCTSTR p){
 }
 
 /* xx:xx:xxÇ∆Ç¢Ç§ï\ãLÇ∆ÉnÉìÉhÉãÇ©ÇÁéûä‘ÇQWORDÇ≈éÊìæ */
-static QWORD GetByteFromSecStr(HCHANNEL hChan, LPTSTR pszSecStr){
+static QWORD GetByteFromSecStr(DWORD hChan, LPTSTR pszSecStr){
 	int min, sec, frame;
 
 	if(*pszSecStr == TEXT('\0')){

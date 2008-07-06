@@ -15,8 +15,12 @@
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")
 #pragma comment(lib,"user32.lib")
+#pragma comment(lib,"gdi32.lib")
 #pragma comment(lib,"comctl32.lib")
+#pragma comment(lib,"comdlg32.lib")
+#pragma comment(lib,"ole32.lib")
 #pragma comment(lib,"shlwapi.lib")
+#pragma comment(lib,"shell32.lib")
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/ENTRY:DllMain")
@@ -53,10 +57,9 @@ static SHARED_MEMORY *psm = NULL;
 /* プラグインリスト */
 static CONFIG_PLUGIN_INFO *pTop = NULL;
 
-static BOOL fIsUnicode = FALSE;
-static WNDPROC hOldProc = 0;
-
-static HMODULE hDLL = 0;
+static BOOL m_fIsUnicode = FALSE;
+static WNDPROC m_hOldProc = 0;
+static HMODULE m_hDLL = 0;
 
 static FITTLE_PLUGIN_INFO fpi = {
 	PDK_VER,
@@ -69,14 +72,13 @@ static FITTLE_PLUGIN_INFO fpi = {
 	NULL
 };
 
-#define WA_MAX_SIZE MAX_PATH
-#define WAIsUnicode fIsUnicode
 #include "../../../fittle/src/wastr.h"
+#include "../../../fittle/src/wastr.cpp"
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 	(void)lpvReserved;
 	if (fdwReason == DLL_PROCESS_ATTACH){
-		hDLL = hinstDLL;
+		m_hDLL = hinstDLL;
 		DisableThreadLibraryCalls(hinstDLL);
 	}else if (fdwReason == DLL_PROCESS_DETACH){
 	}
@@ -126,7 +128,7 @@ static BOOL CALLBACK RegisterPlugin(HMODULE hPlugin){
 }
 
 static void InitPlugins(){
-	WAEnumPlugins(NULL, "", "*.fcp", RegisterPlugin);
+	WAEnumPlugins(NULL, "Plugins\\fcp\\", "*.fcp", RegisterPlugin);
 }
 
 static void *HAlloc(DWORD dwSize){
@@ -262,14 +264,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 		ShowSettingDialog(hWnd, lp);
 		return 0;
 	}
-	return (fIsUnicode ? CallWindowProcW : CallWindowProcA)(hOldProc, hWnd, msg, wp, lp);
+	return (m_fIsUnicode ? CallWindowProcW : CallWindowProcA)(m_hOldProc, hWnd, msg, wp, lp);
 }
 
 /* 起動時に一度だけ呼ばれます */
 static BOOL OnInit(){
-	fIsUnicode = ((GetVersion() & 0x80000000) == 0) || IsWindowUnicode(fpi.hParent);
+	m_fIsUnicode = WAIsUnicode() || IsWindowUnicode(fpi.hParent);
 	InitPlugins();
-	hOldProc = (WNDPROC)(fIsUnicode ? SetWindowLongW : SetWindowLongA)(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
+	m_hOldProc = (WNDPROC)(m_fIsUnicode ? SetWindowLongW : SetWindowLongA)(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
 	return TRUE;
 }
 

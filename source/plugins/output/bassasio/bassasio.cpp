@@ -6,9 +6,8 @@
 #include <shlobj.h>
 #include <shlwapi.h>
 
-#include "../../../../extra/bass24/bass.h"
-#include "../../../fittle/src/oplugin.h"
 #include "../../../fittle/src/f4b24.h"
+#include "../../../fittle/src/oplugin.h"
 
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")
@@ -19,7 +18,6 @@
 #pragma comment(lib,"ole32.lib")
 #pragma comment(lib,"shlwapi.lib")
 #pragma comment(lib,"shell32.lib")
-#pragma comment(lib,"../../../../extra/bass24/bass.lib")
 #pragma comment(linker, "/EXPORT:GetOPluginInfo=_GetOPluginInfo@0")
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
@@ -28,8 +26,24 @@
 #pragma comment(linker,"/OPT:NOWIN98")
 #endif
 
-#define BASSASIODEF(f) (WINAPI * f)
+#define BASSDEF(f) (WINAPI * f)
+#define BASS_DATA_FLOAT		0x40000000
 
+typedef struct {
+	DWORD freq;
+	DWORD chans;
+	DWORD flags;
+	DWORD ctype;
+	DWORD origres;
+	DWORD plugin;
+	DWORD sample;
+	const char *filename;
+} BASS_CHANNELINFO;
+
+DWORD BASSDEF(BASS_ChannelGetData)(DWORD handle, void *buffer, DWORD length);
+DWORD BASSDEF(BASS_ChannelIsActive)(DWORD handle);
+
+#define BASSASIODEF(f) (WINAPI * f)
 
 #define BASS_ASIO_FORMAT_FLOAT  19 // 32-bit floating-point
 #define BASS_ASIO_RESET_PAUSE	4 // unpause channel
@@ -59,12 +73,19 @@ BOOL BASSASIODEF(BASS_ASIO_Start)(DWORD buflen);
 BOOL BASSASIODEF(BASS_ASIO_Stop)();
 
 
-#define FUNC_PREFIXA "BASS_ASIO_"
-static CHAR szDllNameA[] = "bassasio.dll";
-static struct IMPORT_FUNC_TABLE {
-	LPSTR lpszFuncName;
+static LPCSTR szFuncBase[2] = { "BASS_", "BASS_ASIO_" };
+static LPCSTR szDllNameA[2] = { "bass.dll", "bassasio.dll" };
+typedef struct IMPORT_FUNC_TABLE {
+	LPCSTR lpszFuncName;
 	FARPROC * ppFunc;
-} functbl[] = {
+} IMPORT_FUNC_TABLE, *LPIMPORT_FUNC_TABLE;
+typedef const IMPORT_FUNC_TABLE *LPCIMPORT_FUNC_TABLE;
+static const IMPORT_FUNC_TABLE functbl0[] = {
+	{ "ChannelGetData", (FARPROC *)&BASS_ChannelGetData },
+	{ "ChannelIsActive", (FARPROC *)&BASS_ChannelIsActive },
+	{ 0, (FARPROC *)0 }
+};
+static const IMPORT_FUNC_TABLE functbl1[] = {
 	{ "ChannelEnable", (FARPROC *)&BASS_ASIO_ChannelEnable },
 	{ "ChannelIsActive", (FARPROC *)&BASS_ASIO_ChannelIsActive },
 	{ "ChannelJoin", (FARPROC *)&BASS_ASIO_ChannelJoin },
@@ -82,11 +103,14 @@ static struct IMPORT_FUNC_TABLE {
 	{ "Stop", (FARPROC *)&BASS_ASIO_Stop },
 	{ 0, (FARPROC *)0 }
 };
+static const LPCIMPORT_FUNC_TABLE functbl[2] = { functbl0, functbl1 };
 
 
 static HMODULE m_hDLL = 0;
 static int m_nDevice = 0;
-static HMODULE m_hBASSASIO = 0;
+
+#include "../../../fittle/src/wastr.h"
+#include "../../../fittle/src/wastr.cpp"
 
 #define OUTPUT_PLUGIN_ID_BASE (0x20000)
 
@@ -131,23 +155,37 @@ static OUTPUT_PLUGIN_INFO opinfo = {
 };
 
 static BOOL LoadBASSASIO(void){
-	const struct IMPORT_FUNC_TABLE *pft;
-	CHAR funcname[32];
-	int l;
-	lstrcpynA(funcname, FUNC_PREFIXA, 32);
-	l = lstrlenA(funcname);
-	if (m_hBASSASIO) return TRUE;
-	m_hBASSASIO = LoadLibraryA(szDllNameA);
-	if(!m_hBASSASIO) return FALSE;
-	for (pft = functbl; pft->lpszFuncName; pft++){
-		lstrcpynA(funcname + l, pft->lpszFuncName, 32 - l);
-		FARPROC fp = GetProcAddress(m_hBASSASIO, funcname);
-		if (!fp){
-			FreeLibrary(m_hBASSASIO);
-			m_hBASSASIO = NULL;
+	int i;
+	HMODULE h[2];
+	for (i = 0; i < 2; i++){
+		LPCIMPORT_FUNC_TABLE pft;
+		CHAR funcname[32];
+		WASTR szPath;
+		int l;
+
+		WAGetModuleParentDir(NULL, &szPath);
+		WAstrcatA(&szPath, "Plugins\\BASS\\");
+		WAstrcatA(&szPath, szDllNameA[i]);
+		h[i] = WALoadLibrary(&szPath);
+		if(!h[i])
+		{
+			if (i > 0) FreeLibrary(h[0]);
 			return FALSE;
 		}
-		*pft->ppFunc = fp;
+
+		lstrcpynA(funcname, szFuncBase[i], 32);
+		l = lstrlenA(funcname);
+
+		for (pft = functbl[i]; pft->lpszFuncName; pft++){
+			lstrcpynA(funcname + l, pft->lpszFuncName, 32 - l);
+			FARPROC fp = GetProcAddress(h[i], funcname);
+			if (!fp){
+				if (i > 0) FreeLibrary(h[1]);
+				FreeLibrary(h[0]);
+				return FALSE;
+			}
+			*pft->ppFunc = fp;
+		}
 	}
 	return TRUE;
 }
@@ -156,6 +194,7 @@ static BOOL LoadBASSASIO(void){
 extern "C"
 #endif
 OUTPUT_PLUGIN_INFO * CALLBACK GetOPluginInfo(void){
+	WAIsUnicode();
 	return LoadBASSASIO() ? &opinfo : 0;
 }
 

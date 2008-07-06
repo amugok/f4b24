@@ -6,35 +6,78 @@ if exist "%ProgramFiles%\Microsoft Visual Studio\VC98\Bin\VCVARS32.BAT" CALL "%P
 :skipsetup
 
 if "%1"=="" goto buildall
+if "%2"=="" goto builddll
 
-cl /Ogisyb1 /LD %1.cpp %2 %3 %4 %5 %6 %7 %8 %9
+if not "%2"=="exe" set CFLAGS=%CFLAGS% /LD
+
+if exist %1.rc rc %1.rc
+
+if not exist %1.rc cl %CFLAGS% /Fe%1.%2 %1.cpp %3 %4 %5 %6 %7 %8 %9
+if exist %1.res cl %CFLAGS% /Fe%1.%2 %1.cpp %1.res %3 %4 %5 %6 %7 %8 %9
+
 if exist %1.exp del %1.exp
 if exist %1.lib del %1.lib
 if exist %1.obj del %1.obj
-if exist %1.dll perb %1.dll
-if exist %1.dll editbin /release %1.dll
-if exist %1.dll move %1.dll ..\..\..\bin\%1.fap
+if exist %1.res del %1.res
+
+if not exist %1.%2 goto exitcmd
+if "%1.%2" == "perb.exe" goto selfperb
+
+if "%VER_STR%"=="" perb %1.%2
+if not "%VER_STR%"=="" perb /v %VER_STR% %1.%2
+editbin /release %1.%2
+if not "%PREFIX%"=="" move %1.%2 %PREFIX%%1.%2
+
+goto exitcmd
+
+:selfperb
+
+copy %1.%2 .\perb_.exe
+if "%VER_STR%"=="" .\perb_.exe %1.%2
+if not "%VER_STR%"=="" .\perb_.exe /v %VER_STR% %1.%2
+editbin /release %1.%2
+del .\perb_.exe
+
+goto exitcmd
+
+:builddll
+
+call %0 %1 dll
 
 goto exitcmd
 
 :buildall
 
-call %0 arj /MD
-call %0 cab /MD
-call %0 cue /MD
-call %0 gca /GX /link /NODEFAULTLIB:libcmt.lib msvcrt.lib
-call %0 lha /MD
-call %0 rar /MD
-call %0 tar /MD
-call %0 zip /MD
+set VER_STR_BASE=0807061
+set CFLAGSBASE=/Ogisyb1 /Gy
+set PREFIX=..\..\..\bin\Plugins\fap\
 
-call %0 arju /MD
-call %0 cabu /MD
-call %0 cueu /MD
-call %0 lhau /MD
-call %0 gcau /GX /link /NODEFAULTLIB:libcmt.lib msvcrt.lib
-call %0 raru /MD
-call %0 taru /MD
-call %0 zipu /MD
+set CFLAGS=%CFLAGSBASE% /MD
+
+set VER_STR=%VER_STR_BASE%A
+call %0 arj fap
+call %0 cab fap
+call %0 cue fap
+call %0 lha fap
+call %0 rar fap
+call %0 tar fap
+call %0 zip fap
+set VER_STR=%VER_STR_BASE%U
+call %0 arju fap
+call %0 cabu fap
+call %0 cueu fap
+call %0 lhau fap
+call %0 raru fap
+call %0 taru fap
+call %0 zipu fap
+
+set CFLAGS=%CFLAGSBASE%
+
+set VER_STR=%VER_STR_BASE%A
+call %0 gca fap /GX /link /NODEFAULTLIB:libcmt.lib msvcrt.lib
+set VER_STR=%VER_STR_BASE%U
+call %0 gcau fap /GX /link /NODEFAULTLIB:libcmt.lib msvcrt.lib
+
+
 
 :exitcmd

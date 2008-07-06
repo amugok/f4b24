@@ -12,7 +12,12 @@
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")
 #pragma comment(lib,"user32.lib")
+#pragma comment(lib,"comctl32.lib")
+#pragma comment(lib,"comdlg32.lib")
 #pragma comment(lib,"shlwapi.lib")
+#pragma comment(lib,"shell32.lib")
+#pragma comment(lib,"ole32.lib")
+#pragma comment(lib,"gdi32.lib")
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/ENTRY:DllMain")
@@ -55,25 +60,28 @@ static /*const*/ struct IMPORT_FUNC_TABLE {
 	LPSTR lpszFuncName;
 	FARPROC * ppFunc;
 } functbl[] = {
-	{ FUNC_PREFIXA "Init", (FARPROC *)&BASS_WADSP_Init },
-	{ FUNC_PREFIXA "Load", (FARPROC *)&BASS_WADSP_Load },
-	{ FUNC_PREFIXA "Start", (FARPROC *)&BASS_WADSP_Start },
-	{ FUNC_PREFIXA "ChannelSetDSP", (FARPROC *)&BASS_WADSP_ChannelSetDSP },
-	{ FUNC_PREFIXA "ChannelRemoveDSP", (FARPROC *)&BASS_WADSP_ChannelRemoveDSP },
-	{ FUNC_PREFIXA "Stop", (FARPROC *)&BASS_WADSP_Stop },
-	{ FUNC_PREFIXA "Free", (FARPROC *)&BASS_WADSP_Free },
-	{ FUNC_PREFIXA "Config", (FARPROC *)&BASS_WADSP_Config },
-	{ FUNC_PREFIXA "GetName", (FARPROC *)&BASS_WADSP_GetName },
+	{ "Init", (FARPROC *)&BASS_WADSP_Init },
+	{ "Load", (FARPROC *)&BASS_WADSP_Load },
+	{ "Start", (FARPROC *)&BASS_WADSP_Start },
+	{ "ChannelSetDSP", (FARPROC *)&BASS_WADSP_ChannelSetDSP },
+	{ "ChannelRemoveDSP", (FARPROC *)&BASS_WADSP_ChannelRemoveDSP },
+	{ "Stop", (FARPROC *)&BASS_WADSP_Stop },
+	{ "Free", (FARPROC *)&BASS_WADSP_Free },
+	{ "Config", (FARPROC *)&BASS_WADSP_Config },
+	{ "GetName", (FARPROC *)&BASS_WADSP_GetName },
 	{ 0, (FARPROC *)0 }
 };
 
 static HMODULE hWaDsp = NULL;
 static WADSPNODE *pDspListTop = NULL;
-static int nCount = 0;
 
-static HMODULE hDLL = 0;
-static BOOL fIsUnicode = FALSE;
-static WNDPROC hOldProc = 0;
+static HMODULE m_hDLL = 0;
+static BOOL m_fIsUnicode = FALSE;
+static WNDPROC m_hOldProc = 0;
+static BOOL m_fInitialized = FALSE;
+
+#include "../../../fittle/src/wastr.h"
+#include "../../../fittle/src/wastr.cpp"
 
 static BOOL OnInit();
 static void OnQuit();
@@ -95,7 +103,7 @@ static FITTLE_PLUGIN_INFO fpi = {
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 	(void)lpvReserved;
 	if (fdwReason == DLL_PROCESS_ATTACH){
-		hDLL = hinstDLL;
+		m_hDLL = hinstDLL;
 		DisableThreadLibraryCalls(hinstDLL);
 	}else if (fdwReason == DLL_PROCESS_DETACH){
 	}
@@ -110,24 +118,25 @@ static void HFree(LPVOID lp){
 	HeapFree(GetProcessHeap(), 0, lp);
 }
 
-static BOOL InitBassWaDsp(HWND hWnd){
+static BOOL LoadBASSWADSP(void){
 	const struct IMPORT_FUNC_TABLE *pft;
-	HANDLE hFind;
-	union{
-		CHAR A[MAX_PATH];
-		WCHAR W[MAX_PATH];
-	} szDir, szPath;
-	union{
-		WIN32_FIND_DATAA A;
-		WIN32_FIND_DATAW W;
-	} wfd;
-	int i = 0;
-	hWaDsp = LoadLibraryA(szDllNameA);
-	if(!hWaDsp){
-		return FALSE;
-	}
+	CHAR funcname[32];
+	WASTR szPath;
+	int l;
+	if (hWaDsp) return TRUE;
+
+	WAGetModuleParentDir(NULL, &szPath);
+	WAstrcatA(&szPath, "Plugins\\BASS\\");
+	WAstrcatA(&szPath, szDllNameA);
+	hWaDsp = WALoadLibrary(&szPath);
+	if(!hWaDsp) return FALSE;
+
+	lstrcpynA(funcname, FUNC_PREFIXA, 32);
+	l = lstrlenA(funcname);
+
 	for (pft = functbl; pft->lpszFuncName; pft++){
-		FARPROC fp = GetProcAddress(hWaDsp, pft->lpszFuncName);
+		lstrcpynA(funcname + l, pft->lpszFuncName, 32 - l);
+		FARPROC fp = GetProcAddress(hWaDsp, funcname);
 		if (!fp){
 			FreeLibrary(hWaDsp);
 			hWaDsp = NULL;
@@ -135,71 +144,61 @@ static BOOL InitBassWaDsp(HWND hWnd){
 		}
 		*pft->ppFunc = fp;
 	}
+	return TRUE;
+}
 
-	BASS_WADSP_Init(hWnd);
-
-	if (fIsUnicode){
-		GetModuleFileNameW(NULL, szDir.W, MAX_PATH);
-		PathFindFileNameW(szDir.W)[0] = L'\0';
-		PathCombineW(szPath.W, szDir.W, L"dsp_*.dll");
-		hFind = FindFirstFileW(szPath.W, &wfd.W);
-	}else{
-		GetModuleFileNameA(NULL, szDir.A, MAX_PATH);
-		PathFindFileNameA(szDir.A)[0] = '\0';
-		PathCombineA(szPath.A, szDir.A, "dsp_*.dll");
-		hFind = FindFirstFileA(szPath.A, &wfd.A);
+static BOOL CALLBACK LoadDSPPluginProc(LPWASTR lpPath, LPVOID user){
+	WADSPNODE *pNew = (WADSPNODE *)HAlloc(sizeof(WADSPNODE));
+	if (pNew) {
+		pNew->h = BASS_WADSP_Load(lpPath, 0, 0, 5, 5, NULL);
+		if(pNew->h){
+			BASS_WADSP_Start(pNew->h, 0, 0);
+			pNew->pNext = pDspListTop;
+			pDspListTop = pNew;
+			return TRUE;
+		}
+		HFree(pNew);
 	}
+	return FALSE;
+}
 
-	if(hFind!=INVALID_HANDLE_VALUE){
-		do{
-			WADSPNODE *pNew = (WADSPNODE *)HAlloc(sizeof(WADSPNODE));
-			if (pNew) {
-				if (fIsUnicode){
-					PathCombineW(szPath.W, szDir.W, wfd.W.cFileName);
-				}else{
-					PathCombineA(szPath.A, szDir.A, wfd.A.cFileName);
-				}
-				pNew->h = BASS_WADSP_Load(fIsUnicode ? (void *)szPath.W : (void *)szPath.A, 0, 0, 5, 5, NULL);
-				if(pNew->h){
-					BASS_WADSP_Start(pNew->h, 0, 0);
-					i++;
-					pNew->pNext = pDspListTop;
-					pDspListTop = pNew;
-				} else {
-					HFree(pNew);
-				}
-			}
-		}while(fIsUnicode ? FindNextFileW(hFind, &wfd.W) : FindNextFileA(hFind, &wfd.A));
-		FindClose(hFind);
-	}
-	nCount = i;
+static BOOL InitBassWaDsp(){
+	if (!LoadBASSWADSP()) return FALSE;
+	if (m_fInitialized) return TRUE;
+	m_fInitialized = TRUE;
+	BASS_WADSP_Init(fpi.hParent);
+	WAEnumFiles(NULL, "Plugins\\wadsp\\", "dsp_*.dll", LoadDSPPluginProc, 0);
 	return TRUE;
 }
 
 static BOOL SetBassWaDsp(DWORD hChan, BOOL fSw){
-	WADSPNODE *pDsp = pDspListTop;
-	while (pDsp){
-		WADSPNODE *pNext = pDsp->pNext;
-		if (fSw) {
-			BASS_WADSP_ChannelSetDSP(pDsp->h, hChan, 0);
-		} else {
-			BASS_WADSP_ChannelRemoveDSP(pDsp->h);
+	if (InitBassWaDsp()) {
+		WADSPNODE *pDsp = pDspListTop;
+		while (pDsp){
+			WADSPNODE *pNext = pDsp->pNext;
+			if (fSw) {
+				BASS_WADSP_ChannelSetDSP(pDsp->h, hChan, 0);
+			} else {
+				BASS_WADSP_ChannelRemoveDSP(pDsp->h);
+			}
+			pDsp = pNext;
 		}
-		pDsp = pNext;
 	}
 	return TRUE;
-}		
+}
 
 static void FreeBassWaDsp(){
-	WADSPNODE *pDsp = pDspListTop;
-	while (pDsp){
-		WADSPNODE *pNext = pDsp->pNext;
-		BASS_WADSP_Stop(pDsp->h);
-		HFree(pDsp);
-		pDsp = pNext;
+	if (m_fInitialized) {
+		WADSPNODE *pDsp = pDspListTop;
+		while (pDsp){
+			WADSPNODE *pNext = pDsp->pNext;
+			BASS_WADSP_Stop(pDsp->h);
+			HFree(pDsp);
+			pDsp = pNext;
+		}
+		pDspListTop = NULL;
+		if(BASS_WADSP_Free) BASS_WADSP_Free();
 	}
-	pDspListTop = NULL;
-	if(BASS_WADSP_Free) BASS_WADSP_Free();
 }
 
 // サブクラス化したウィンドウプロシージャ
@@ -221,7 +220,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				}
 				pDsp = pNext;
 			}
-		} else if (wp == WM_F4B24_IPC_GET_WADSP_LIST){
+		} else if (wp == WM_F4B24_IPC_GET_WADSP_LIST && InitBassWaDsp()){
 			int i, l = 1;
 			WADSPNODE *pDsp = pDspListTop;
 			char *p;
@@ -250,14 +249,13 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 		}
 		break;
 	}
-	return (fIsUnicode ? CallWindowProcW : CallWindowProcA)(hOldProc, hWnd, msg, wp, lp);
+	return (m_fIsUnicode ? CallWindowProcW : CallWindowProcA)(m_hOldProc, hWnd, msg, wp, lp);
 }
 
 /* 起動時に一度だけ呼ばれます */
 static BOOL OnInit(){
-	fIsUnicode = ((GetVersion() & 0x80000000) == 0) || IsWindowUnicode(fpi.hParent);
-	InitBassWaDsp(fpi.hParent);
-	hOldProc = (WNDPROC)(fIsUnicode ? SetWindowLongW : SetWindowLongA)(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
+	m_fIsUnicode = WAIsUnicode() || IsWindowUnicode(fpi.hParent);
+	m_hOldProc = (WNDPROC)(m_fIsUnicode ? SetWindowLongW : SetWindowLongA)(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
 	return TRUE;
 }
 

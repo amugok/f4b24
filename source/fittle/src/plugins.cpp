@@ -33,7 +33,8 @@ static BOOL CALLBACK RegisterPlugin(HMODULE hPlugin, HWND hWnd){
 	return FALSE;
 }
 void InitPlugins(HWND hWnd){
-	EnumPlugins(NULL, TEXT(""), TEXT("*.dll"), RegisterPlugin, hWnd);
+	EnumPlugins(NULL, TEXT("Plugins\\fgp\\"), TEXT("*.fgp"), RegisterPlugin, hWnd);
+	EnumPlugins(NULL, TEXT("Plugins\\Fittle\\"), TEXT("*.dll"), RegisterPlugin, hWnd);
 }
 
 void QuitPlugins(){

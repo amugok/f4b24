@@ -6,9 +6,8 @@
 #include <shlobj.h>
 #include <shlwapi.h>
 
-#include "../../../../extra/bass24/bass.h"
-#include "../../../fittle/src/oplugin.h"
 #include "../../../fittle/src/f4b24.h"
+#include "../../../fittle/src/oplugin.h"
 
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")
@@ -19,7 +18,6 @@
 #pragma comment(lib,"ole32.lib")
 #pragma comment(lib,"shlwapi.lib")
 #pragma comment(lib,"shell32.lib")
-#pragma comment(lib,"../../../../extra/bass24/bass.lib")
 #pragma comment(linker, "/EXPORT:GetOPluginInfo=_GetOPluginInfo@0")
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
@@ -28,8 +26,82 @@
 #pragma comment(linker,"/OPT:NOWIN98")
 #endif
 
+#define BASSDEF(f) (WINAPI * f)
+#define BASS_SAMPLE_8BITS		1
+#define BASS_SAMPLE_FLOAT		256
+#define BASS_DATA_FLOAT		0x40000000
+#define BASS_STREAMPROC_END		0x80000000
+#define BASS_DEVICE_DEFAULT		2
 
-static HMODULE hDLL = 0;
+#define BASS_STREAM_DECODE		0x200000
+#define BASS_MUSIC_DECODE		BASS_STREAM_DECODE
+
+#define BASS_ACTIVE_STOPPED	0
+#define BASS_ACTIVE_PLAYING	1
+#define BASS_ACTIVE_STALLED	2
+#define BASS_ACTIVE_PAUSED	3
+
+#define BASS_ATTRIB_VOL				2
+
+typedef struct {
+	DWORD freq;
+	DWORD chans;
+	DWORD flags;
+	DWORD ctype;
+	DWORD origres;
+	DWORD plugin;
+	DWORD sample;
+	const char *filename;
+} BASS_CHANNELINFO;
+
+typedef struct {
+	const char *name;
+	const char *driver;
+	DWORD flags;
+} BASS_DEVICEINFO;
+
+typedef DWORD (CALLBACK STREAMPROC)(DWORD handle, void *buffer, DWORD length, void *user);
+
+DWORD BASSDEF(BASS_ChannelGetData)(DWORD handle, void *buffer, DWORD length);
+BOOL BASSDEF(BASS_ChannelGetInfo)(DWORD handle, BASS_CHANNELINFO *info);
+DWORD BASSDEF(BASS_ChannelIsActive)(DWORD handle);
+BOOL BASSDEF(BASS_ChannelIsSliding)(DWORD handle, DWORD attrib);
+BOOL BASSDEF(BASS_ChannelPause)(DWORD handle);
+BOOL BASSDEF(BASS_ChannelPlay)(DWORD handle, BOOL restart);
+BOOL BASSDEF(BASS_ChannelSetAttribute)(DWORD handle, DWORD attrib, float value);
+BOOL BASSDEF(BASS_ChannelSlideAttribute)(DWORD handle, DWORD attrib, float value, DWORD time);
+BOOL BASSDEF(BASS_ChannelStop)(DWORD handle);
+BOOL BASSDEF(BASS_GetDeviceInfo)(DWORD device, BASS_DEVICEINFO *info);
+DWORD BASSDEF(BASS_StreamCreate)(DWORD freq, DWORD chans, DWORD flags, STREAMPROC *proc, void *user);
+BOOL BASSDEF(BASS_StreamFree)(DWORD handle);
+
+#define FUNC_PREFIXA "BASS_"
+static CHAR szDllNameA[] = "bass.dll";
+static struct IMPORT_FUNC_TABLE {
+	LPSTR lpszFuncName;
+	FARPROC * ppFunc;
+} functbl[] = {
+	{ "ChannelGetData", (FARPROC *)&BASS_ChannelGetData },
+	{ "ChannelGetInfo", (FARPROC *)&BASS_ChannelGetInfo },
+	{ "ChannelIsActive", (FARPROC *)&BASS_ChannelIsActive },
+	{ "ChannelIsSliding", (FARPROC *)&BASS_ChannelIsSliding },
+	{ "ChannelPause", (FARPROC *)&BASS_ChannelPause },
+	{ "ChannelPlay", (FARPROC *)&BASS_ChannelPlay },
+	{ "ChannelSetAttribute", (FARPROC *)&BASS_ChannelSetAttribute },
+	{ "ChannelSlideAttribute", (FARPROC *)&BASS_ChannelSlideAttribute },
+	{ "ChannelStop", (FARPROC *)&BASS_ChannelStop },
+	{ "GetDeviceInfo", (FARPROC *)&BASS_GetDeviceInfo },
+	{ "StreamCreate", (FARPROC *)&BASS_StreamCreate },
+	{ "StreamFree", (FARPROC *)&BASS_StreamFree },
+	{ 0, (FARPROC *)0 }
+};
+
+static HMODULE m_hDLL = 0;
+
+static HMODULE m_hBASS = 0;
+
+#include "../../../fittle/src/wastr.h"
+#include "../../../fittle/src/wastr.cpp"
 
 #define OUTPUT_PLUGIN_ID_BASE (0x10000)
 
@@ -73,10 +145,42 @@ static OUTPUT_PLUGIN_INFO opinfo = {
 	0,0,0,0
 };
 
+
+BOOL LoadBASS(void){
+	const struct IMPORT_FUNC_TABLE *pft;
+	CHAR funcname[32];
+	WASTR szPath;
+	int l;
+	if (m_hBASS) return TRUE;
+
+	WAGetModuleParentDir(NULL, &szPath);
+	WAstrcatA(&szPath, "Plugins\\BASS\\");
+	WAstrcatA(&szPath, szDllNameA);
+	m_hBASS = WALoadLibrary(&szPath);
+	if(!m_hBASS) return FALSE;
+
+	lstrcpynA(funcname, FUNC_PREFIXA, 32);
+	l = lstrlenA(funcname);
+
+	for (pft = functbl; pft->lpszFuncName; pft++){
+		lstrcpynA(funcname + l, pft->lpszFuncName, 32 - l);
+		FARPROC fp = GetProcAddress(m_hBASS, funcname);
+		if (!fp){
+			FreeLibrary(m_hBASS);
+			m_hBASS = NULL;
+			return FALSE;
+		}
+		*pft->ppFunc = fp;
+	}
+	return TRUE;
+}
+	
 #ifdef __cplusplus
 extern "C"
 #endif
 OUTPUT_PLUGIN_INFO * CALLBACK GetOPluginInfo(void){
+	WAIsUnicode();
+	if (!LoadBASS()) return NULL;
 	return &opinfo;
 }
 
@@ -84,7 +188,7 @@ OUTPUT_PLUGIN_INFO * CALLBACK GetOPluginInfo(void){
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 	(void)lpvReserved;
 	if (fdwReason == DLL_PROCESS_ATTACH){
-		hDLL = hinstDLL;
+		m_hDLL = hinstDLL;
 		DisableThreadLibraryCalls(hinstDLL);
 	}
 	return TRUE;
@@ -135,7 +239,7 @@ static BOOL CALLBACK Setup(HWND hWnd){
 	-------------------------------------------------------------------------------------------------------------------------
 */
 
-static HSTREAM m_hChanOut = NULL;	// ストリームハンドル
+static DWORD m_hChanOut = NULL;	// ストリームハンドル
 
 static int CALLBACK GetStatus(void){
 	if (m_hChanOut) {
@@ -152,7 +256,7 @@ static int CALLBACK GetStatus(void){
 }
 
 // メインストリームプロシージャ
-static DWORD CALLBACK MainStreamProc(HSTREAM handle, void *buf, DWORD len, void *user){
+static DWORD CALLBACK MainStreamProc(DWORD handle, void *buf, DWORD len, void *user){
 	DWORD r;
 	BASS_CHANNELINFO bci;
 	float sAmp = 0;
