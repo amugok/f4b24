@@ -15,6 +15,10 @@ BOOL WAIsUnicode(void){
 	return m_WAIsUnicode;
 }
 
+BOOL WAFILE_EXIST(LPCWASTR pValue) {
+	return 0xFFFFFFFF != (m_WAIsUnicode ? GetFileAttributesW(pValue->W) : GetFileAttributesA(pValue->A)); 
+}
+
 int WAstrlen(LPCWASTR pValue){
 	if (m_WAIsUnicode)
 		return lstrlenW(pValue->W);
@@ -35,6 +39,34 @@ void WAstrcpy(LPWASTR pBuf, LPCWASTR pValue){
 	else
 		lstrcpynA(pBuf->A, pValue->A, WA_MAX_SIZE);
 }
+void WAstrcpyt(LPTSTR pszBuf, LPCWASTR pValue, int n){
+#ifdef UNICODE
+	if (m_WAIsUnicode)
+		lstrcpynW(pszBuf, pValue->W, n);
+	else
+		MultiByteToWideChar(CP_ACP, 0, pValue->A, -1, pszBuf, n);
+#else
+	if (m_WAIsUnicode)
+		WideCharToMultiByte(CP_ACP, 0, pValue->W, -1, pszBuf, n, 0, 0);
+	else
+		lstrcpynA(pszBuf, pValue->A, n);
+#endif
+}
+
+void WAstrcpyT(LPWASTR pBuf, LPCTSTR pszValue){
+#ifdef UNICODE
+	if (m_WAIsUnicode)
+		lstrcpynW(pBuf->W, pszValue, WA_MAX_SIZE);
+	else
+		WideCharToMultiByte(CP_ACP, 0, pszValue, -1, pBuf->A, WA_MAX_SIZE, 0, 0);
+#else
+	if (m_WAIsUnicode)
+		MultiByteToWideChar(CP_ACP, 0, pszValue, -1, pBuf->W, WA_MAX_SIZE);
+	else
+		lstrcpynA(pBuf->A, pszValue, WA_MAX_SIZE);
+#endif
+}
+
 
 void WAstrcpyonA(LPWASTR pBuf, int o, LPCSTR pValue, int n){
 	if (m_WAIsUnicode)

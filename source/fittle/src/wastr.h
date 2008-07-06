@@ -12,9 +12,12 @@ typedef union WASTR_TAG_ {
 typedef const WASTR CWASTR, *LPCWASTR;
 
 extern BOOL WAIsUnicode(void);
+extern BOOL WAFILE_EXIST(LPCWASTR pValue);
 extern int WAstrlen(LPCWASTR pValue);
 extern int WAstrcmp(LPCWASTR pValue1, LPCWASTR pValue2);
 extern void WAstrcpy(LPWASTR pBuf, LPCWASTR pValue);
+extern void WAstrcpyt(LPTSTR pszBuf, LPCWASTR pValue, int n);
+extern void WAstrcpyT(LPWASTR pBuf, LPCTSTR pszValue);
 extern void WAstrcpyonA(LPWASTR pBuf, int o, LPCSTR pValue, int n);
 extern void WAstrcpyA(LPWASTR pBuf, LPCSTR pValue);
 extern void WAstrcatWX(LPWASTR pBuf, LPCWSTR pValue);

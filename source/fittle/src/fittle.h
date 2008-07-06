@@ -34,6 +34,7 @@ typedef long LONG_PTR;
 
 #include "../resource/resource.h"
 
+#define WA_MAX_SIZE MAX_FITTLE_PATH
 #include "wastr.h"
 #include "bassload.h"
 
@@ -125,18 +126,18 @@ struct CONFIG{
 	int nReplayGainPreAmp;		// PreAmp(%)
 	int nReplayGainPostAmp;		// PostAmp(%)
 
-	TCHAR szStartPath[MAX_FITTLE_PATH];	// スタートアップパス
-	TCHAR szFilerPath[MAX_FITTLE_PATH];	// ファイラのパス
+	WASTR szStartPath;			// スタートアップパス
+	WASTR szFilerPath;			// ファイラのパス
 
 	int nHotKey[HOTKEY_COUNT];	// ホットキー
 
 	int nTrayClick[6];			// クリック時の動作
 
-	TCHAR szFontName[32];		// フォントの名前
+	WASTR szFontName;			// フォントの名前
 	int nFontHeight;			// フォントの高さ
 	int nFontStyle;				// フォントのスタイル
 
-	TCHAR szToolPath[MAX_FITTLE_PATH];
+	WASTR szToolPath;
 
 	/* 状態 */
 
@@ -148,7 +149,7 @@ struct CONFIG{
 
 	int nMiniPanelEnd;
 
-	TCHAR szLastFile[MAX_FITTLE_PATH];
+	WASTR szLastFile;
 };
 
 extern struct CONFIG g_cfg;
