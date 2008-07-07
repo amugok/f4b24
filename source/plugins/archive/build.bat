@@ -48,7 +48,7 @@ goto exitcmd
 
 :buildall
 
-set VER_STR_BASE=0807061
+set VER_STR_BASE=0807070
 set CFLAGSBASE=/Ogisyb1 /Gy
 set PREFIX=..\..\..\bin\Plugins\fap\
 

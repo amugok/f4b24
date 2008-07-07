@@ -67,7 +67,7 @@ static void FreeOutputPlugins(){
 }
 
 /* 出力プラグインを登録 */
-static BOOL CALLBACK RegisterOutputPlugin(HMODULE hPlugin){
+static BOOL CALLBACK RegisterOutputPlugin(HMODULE hPlugin, LPVOID user){
 	FARPROC lpfnProc = GetProcAddress(hPlugin, "GetOPluginInfo");
 	if (lpfnProc){
 		struct OUTPUT_PLUGIN_NODE *pNewNode = (struct OUTPUT_PLUGIN_NODE *)HAlloc(sizeof(struct OUTPUT_PLUGIN_NODE));
@@ -358,7 +358,7 @@ static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel, LPSTR pszCo
 	LPCSTR lpszTemplate, lpszPath;
 	DLGPROC lpfnDlgProc = 0;
 	WAIsUnicode();
-	if (!pTop) WAEnumPlugins(NULL, "Plugins\\fop\\", "*.fop", RegisterOutputPlugin);
+	if (!pTop) WAEnumPlugins(NULL, "Plugins\\fop\\", "*.fop", RegisterOutputPlugin, 0);
 	if (nLevel == 1){
 		if (nIndex == 0){
 			lpszTemplate = "OUTPUT_SHEET";

@@ -5,14 +5,16 @@
  * All Rights Reserved
  */
 
-#include "plugins.h"
+#include "fittle.h"
 #include "plugin.h"
+#include "plugins.h"
 #include <shlwapi.h>
 
 static FITTLE_PLUGIN_INFO *m_fpis[256] = {0};
 static int m_nPluginCount = 0;
 
-static BOOL CALLBACK RegisterPlugin(HMODULE hPlugin, HWND hWnd){
+static BOOL CALLBACK RegisterPlugin(HMODULE hPlugin, LPVOID user){
+	HWND hWnd = (HWND)user;
 	if (m_nPluginCount < 256) {
 		GetPluginInfoFunc GetPluginInfo;
 		FITTLE_PLUGIN_INFO *fpi;
@@ -33,8 +35,8 @@ static BOOL CALLBACK RegisterPlugin(HMODULE hPlugin, HWND hWnd){
 	return FALSE;
 }
 void InitPlugins(HWND hWnd){
-	EnumPlugins(NULL, TEXT("Plugins\\fgp\\"), TEXT("*.fgp"), RegisterPlugin, hWnd);
-	EnumPlugins(NULL, TEXT("Plugins\\Fittle\\"), TEXT("*.dll"), RegisterPlugin, hWnd);
+	WAEnumPlugins(NULL, "Plugins\\fgp\\", "*.fgp", RegisterPlugin, hWnd);
+	WAEnumPlugins(NULL, "Plugins\\Fittle\\", "*.dll", RegisterPlugin, hWnd);
 }
 
 void QuitPlugins(){
@@ -64,46 +66,3 @@ void OnStatusChangePlugins(){
 	return;
 }
 
-static BOOL EnumFilesAndPlugins(HMODULE hParent, LPCTSTR lpszSubDir, LPCTSTR lpszMask, BOOL (CALLBACK * lpfnFileProc)(LPCTSTR lpszPath, HWND hWnd), BOOL (CALLBACK * lpfnPluginProc)(HMODULE hPlugin, HWND hWnd), HWND hWnd){
-	TCHAR szDir[MAX_PATH];
-	TCHAR szPath[MAX_PATH];
-	WIN32_FIND_DATA wfd;
-	HANDLE hFind;
-	BOOL fRet = FALSE;
-	GetModuleFileName(hParent, szPath, MAX_PATH);
-	*PathFindFileName(szPath) = TEXT('\0');
-	PathCombine(szDir, szPath, lpszSubDir);
-	PathCombine(szPath, szDir, lpszMask);
-
-	hFind = FindFirstFile(szPath, &wfd);
-
-	if(hFind!=INVALID_HANDLE_VALUE){
-		do{
-			HMODULE hPlugin;
-			PathCombine(szPath, szDir, wfd.cFileName);
-			if (lpfnFileProc && lpfnFileProc(szPath, hWnd)) {
-				fRet = TRUE;
-			}
-			if (lpfnPluginProc) {
-				hPlugin = LoadLibrary(szPath);
-				if(hPlugin) {
-					if (lpfnPluginProc(hPlugin, hWnd)){
-						fRet = TRUE;
-					}else{
-						FreeLibrary(hPlugin);
-					}
-				}
-			}
-		}while(FindNextFile(hFind, &wfd));
-		FindClose(hFind);
-	}
-	return fRet;
-}
-
-BOOL EnumPlugins(HMODULE hParent, LPCTSTR lpszSubDir, LPCTSTR lpszMask, BOOL (CALLBACK * lpfnPluginProc)(HMODULE hPlugin, HWND hWnd), HWND hWnd){
-	return EnumFilesAndPlugins(hParent, lpszSubDir, lpszMask, 0, lpfnPluginProc, hWnd);
-}
-
-BOOL EnumFiles(HMODULE hParent, LPCTSTR lpszSubDir, LPCTSTR lpszMask, BOOL (CALLBACK * lpfnFileProc)(LPCTSTR lpszPath, HWND hWnd), HWND hWnd){
-	return EnumFilesAndPlugins(hParent, lpszSubDir, lpszMask, lpfnFileProc, 0, hWnd);
-}

@@ -52,12 +52,12 @@ goto exitcmd
 set CFLAGS=/GF /Gy /Ox /Os /MD
 
 set PREFIX=..\..\..\..\bin\Plugins\Fittle\
-set VER_STR=0807061A
+set VER_STR=0807070A
 
 call %0 minipane dll
 
 set PREFIX=..\..\..\..\bin\Plugins\fgp\
-set VER_STR=0807061U
+set VER_STR=0807070U
 
 call %0 minipaneu fgp
 

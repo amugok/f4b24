@@ -41,6 +41,6 @@ extern HPROPSHEETPAGE WACreatePropertySheetPage(HMODULE hmod, LPCSTR lpszTemplat
 #endif
 extern BOOL WAEnumFiles(HMODULE hParent, LPCSTR lpszSubDir, LPCSTR lpszMask, BOOL (CALLBACK * lpfnFileProc)(LPWASTR lpPath, LPVOID user), LPVOID user);
 extern HMODULE WALoadLibrary(LPCWASTR lpPath) ;
-extern BOOL WAEnumPlugins(HMODULE hParent, LPCSTR lpszSubDir, LPCSTR lpszMask, BOOL (CALLBACK * lpfnPluginProc)(HMODULE hPlugin));
+extern BOOL WAEnumPlugins(HMODULE hParent, LPCSTR lpszSubDir, LPCSTR lpszMask, BOOL (CALLBACK * lpfnPluginProc)(HMODULE hPlugin, LPVOID user), LPVOID user);
 
 #endif

@@ -51,7 +51,7 @@ goto exitcmd
 
 set CFLAGS=/GF /Gy /Ox /Os /MD
 set PREFIX=..\..\..\..\bin\Plugins\fgp\
-set VER_STR=0807061_
+set VER_STR=0807070_
 
 call %0 addurl fgp
 

@@ -5,6 +5,7 @@
  * All Rights Reserved
  */
 
+#include "fittle.h"
 #include "bass_tag.h"
 #include "archive.h"
 #include "list.h"
@@ -169,7 +170,8 @@ BOOL AnalyzeArchivePath(CHANNELINFO *pInfo, LPTSTR pszArchivePath, LPTSTR pszSta
 	return FALSE;
 }
 
-static BOOL CALLBACK RegisterPluginProc(HMODULE hPlugin, HWND hWnd){
+static BOOL CALLBACK RegisterPluginProc(HMODULE hPlugin, LPVOID user){
+	HWND hWnd = (HWND)user;
 #ifdef UNICODE
 	FARPROC pfnAPlugin = GetProcAddress(hPlugin, "GetAPluginInfoW");
 #else
@@ -179,7 +181,7 @@ static BOOL CALLBACK RegisterPluginProc(HMODULE hPlugin, HWND hWnd){
 }
 
 BOOL InitArchive(HWND hWnd){
-	EnumPlugins(NULL, TEXT("Plugins\\fap\\"), TEXT("*.fap"), RegisterPluginProc, hWnd);
+	WAEnumPlugins(NULL, "Plugins\\fap\\", "*.fap", RegisterPluginProc, hWnd);
 	return TRUE;
 }
 

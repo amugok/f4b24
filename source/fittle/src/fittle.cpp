@@ -88,7 +88,7 @@ static LRESULT CALLBACK NewSliderProc(HWND, UINT, WPARAM, LPARAM);
 static LRESULT CALLBACK NewTabProc(HWND, UINT, WPARAM, LPARAM);
 static LRESULT CALLBACK NewTreeProc(HWND, UINT, WPARAM, LPARAM);
 static LRESULT CALLBACK NewSplitBarProc(HWND, UINT, WPARAM, LPARAM);
-static void CALLBACK EventSync(HSYNC, DWORD, DWORD, void *);
+static void CALLBACK EventSync(DWORD, DWORD, DWORD, void *);
 // 設定関係
 static void LoadState();
 static void LoadConfig();
@@ -2694,12 +2694,8 @@ static void AddTypes(LPCSTR lpszTypes) {
 }
 
 // BASS Addonをロードし 対応拡張子リストに追加
-static BOOL CALLBACK FileProc(LPCTSTR lpszPath, HWND hWnd){
-#ifdef UNICODE
-	HPLUGIN hPlugin = BASS_PluginLoad((LPSTR)lpszPath, BASS_UNICODE);
-#else
-	HPLUGIN hPlugin = BASS_PluginLoad(lpszPath, 0);
-#endif
+static BOOL CALLBACK FileProc(LPWASTR lpPath, LPVOID user){
+	DWORD hPlugin = WAIsUnicode() ? BASS_PluginLoad((LPSTR)lpPath->W, BASS_UNICODE) : BASS_PluginLoad(lpPath->A, 0);
 	if(hPlugin){
 		const BASS_PLUGININFO *info = BASS_PluginGetInfo(hPlugin);
 		for(DWORD d=0;d<info->formatc;d++){
@@ -2715,7 +2711,7 @@ static void InitFileTypes(){
 	AddTypes("mp3;mp2;mp1;wav;ogg;aif;aiff");
 	AddTypes("mod;mo3;xm;it;s3m;mtm;umx");
 
-	EnumFiles(NULL, TEXT("Plugins\\BASS\\"), TEXT("bass*.dll"), FileProc, 0);
+	WAEnumFiles(NULL, "Plugins\\BASS\\", "bass*.dll", FileProc, 0);
 }
 
 static int XATOI(LPCTSTR p){
@@ -2889,7 +2885,7 @@ static BOOL PlayByUser(HWND hWnd, struct FILEINFO *pPlayFile){
 }
 
 // 次のファイルをオープンする関数(99％地点で発動)
-static void CALLBACK EventSync(HSYNC /*handle*/, DWORD /*channel*/, DWORD /*data*/, void *user){
+static void CALLBACK EventSync(DWORD /*handle*/, DWORD /*channel*/, DWORD /*data*/, void *user){
 	if(user==0){
 		PostMessage(GetParent(m_hStatus), WM_F4B24_IPC, WM_F4B24_INTERNAL_PREPARE_NEXT_MUSIC, 0);
 	}else{

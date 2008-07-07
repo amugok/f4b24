@@ -199,6 +199,22 @@ static int perb(const char *path, int s, int dctmin, const char *v){
 		unsigned long wdsz = realign(rdsz, s);
 		memcpy(wbf + wsecofs + rsec * 40, rbf + rsecofs + rsec * 40, 40);
 		setdwordle(wbf + wsecofs + rsec * 40 + 20, wdofs);
+
+		while (wdsz >= (1 << s)) {
+			int c = 0;
+			unsigned long csz = realign(wdsz - (1 << s), s);
+			unsigned long o;
+			for (o = 0; o < (1 << s); o++){
+				if (rbf[rdofs + csz + o] != 0) {
+					c = 1;
+					break;
+				}
+			}
+			if (c) break;
+			wdsz = csz;
+			setdwordle(wbf + wsecofs + rsec * 40 + 16, wdsz);
+		}
+
 		if (wsz < wdofs + wdsz) {
 			size_t nwsz = wdofs + wdsz;
 			unsigned char *nwbf = (unsigned char *)realloc(wbf, nwsz); 

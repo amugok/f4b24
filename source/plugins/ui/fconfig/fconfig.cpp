@@ -112,7 +112,7 @@ static SHARED_MEMORY_STATUS OpenSharedMemory(){
 }
 
 /* ƒvƒ‰ƒOƒCƒ“‚ð“o˜^ */
-static BOOL CALLBACK RegisterPlugin(HMODULE hPlugin){
+static BOOL CALLBACK RegisterPlugin(HMODULE hPlugin, LPVOID user){
 	FARPROC lpfnProc = GetProcAddress(hPlugin, "GetCPluginInfo");
 	if (lpfnProc){
 		CONFIG_PLUGIN_INFO *pNewPlugins = ((GetCPluginInfoFunc)lpfnProc)();
@@ -128,7 +128,7 @@ static BOOL CALLBACK RegisterPlugin(HMODULE hPlugin){
 }
 
 static void InitPlugins(){
-	WAEnumPlugins(NULL, "Plugins\\fcp\\", "*.fcp", RegisterPlugin);
+	WAEnumPlugins(NULL, "Plugins\\fcp\\", "*.fcp", RegisterPlugin, 0);
 }
 
 static void *HAlloc(DWORD dwSize){

@@ -79,7 +79,7 @@ struct FILEINFO{
 };
 
 typedef struct {
-	HSTREAM hChan;				// ストリームハンドル
+	DWORD hChan;				// ストリームハンドル
 	TCHAR szFilePath[MAX_FITTLE_PATH];	// フルパス
 	QWORD qStart;				// 再生開始位置
 	QWORD qDuration;			// 再生終了位置

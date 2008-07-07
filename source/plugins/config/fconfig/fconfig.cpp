@@ -88,7 +88,7 @@ static SHARED_MEMORY_STATUS OpenSharedMemory(){
 }
 
 /* ƒvƒ‰ƒOƒCƒ“‚ð“o˜^ */
-static BOOL CALLBACK RegisterPlugin(HMODULE hPlugin){
+static BOOL CALLBACK RegisterPlugin(HMODULE hPlugin, LPVOID user){
 	FARPROC lpfnProc = GetProcAddress(hPlugin, "GetCPluginInfo");
 	if (lpfnProc){
 		CONFIG_PLUGIN_INFO *pNewPlugins = ((GetCPluginInfoFunc)lpfnProc)();
@@ -140,7 +140,7 @@ static HWND CreateSimaWork(int i){
 }
 
 
-static BOOL CALLBACK SimalistEx(HMODULE hPlugin){
+static BOOL CALLBACK SimalistEx(HMODULE hPlugin, LPVOID user){
 	FARPROC lpfnProc = GetProcAddress(hPlugin, "GetPluginInfo");
 	if (lpfnProc){
 		FITTLE_PLUGIN_INFO *pNewPlugin= ((GetPluginInfoFunc)lpfnProc)();
@@ -168,9 +168,9 @@ static BOOL CALLBACK SimalistEx(HMODULE hPlugin){
 #endif
 
 static void InitPlugins(){
-	WAEnumPlugins(NULL, "Plugins\\fcp\\", "*.fcp", RegisterPlugin);
+	WAEnumPlugins(NULL, "Plugins\\fcp\\", "*.fcp", RegisterPlugin, 0);
 #if SIMALISTEX
-	WAEnumPlugins(NULL, "Plugins\\Fittle\\", "simalist.dll", SimalistEx);
+	WAEnumPlugins(NULL, "Plugins\\Fittle\\", "simalist.dll", SimalistEx, 0);
 #endif
 }
 

@@ -57,7 +57,7 @@ static void FreeOutputPlugins(){
 }
 
 /* 出力プラグインを登録 */
-static BOOL CALLBACK RegisterOutputPlugin(HMODULE hPlugin, HWND hWnd){
+static BOOL CALLBACK RegisterOutputPlugin(HMODULE hPlugin, LPVOID user){
 	FARPROC lpfnProc = GetProcAddress(hPlugin, "GetOPluginInfo");
 	if (lpfnProc){
 		struct OUTPUT_PLUGIN_NODE *pNewNode = (struct OUTPUT_PLUGIN_NODE *)HAlloc(sizeof(struct OUTPUT_PLUGIN_NODE));
@@ -98,7 +98,7 @@ static DWORD CALLBACK OPCBGetDecodeChannel(float *pGain) {
 }
 
 #if DEFAULT_DEVICE_ENABLE
-static HSTREAM m_hOutDefault = NULL;	// ストリームハンドル
+static DWORD m_hOutDefault = NULL;	// ストリームハンドル
 static HWND m_hwndDefault = NULL;
 
 static int Default_Init(HWND h){
@@ -120,7 +120,7 @@ static int Default_GetStatus(){
 	return OUTPUT_PLUGIN_STATUS_STOP;
 }
 // メインストリームプロシージャ
-static DWORD CALLBACK Default_StreamProc(HSTREAM handle, void *buf, DWORD len, void *user){
+static DWORD CALLBACK Default_StreamProc(DWORD handle, void *buf, DWORD len, void *user){
 	DWORD r;
 	BASS_CHANNELINFO bci;
 	DWORD hChan = g_cInfo[g_bNow].hChan;
@@ -243,7 +243,7 @@ static int OPInit(OUTPUT_PLUGIN_INFO *pPlugin, DWORD dwId, HWND hWnd){
 }
 
 static int InitOutputPlugin(HWND hWnd){
-	EnumPlugins(NULL, TEXT("Plugins\\fop\\"), TEXT("*.fop"), RegisterOutputPlugin, hWnd);
+	WAEnumPlugins(NULL, "Plugins\\fop\\", "*.fop", RegisterOutputPlugin, hWnd);
 
 	if (pOutputPluginList){
 		struct OUTPUT_PLUGIN_NODE *pList = pOutputPluginList;

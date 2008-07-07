@@ -357,11 +357,15 @@ HMODULE WALoadLibrary(LPCWASTR lpPath) {
 	return (m_WAIsUnicode) ? LoadLibraryW(lpPath->W) : LoadLibraryA(lpPath->A);
 }
 
+typedef struct {
+	BOOL (CALLBACK * lpfnPluginProc)(HMODULE hPlugin, LPVOID user);
+	LPVOID user;
+} ENUMPLUGINWORK, *LPENUMPLUGINWORK;
 static BOOL CALLBACK WAEnumPluginsProc(LPWASTR lpPath, LPVOID user){
-	BOOL (CALLBACK * lpfnPluginProc)(HMODULE hPlugin) = (BOOL (CALLBACK *)(HMODULE hPlugin))user;
+	LPENUMPLUGINWORK pwork = (LPENUMPLUGINWORK)user;
 	HMODULE hPlugin = WALoadLibrary(lpPath);
 	if(hPlugin) {
-		if (lpfnPluginProc(hPlugin)){
+		if (pwork->lpfnPluginProc(hPlugin, pwork->user)){
 			return TRUE;
 		}
 		FreeLibrary(hPlugin);
@@ -369,6 +373,7 @@ static BOOL CALLBACK WAEnumPluginsProc(LPWASTR lpPath, LPVOID user){
 	return FALSE;
 }
 
-BOOL WAEnumPlugins(HMODULE hParent, LPCSTR lpszSubDir, LPCSTR lpszMask, BOOL (CALLBACK * lpfnPluginProc)(HMODULE hPlugin)){
-	return WAEnumFiles(hParent, lpszSubDir, lpszMask, WAEnumPluginsProc, (LPVOID)lpfnPluginProc);
+BOOL WAEnumPlugins(HMODULE hParent, LPCSTR lpszSubDir, LPCSTR lpszMask, BOOL (CALLBACK * lpfnPluginProc)(HMODULE hPlugin, LPVOID user), LPVOID user){
+	ENUMPLUGINWORK work = { lpfnPluginProc, user };
+	return WAEnumFiles(hParent, lpszSubDir, lpszMask, WAEnumPluginsProc, &work);
 }

@@ -8,9 +8,6 @@
 #ifndef _BASS_TAG_H_
 #define _BASS_TAG_H_
 
-#include "windows.h"
-#include "fittle.h"
-
 typedef struct{
 	char ID3[3];
 	char Title[30];

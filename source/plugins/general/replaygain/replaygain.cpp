@@ -7,7 +7,6 @@
 
 #include "../../../fittle/src/plugin.h"
 #include "../../../fittle/src/f4b24.h"
-#include "../../../../extra/bass24/bass.h"
 #include <shlwapi.h>
 #include <math.h>
 #include "../../../fittle/src/bass_tag.h"
@@ -20,13 +19,46 @@ static void HFree(LPVOID lp){
 	HeapFree(GetProcessHeap(), 0, lp);
 }
 
+#define BASSDEF(f) (WINAPI * f)
+
+typedef struct {
+	DWORD freq;
+	DWORD chans;
+	DWORD flags;
+	DWORD ctype;
+	DWORD origres;
+	DWORD plugin;
+	DWORD sample;
+	const char *filename;
+} BASS_CHANNELINFO;
+
+BOOL BASSDEF(BASS_ChannelGetInfo)(DWORD handle, BASS_CHANNELINFO *info);
+const char *BASSDEF(BASS_ChannelGetTags)(DWORD handle, DWORD tags);
+
+
+#define FUNC_PREFIXA "BASS_"
+static const CHAR szDllNameA[] = "bass.dll";
+static const struct IMPORT_FUNC_TABLE {
+	LPSTR lpszFuncName;
+	FARPROC * ppFunc;
+} functbl[] = {
+	{ "ChannelGetInfo", (FARPROC *)&BASS_ChannelGetInfo },
+	{ "ChannelGetTags", (FARPROC *)&BASS_ChannelGetTags },
+	{ 0, (FARPROC *)0 }
+};
+
+
 #include "../../../fittle/src/readtag.h"
 
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")
 #pragma comment(lib,"user32.lib")
+#pragma comment(lib,"comctl32.lib")
+#pragma comment(lib,"comdlg32.lib")
 #pragma comment(lib,"shlwapi.lib")
-#pragma comment(lib,"../../../../extra/bass24/bass.lib")
+#pragma comment(lib,"shell32.lib")
+#pragma comment(lib,"ole32.lib")
+#pragma comment(lib,"gdi32.lib")
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 //#pragma comment(linker,"/ENTRY:DllMain")
@@ -34,9 +66,13 @@ static void HFree(LPVOID lp){
 #pragma comment(linker,"/OPT:NOWIN98")
 #endif
 
-static HMODULE hDLL = 0;
-static BOOL fIsUnicode = FALSE;
-static WNDPROC hOldProc = 0;
+static HMODULE m_hBASS = 0;
+static HMODULE m_hDLL = 0;
+static BOOL m_fIsUnicode = FALSE;
+static WNDPROC m_hOldProc = 0;
+
+#include "../../../fittle/src/wastr.h"
+#include "../../../fittle/src/wastr.cpp"
 
 static BOOL OnInit();
 static void OnQuit();
@@ -55,10 +91,41 @@ static FITTLE_PLUGIN_INFO fpi = {
 	NULL
 };
 
+BOOL LoadBASS(void){
+	const struct IMPORT_FUNC_TABLE *pft;
+	CHAR funcname[32];
+	WASTR szPath;
+	int l;
+	if (m_hBASS) return TRUE;
+
+	WAGetModuleParentDir(NULL, &szPath);
+	WAstrcatA(&szPath, "Plugins\\BASS\\");
+	WAstrcatA(&szPath, szDllNameA);
+	m_hBASS = WALoadLibrary(&szPath);
+	if(!m_hBASS) return FALSE;
+
+	lstrcpynA(funcname, FUNC_PREFIXA, 32);
+	l = lstrlenA(funcname);
+
+	for (pft = functbl; pft->lpszFuncName; pft++){
+		lstrcpynA(funcname + l, pft->lpszFuncName, 32 - l);
+		FARPROC fp = GetProcAddress(m_hBASS, funcname);
+		if (!fp){
+			FreeLibrary(m_hBASS);
+			m_hBASS = NULL;
+			return FALSE;
+		}
+		*pft->ppFunc = fp;
+	}
+	return TRUE;
+}
+	
+
+
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 	(void)lpvReserved;
 	if (fdwReason == DLL_PROCESS_ATTACH){
-		hDLL = hinstDLL;
+		m_hDLL = hinstDLL;
 		DisableThreadLibraryCalls(hinstDLL);
 	}else if (fdwReason == DLL_PROCESS_DETACH){
 	}
@@ -370,13 +437,14 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			}
 		}
 	}
-	return (fIsUnicode ? CallWindowProcW : CallWindowProcA)(hOldProc, hWnd, msg, wp, lp);
+	return (m_fIsUnicode ? CallWindowProcW : CallWindowProcA)(m_hOldProc, hWnd, msg, wp, lp);
 }
 
 /* ‹N“®Žž‚Éˆê“x‚¾‚¯ŒÄ‚Î‚ê‚Ü‚· */
 static BOOL OnInit(){
-	fIsUnicode = ((GetVersion() & 0x80000000) == 0) || IsWindowUnicode(fpi.hParent);
-	hOldProc = (WNDPROC)(fIsUnicode ? SetWindowLongW : SetWindowLongA)(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
+	m_fIsUnicode = WAIsUnicode() || IsWindowUnicode(fpi.hParent);
+	if (!LoadBASS()) return FALSE;
+	m_hOldProc = (WNDPROC)(m_fIsUnicode ? SetWindowLongW : SetWindowLongA)(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
 	return TRUE;
 }
 

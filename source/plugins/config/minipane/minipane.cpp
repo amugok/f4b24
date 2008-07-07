@@ -18,6 +18,8 @@
 #pragma comment(lib,"comdlg32.lib")
 #pragma comment(lib,"comctl32.lib")
 #pragma comment(lib,"shlwapi.lib")
+#pragma comment(lib,"shell32.lib")
+#pragma comment(lib,"ole32.lib")
 #pragma comment(linker, "/EXPORT:GetCPluginInfo=_GetCPluginInfo@0")
 #pragma comment(linker, "/EXPORT:OldMode=_OldMode@4")
 #endif
