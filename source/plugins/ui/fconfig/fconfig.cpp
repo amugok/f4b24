@@ -46,11 +46,13 @@ typedef struct {
 } SHARED_MEMORY;
 
 /* 共有メモリ */
-static HANDLE hsm = NULL;
-static SHARED_MEMORY *psm = NULL;
+static HANDLE m_hsm = NULL;
+static SHARED_MEMORY *m_psm = NULL;
 
 /* プラグインリスト */
-static CONFIG_PLUGIN_INFO *pTop = NULL;
+static CONFIG_PLUGIN_INFO *m_pTop = NULL;
+
+static BOOL m_fInitialized = FALSE;
 
 #include "../../../fittle/src/wastr.h"
 #include "../../../fittle/src/wastr.cpp"
@@ -82,25 +84,25 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 }
 
 static void CloseSharedMemory(){
-	if (psm){
-		UnmapViewOfFile(psm);
-		psm = NULL;
+	if (m_psm){
+		UnmapViewOfFile(m_psm);
+		m_psm = NULL;
 	}
-	if (hsm){
-		CloseHandle(hsm);
-		hsm = NULL;
+	if (m_hsm){
+		CloseHandle(m_hsm);
+		m_hsm = NULL;
 	}
 }
 
 static SHARED_MEMORY_STATUS OpenSharedMemory(){
 	SHARED_MEMORY_STATUS ret = SM_SUCCESS;
 	CloseSharedMemory();
-	hsm = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(SHARED_MEMORY), TEXT(FCONFIG_MAPPING_NAME));
-	if (!hsm) return SM_ERROR;
+	m_hsm = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(SHARED_MEMORY), TEXT(FCONFIG_MAPPING_NAME));
+	if (!m_hsm) return SM_ERROR;
 	if (GetLastError() == ERROR_ALREADY_EXISTS)
 		ret = SM_ALREADY_EXISTS;
-	psm = (SHARED_MEMORY *)MapViewOfFile(hsm, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(SHARED_MEMORY));
-	if (!psm){
+	m_psm = (SHARED_MEMORY *)MapViewOfFile(m_hsm, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(SHARED_MEMORY));
+	if (!m_psm){
 		CloseSharedMemory();
 		return SM_ERROR;
 	}
@@ -115,16 +117,20 @@ static BOOL CALLBACK RegisterPlugin(HMODULE hPlugin, LPVOID user){
 		if (pNewPlugins){
 			CONFIG_PLUGIN_INFO *pNext = pNewPlugins;
 			for (pNext = pNewPlugins; pNext->pNext; pNext = pNext->pNext);
-			pNext->pNext = pTop;
-			pTop = pNewPlugins;
+			pNext->pNext = m_pTop;
+			m_pTop = pNewPlugins;
 			return TRUE;
 		}
 	}
 	return FALSE;
 }
 
-static void InitPlugins(){
-	WAEnumPlugins(NULL, "Plugins\\fcp\\", "*.fcp", RegisterPlugin, 0);
+static BOOL InitPlugins(){
+	if (!m_fInitialized) {
+		WAEnumPlugins(NULL, "Plugins\\fcp\\", "*.fcp", RegisterPlugin, 0);
+		m_fInitialized = TRUE;
+	}
+	return TRUE;
 }
 
 static void *HAlloc(DWORD dwSize){
@@ -136,8 +142,8 @@ static void HFree(void *pPtr){
 }
 
 static void SheetActivate(LPPROPSHEETHEADER ppsh){
-	if (psm){
-		HWND hwnd = psm->hwnd;
+	if (m_psm){
+		HWND hwnd = m_psm->hwnd;
 		if (hwnd && IsWindow(hwnd)){
 			PropSheet_SetCurSel(hwnd, ppsh->nStartPage, ppsh->nStartPage);
 			ShowWindow(hwnd, SW_SHOW);
@@ -169,7 +175,7 @@ static void SheetFree(LPPROPSHEETHEADER ppsh){
 
 static int CALLBACK PropSheetProc(HWND hwndDlg, UINT uMsg, LPARAM lParam){
 	if (uMsg == PSCB_INITIALIZED){
-		if (psm) psm->hwnd = hwndDlg;
+		if (m_psm) m_psm->hwnd = hwndDlg;
 	}
 	return 0;
 }
@@ -183,7 +189,7 @@ static int SheetSetup(PROPSHEETHEADER *ppsh, HWND hwndParent, LPCSTR lpszStartPa
 	ppsh->phpage = 0;
 	ppsh->nPages = 0;
 
-	for (pCur = pTop; pCur; pCur = pCur->pNext)
+	for (pCur = m_pTop; pCur; pCur = pCur->pNext)
 		nMaxPage += pCur->GetConfigPageCount();
 
 	if (nMaxPage == 0) return 0;
@@ -192,7 +198,7 @@ static int SheetSetup(PROPSHEETHEADER *ppsh, HWND hwndParent, LPCSTR lpszStartPa
 	if (ppsh->phpage) {
 		int nLevel;
 		for (nLevel = 0; nLevel < 4; nLevel++){
-			for (pCur = pTop; pCur; pCur = pCur->pNext){
+			for (pCur = m_pTop; pCur; pCur = pCur->pNext){
 				int nIndex = 0;
 				HPROPSHEETPAGE hpspAdd;
 				do{
@@ -232,15 +238,17 @@ static void ShowSettingDialog(HWND hWnd, int nPage){
 	};
 	SHARED_MEMORY_STATUS sms = OpenSharedMemory();
 
-	if (nPage < 0 || nPage > WM_F4B24_IPC_SETTING_LP_MAX) nPage = 0;
+	if (nPage < 0 || nPage > 5) nPage = 0;
 	if (SM_ERROR != sms){
-		PROPSHEETHEADER psh;
-		int nNumPage = SheetSetup(&psh, hWnd, table[nPage]);
-		if (sms == SM_SUCCESS)
-			SheetInvoke(&psh);
-		else if (sms == SM_ALREADY_EXISTS)
-			SheetActivate(&psh);
-		SheetFree(&psh);
+		if (InitPlugins()) {
+			PROPSHEETHEADER psh;
+			int nNumPage = SheetSetup(&psh, hWnd, table[nPage]);
+			if (sms == SM_SUCCESS)
+				SheetInvoke(&psh);
+			else if (sms == SM_ALREADY_EXISTS)
+				SheetActivate(&psh);
+			SheetFree(&psh);
+		}
 		CloseSharedMemory();
 	}
 }
@@ -265,7 +273,6 @@ static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg) {
 static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode) {
 	if (eCode == GENERAL_PLUGIN_EVENT_INIT) {
 		WAIsUnicode();
-		InitPlugins();
 	} else if (eCode == GENERAL_PLUGIN_EVENT_QUIT) {
 	}
 	return TRUE;
