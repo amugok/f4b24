@@ -5,19 +5,29 @@
  * All Rights Reserved
  */
 
-#include "../../../fittle/src/plugin.h"
-#include "../../../fittle/src/f4b24.h"
+#include <windows.h>
 #include <shlwapi.h>
 #include <math.h>
+#include "../../../fittle/src/gplugin.h"
+#include "../../../fittle/src/f4b24.h"
 #include "../../../fittle/src/bass_tag.h"
 
-static LPVOID HZAlloc(DWORD dwSize){
-	return HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwSize);
-}
-
-static void HFree(LPVOID lp){
-	HeapFree(GetProcessHeap(), 0, lp);
-}
+#if defined(_MSC_VER)
+#pragma comment(lib,"kernel32.lib")
+#pragma comment(lib,"user32.lib")
+#pragma comment(lib,"comctl32.lib")
+#pragma comment(lib,"comdlg32.lib")
+#pragma comment(lib,"shlwapi.lib")
+#pragma comment(lib,"shell32.lib")
+#pragma comment(lib,"ole32.lib")
+#pragma comment(lib,"gdi32.lib")
+#pragma comment(linker, "/EXPORT:GetGPluginInfo=_GetGPluginInfo@0")
+#endif
+#if defined(_MSC_VER) && !defined(_DEBUG)
+//#pragma comment(linker,"/ENTRY:DllMain")
+#pragma comment(linker,"/MERGE:.rdata=.text")
+#pragma comment(linker,"/OPT:NOWIN98")
+#endif
 
 #define BASSDEF(f) (WINAPI * f)
 
@@ -48,48 +58,45 @@ static const struct IMPORT_FUNC_TABLE {
 };
 
 
+static LPVOID HZAlloc(DWORD dwSize){
+	return HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwSize);
+}
+
+static void HFree(LPVOID lp){
+	HeapFree(GetProcessHeap(), 0, lp);
+}
+
 #include "../../../fittle/src/readtag.h"
 
-#if defined(_MSC_VER)
-#pragma comment(lib,"kernel32.lib")
-#pragma comment(lib,"user32.lib")
-#pragma comment(lib,"comctl32.lib")
-#pragma comment(lib,"comdlg32.lib")
-#pragma comment(lib,"shlwapi.lib")
-#pragma comment(lib,"shell32.lib")
-#pragma comment(lib,"ole32.lib")
-#pragma comment(lib,"gdi32.lib")
-#endif
-#if defined(_MSC_VER) && !defined(_DEBUG)
-//#pragma comment(linker,"/ENTRY:DllMain")
-#pragma comment(linker,"/MERGE:.rdata=.text")
-#pragma comment(linker,"/OPT:NOWIN98")
-#endif
-
 static HMODULE m_hBASS = 0;
-static HMODULE m_hDLL = 0;
-static BOOL m_fIsUnicode = FALSE;
-static WNDPROC m_hOldProc = 0;
-
+
 #include "../../../fittle/src/wastr.h"
 #include "../../../fittle/src/wastr.cpp"
 
-static BOOL OnInit();
-static void OnQuit();
-static void OnTrackChange();
-static void OnStatusChange();
-static void OnConfig();
+static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg);
+static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode);
 
-static FITTLE_PLUGIN_INFO fpi = {
-	PDK_VER,
-	OnInit,
-	OnQuit,
-	OnTrackChange,
-	OnStatusChange,
-	OnConfig,
-	NULL,
-	NULL
+static GENERAL_PLUGIN_INFO gpinfo = {
+	GPDK_VER,
+	HookWndProc,
+	OnEvent
 };
+
+#ifdef __cplusplus
+extern "C"
+#endif
+GENERAL_PLUGIN_INFO * CALLBACK GetGPluginInfo(void){
+	return &gpinfo;
+}
+
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
+	(void)lpvReserved;
+	if (fdwReason == DLL_PROCESS_ATTACH){
+		DisableThreadLibraryCalls(hinstDLL);
+	}else if (fdwReason == DLL_PROCESS_DETACH){
+	}
+	return TRUE;
+}
 
 BOOL LoadBASS(void){
 	const struct IMPORT_FUNC_TABLE *pft;
@@ -122,15 +129,6 @@ BOOL LoadBASS(void){
 	
 
 
-BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
-	(void)lpvReserved;
-	if (fdwReason == DLL_PROCESS_ATTACH){
-		m_hDLL = hinstDLL;
-		DisableThreadLibraryCalls(hinstDLL);
-	}else if (fdwReason == DLL_PROCESS_DETACH){
-	}
-	return TRUE;
-}
 
 typedef struct GAININFO {
 	float album_gain;
@@ -382,12 +380,12 @@ static BOOL ReadGain(LPGAININFO pgi, DWORD hBass){
 	return FALSE;
 }
 
-static BOOL GetGain(float *pGain, DWORD hBass){
+static BOOL GetGain(HWND hWnd, float *pGain, DWORD hBass){
 	GAININFO gi;
 	float volume = 1;
 
-	int nGainMode = SendMessage(fpi.hParent, WM_F4B24_IPC, WM_F4B24_IPC_GET_REPLAYGAIN_MODE, 0);
-	int nPreAmp = SendMessage(fpi.hParent, WM_F4B24_IPC, WM_F4B24_IPC_GET_PREAMP, 0);
+	int nGainMode = SendMessage(hWnd, WM_F4B24_IPC, WM_F4B24_IPC_GET_REPLAYGAIN_MODE, 0);
+	int nPreAmp = SendMessage(hWnd, WM_F4B24_IPC, WM_F4B24_IPC_GET_PREAMP, 0);
 	if (!nPreAmp) nPreAmp = 100;
 
 	if (!ReadGain(&gi, hBass)) return FALSE;
@@ -426,52 +424,26 @@ static BOOL GetGain(float *pGain, DWORD hBass){
 	return TRUE;
 }
 
-// サブクラス化したウィンドウプロシージャ
-static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
-	switch(msg){
+static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg) {
+	switch(pMsg->msg){
 	case WM_F4B24_IPC:
-		if (wp == WM_F4B24_HOOK_REPLAY_GAIN){
+		if (pMsg->wp == WM_F4B24_HOOK_REPLAY_GAIN){
 			float sGain = 1;
-			if (GetGain(&sGain, (DWORD)lp)){
-				return (LRESULT)*(DWORD *)&sGain;
+			if (GetGain(pMsg->hWnd, &sGain, (DWORD)pMsg->lp)){
+				pMsg->lMsgResult = (LRESULT)*(DWORD *)&sGain;
+				return TRUE;
 			}
 		}
 	}
-	return (m_fIsUnicode ? CallWindowProcW : CallWindowProcA)(m_hOldProc, hWnd, msg, wp, lp);
+	return FALSE;
 }
 
-/* 起動時に一度だけ呼ばれます */
-static BOOL OnInit(){
-	m_fIsUnicode = WAIsUnicode() || IsWindowUnicode(fpi.hParent);
-	if (!LoadBASS()) return FALSE;
-	m_hOldProc = (WNDPROC)(m_fIsUnicode ? SetWindowLongW : SetWindowLongA)(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
+static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode) {
+	if (eCode == GENERAL_PLUGIN_EVENT_INIT) {
+		WAIsUnicode();
+		if (!LoadBASS()) return FALSE;
+	} else if (eCode == GENERAL_PLUGIN_EVENT_QUIT) {
+	}
 	return TRUE;
 }
-
-/* 終了時に一度だけ呼ばれます */
-static void OnQuit(){
-}
-
-/* 曲が変わる時に呼ばれます */
-static void OnTrackChange(){
-}
-
-/* 再生状態が変わる時に呼ばれます */
-static void OnStatusChange(){
-}
-
-/* 設定画面を呼び出します（未実装）*/
-static void OnConfig(){
-}
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-__declspec(dllexport) FITTLE_PLUGIN_INFO *GetPluginInfo(){
-	return &fpi;
-}
-#ifdef __cplusplus
-}
-#endif
 

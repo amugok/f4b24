@@ -5,9 +5,10 @@
  * All Rights Reserved
  */
 
-#include "../../../fittle/src/plugin.h"
-#include "../../../fittle/src/f4b24.h"
+#include <windows.h>
 #include <shlwapi.h>
+#include "../../../fittle/src/gplugin.h"
+#include "../../../fittle/src/f4b24.h"
 
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")
@@ -18,6 +19,7 @@
 #pragma comment(lib,"shell32.lib")
 #pragma comment(lib,"ole32.lib")
 #pragma comment(lib,"gdi32.lib")
+#pragma comment(linker, "/EXPORT:GetGPluginInfo=_GetGPluginInfo@0")
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/ENTRY:DllMain")
@@ -75,35 +77,30 @@ static /*const*/ struct IMPORT_FUNC_TABLE {
 static HMODULE hWaDsp = NULL;
 static WADSPNODE *pDspListTop = NULL;
 
-static HMODULE m_hDLL = 0;
-static BOOL m_fIsUnicode = FALSE;
-static WNDPROC m_hOldProc = 0;
 static BOOL m_fInitialized = FALSE;
 
 #include "../../../fittle/src/wastr.h"
 #include "../../../fittle/src/wastr.cpp"
 
-static BOOL OnInit();
-static void OnQuit();
-static void OnTrackChange();
-static void OnStatusChange();
-static void OnConfig();
+static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg);
+static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode);
 
-static FITTLE_PLUGIN_INFO fpi = {
-	PDK_VER,
-	OnInit,
-	OnQuit,
-	OnTrackChange,
-	OnStatusChange,
-	OnConfig,
-	NULL,
-	NULL
+static GENERAL_PLUGIN_INFO gpinfo = {
+	GPDK_VER,
+	HookWndProc,
+	OnEvent
 };
+
+#ifdef __cplusplus
+extern "C"
+#endif
+GENERAL_PLUGIN_INFO * CALLBACK GetGPluginInfo(void){
+	return &gpinfo;
+}
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 	(void)lpvReserved;
 	if (fdwReason == DLL_PROCESS_ATTACH){
-		m_hDLL = hinstDLL;
 		DisableThreadLibraryCalls(hinstDLL);
 	}else if (fdwReason == DLL_PROCESS_DETACH){
 	}
@@ -162,17 +159,16 @@ static BOOL CALLBACK LoadDSPPluginProc(LPWASTR lpPath, LPVOID user){
 	return FALSE;
 }
 
-static BOOL InitBassWaDsp(){
-	if (!LoadBASSWADSP()) return FALSE;
+static BOOL InitBassWaDsp(HWND hWnd){
 	if (m_fInitialized) return TRUE;
 	m_fInitialized = TRUE;
-	BASS_WADSP_Init(fpi.hParent);
+	BASS_WADSP_Init(hWnd);
 	WAEnumFiles(NULL, "Plugins\\wadsp\\", "dsp_*.dll", LoadDSPPluginProc, 0);
 	return TRUE;
 }
 
-static BOOL SetBassWaDsp(DWORD hChan, BOOL fSw){
-	if (InitBassWaDsp()) {
+static BOOL SetBassWaDsp(HWND hWnd, DWORD hChan, BOOL fSw){
+	if (InitBassWaDsp(hWnd)) {
 		WADSPNODE *pDsp = pDspListTop;
 		while (pDsp){
 			WADSPNODE *pNext = pDsp->pNext;
@@ -201,26 +197,25 @@ static void FreeBassWaDsp(){
 	}
 }
 
-// サブクラス化したウィンドウプロシージャ
-static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
-	switch(msg){
+static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg){
+	switch(pMsg->msg){
 	case WM_F4B24_IPC:
-		if (wp == WM_F4B24_HOOK_CREATE_DECODE_STREAM) {
-			SetBassWaDsp((DWORD)lp, TRUE);
-		} else if (wp == WM_F4B24_HOOK_FREE_DECODE_STREAM) {
-			SetBassWaDsp((DWORD)lp, FALSE);
-		} else if (wp == WM_F4B24_IPC_INVOKE_WADSP_SETUP){
+		if (pMsg->wp == WM_F4B24_HOOK_CREATE_DECODE_STREAM) {
+			SetBassWaDsp(pMsg->hWnd, (DWORD)pMsg->lp, TRUE);
+		} else if (pMsg->wp == WM_F4B24_HOOK_FREE_DECODE_STREAM) {
+			SetBassWaDsp(pMsg->hWnd, (DWORD)pMsg->lp, FALSE);
+		} else if (pMsg->wp == WM_F4B24_IPC_INVOKE_WADSP_SETUP){
 			int i;
 			WADSPNODE *pDsp = pDspListTop;
 			for (i = 0; pDsp; i++){
 				WADSPNODE *pNext = pDsp->pNext;
-				if (i == lp){
+				if (i == pMsg->lp){
 					BASS_WADSP_Config(pDsp->h);
 					break;
 				}
 				pDsp = pNext;
 			}
-		} else if (wp == WM_F4B24_IPC_GET_WADSP_LIST && InitBassWaDsp()){
+		} else if (pMsg->wp == WM_F4B24_IPC_GET_WADSP_LIST && InitBassWaDsp(pMsg->hWnd)){
 			int i, l = 1;
 			WADSPNODE *pDsp = pDspListTop;
 			char *p;
@@ -243,46 +238,21 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					p[s] = '\0';
 					pDsp = pNext;
 				}
-				SendMessageA((HWND)lp, WM_SETTEXT, (WPARAM)0, (LPARAM)p);
+				SendMessageA((HWND)pMsg->lp, WM_SETTEXT, (WPARAM)0, (LPARAM)p);
 				HFree(p);
 			}
 		}
 		break;
 	}
-	return (m_fIsUnicode ? CallWindowProcW : CallWindowProcA)(m_hOldProc, hWnd, msg, wp, lp);
+	return FALSE;
 }
 
-/* 起動時に一度だけ呼ばれます */
-static BOOL OnInit(){
-	m_fIsUnicode = WAIsUnicode() || IsWindowUnicode(fpi.hParent);
-	m_hOldProc = (WNDPROC)(m_fIsUnicode ? SetWindowLongW : SetWindowLongA)(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
+static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode) {
+	if (eCode == GENERAL_PLUGIN_EVENT_INIT) {
+		WAIsUnicode();
+		if (!LoadBASSWADSP()) return FALSE;
+	} else if (eCode == GENERAL_PLUGIN_EVENT_QUIT) {
+		FreeBassWaDsp();
+	}
 	return TRUE;
 }
-
-/* 終了時に一度だけ呼ばれます */
-static void OnQuit(){
-	FreeBassWaDsp();
-}
-
-/* 曲が変わる時に呼ばれます */
-static void OnTrackChange(){
-}
-
-/* 再生状態が変わる時に呼ばれます */
-static void OnStatusChange(){
-}
-
-/* 設定画面を呼び出します（未実装）*/
-static void OnConfig(){
-}
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-__declspec(dllexport) FITTLE_PLUGIN_INFO *GetPluginInfo(){
-	return &fpi;
-}
-#ifdef __cplusplus
-}
-#endif

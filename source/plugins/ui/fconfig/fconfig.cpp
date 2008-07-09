@@ -7,7 +7,7 @@
 #include <shlwapi.h>
 #include <prsht.h>
 
-#include "../../../fittle/src/plugin.h"
+#include "../../../fittle/src/gplugin.h"
 #include "../../../fittle/src/f4b24.h"
 #include "../../../fittle/resource/resource.h"
 #include "../../config/cplugin.h"
@@ -21,6 +21,7 @@
 #pragma comment(lib,"ole32.lib")
 #pragma comment(lib,"shlwapi.lib")
 #pragma comment(lib,"shell32.lib")
+#pragma comment(linker, "/EXPORT:GetGPluginInfo=_GetGPluginInfo@0")
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/ENTRY:DllMain")
@@ -44,12 +45,6 @@ typedef struct {
 	HWND hwnd;
 } SHARED_MEMORY;
 
-static BOOL OnInit();
-static void OnQuit();
-static void OnTrackChange();
-static void OnStatusChange();
-static void OnConfig();
-
 /* 共有メモリ */
 static HANDLE hsm = NULL;
 static SHARED_MEMORY *psm = NULL;
@@ -57,28 +52,29 @@ static SHARED_MEMORY *psm = NULL;
 /* プラグインリスト */
 static CONFIG_PLUGIN_INFO *pTop = NULL;
 
-static BOOL m_fIsUnicode = FALSE;
-static WNDPROC m_hOldProc = 0;
-static HMODULE m_hDLL = 0;
-
-static FITTLE_PLUGIN_INFO fpi = {
-	PDK_VER,
-	OnInit,
-	OnQuit,
-	OnTrackChange,
-	OnStatusChange,
-	OnConfig,
-	NULL,
-	NULL
-};
-
 #include "../../../fittle/src/wastr.h"
 #include "../../../fittle/src/wastr.cpp"
+
+static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg);
+static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode);
+
+static GENERAL_PLUGIN_INFO gpinfo = {
+	GPDK_VER,
+	HookWndProc,
+	OnEvent
+};
+
+#ifdef __cplusplus
+extern "C"
+#endif
+GENERAL_PLUGIN_INFO * CALLBACK GetGPluginInfo(void){
+	return &gpinfo;
+}
+
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 	(void)lpvReserved;
 	if (fdwReason == DLL_PROCESS_ATTACH){
-		m_hDLL = hinstDLL;
 		DisableThreadLibraryCalls(hinstDLL);
 	}else if (fdwReason == DLL_PROCESS_DETACH){
 	}
@@ -250,55 +246,28 @@ static void ShowSettingDialog(HWND hWnd, int nPage){
 }
 
 
-// サブクラス化したウィンドウプロシージャ
-LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
-	if (msg == WM_COMMAND){
-		if (LOWORD(wp) == IDM_SETTING){
-			ShowSettingDialog(hWnd, 0);
-			return 0;
-		} else if (LOWORD(wp) == IDM_VER){
-			ShowSettingDialog(hWnd, 5);
-			return 0;
+static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg) {
+	if (pMsg->msg == WM_COMMAND){
+		if (LOWORD(pMsg->wp) == IDM_SETTING){
+			ShowSettingDialog(pMsg->hWnd, 0);
+			return TRUE;
+		} else if (LOWORD(pMsg->wp) == IDM_VER){
+			ShowSettingDialog(pMsg->hWnd, 5);
+			return TRUE;
 		}
-	} else if ((msg == WM_F4B24_IPC) && (wp == WM_F4B24_IPC_SETTING)){
-		ShowSettingDialog(hWnd, lp);
-		return 0;
+	} else if ((pMsg->msg == WM_F4B24_IPC) && (pMsg->wp == WM_F4B24_IPC_SETTING)){
+		ShowSettingDialog(pMsg->hWnd, pMsg->lp);
+		return TRUE;
 	}
-	return (m_fIsUnicode ? CallWindowProcW : CallWindowProcA)(m_hOldProc, hWnd, msg, wp, lp);
+	return FALSE;
 }
 
-/* 起動時に一度だけ呼ばれます */
-static BOOL OnInit(){
-	m_fIsUnicode = WAIsUnicode() || IsWindowUnicode(fpi.hParent);
-	InitPlugins();
-	m_hOldProc = (WNDPROC)(m_fIsUnicode ? SetWindowLongW : SetWindowLongA)(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
+static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode) {
+	if (eCode == GENERAL_PLUGIN_EVENT_INIT) {
+		WAIsUnicode();
+		InitPlugins();
+	} else if (eCode == GENERAL_PLUGIN_EVENT_QUIT) {
+	}
 	return TRUE;
 }
 
-/* 終了時に一度だけ呼ばれます */
-static void OnQuit(){
-	return;
-}
-
-/* 曲が変わる時に呼ばれます */
-static void OnTrackChange(){
-}
-
-/* 再生状態が変わる時に呼ばれます */
-static void OnStatusChange(){
-}
-
-/* 設定画面を呼び出します（未実装）*/
-static void OnConfig(){
-}
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-__declspec(dllexport) FITTLE_PLUGIN_INFO *GetPluginInfo(){
-	return &fpi;
-}
-#ifdef __cplusplus
-}
-#endif

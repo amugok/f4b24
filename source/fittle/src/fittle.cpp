@@ -19,6 +19,7 @@
 #include "plugin.h"
 #include "f4b24.h"
 #include "oplugin.h"
+#include "gplugin.h"
 
 #if defined(_MSC_VER) && defined(_DEBUG)
 #define _CRTDBG_MAP_ALLOC
@@ -605,6 +606,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 	TCHAR szLastPath[MAX_FITTLE_PATH];
 	TCHAR szCmdParPath[MAX_FITTLE_PATH];
 	MENUITEMINFO mii;
+
+	LRESULT lHookRet;
+
+	if (OnWndProcPlugins(hWnd, msg, wp, lp, &lHookRet)) return lHookRet;
 
 	switch(msg)
 	{
@@ -4527,7 +4532,9 @@ static void ApplyConfig(HWND hWnd){
 
 	UnRegHotKey(hWnd);
 
+	OnConfigChangePlugins();
 	LoadConfig();
+
 
 	if(g_cfg.nHighTask){
 		SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);		

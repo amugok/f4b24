@@ -234,6 +234,10 @@ SOURCE=.\src\func.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\src\gplugin.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\src\list.h
 # End Source File
 # Begin Source File

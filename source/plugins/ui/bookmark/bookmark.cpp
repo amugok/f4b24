@@ -6,7 +6,7 @@
  */
 
 #include "../../../fittle/src/fittle.h"
-#include "../../../fittle/src/plugin.h"
+#include "../../../fittle/src/gplugin.h"
 #include "../../../fittle/src/f4b24.h"
 #include "bookmark.rh"
 
@@ -16,6 +16,7 @@
 #pragma comment(lib,"gdi32.lib")
 #pragma comment(lib,"comctl32.lib")
 #pragma comment(lib,"shlwapi.lib")
+#pragma comment(linker, "/EXPORT:GetGPluginInfo=_GetGPluginInfo@0")
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/ENTRY:DllMain")
@@ -32,12 +33,21 @@ typedef struct StringList {
 	TCHAR szString[1];
 } STRING_LIST, *LPSTRING_LIST;
 
-static void LoadConfig();
-static BOOL OnInit();
-static void OnQuit();
-static void OnTrackChange();
-static void OnStatusChange();
-static void OnConfig();
+static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg);
+static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode);
+
+static GENERAL_PLUGIN_INFO gpinfo = {
+	GPDK_VER,
+	HookWndProc,
+	OnEvent
+};
+
+#ifdef __cplusplus
+extern "C"
+#endif
+GENERAL_PLUGIN_INFO * CALLBACK GetGPluginInfo(void){
+	return &gpinfo;
+}
 
 static BOOL CALLBACK BookMarkDlgProc(HWND, UINT, WPARAM, LPARAM);
 static void DrawBookMark(HMENU);
@@ -49,20 +59,8 @@ static void HookComboUpdate(HWND);
 static BOOL HookTreeRoot(HWND);
 
 static HMODULE m_hinstDLL = 0;
-static WNDPROC m_hOldProc = 0;
 
 #define MAX_BM_SIZE 100			// しおりの数
-
-static FITTLE_PLUGIN_INFO fpi = {
-	PDK_VER,
-	OnInit,
-	OnQuit,
-	OnTrackChange,
-	OnStatusChange,
-	OnConfig,
-	NULL,
-	NULL
-};
 
 static struct {
 	LPSTRING_LIST lpBookmark;
@@ -139,8 +137,8 @@ void GetModuleParentDir(LPTSTR szParPath){
 	return;
 }
 
-static void UpdateDriveList(){
-	SendMessage(fpi.hParent, WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_UPDATE_DRIVELIST, (LPARAM)0);
+static void UpdateDriveList(HWND hWnd){
+	SendMessage(hWnd, WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_UPDATE_DRIVELIST, (LPARAM)0);
 //	SetDrivesToCombo(m_hCombo);
 //	SendMessage(hWnd, WM_DEVICECHANGE, 0x8000 ,0);
 }
@@ -159,7 +157,7 @@ static int GetMenuPosFromString(HMENU hMenu, LPTSTR lpszText){
 }
 
 // 設定を読込
-static void LoadState(){
+static void LoadState(HWND hWnd){
 	TCHAR m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
 
 	// INIファイルの位置を取得
@@ -173,7 +171,7 @@ static void LoadState(){
 
 
 	// しおりの読み込み
-	LoadBookMark(GetSubMenu(GetMenu(fpi.hParent), GetMenuPosFromString(GetMenu(fpi.hParent), TEXT("しおり(&B)"))), m_szINIPath);
+	LoadBookMark(GetSubMenu(GetMenu(hWnd), GetMenuPosFromString(GetMenu(hWnd), TEXT("しおり(&B)"))), m_szINIPath);
 //	nTagReverse = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("TagReverse"), 0, m_szINIPath);
 }
 
@@ -213,127 +211,83 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 	return TRUE;
 }
 
-static LRESULT FittlePluginInterface(int nCommand){
-	return SendMessage(fpi.hParent, WM_FITTLE, nCommand, 0);
-}
-
-static int IsCheckedMainMenu(int nCommand){
-	HMENU hMainMenu = (HMENU)FittlePluginInterface(GET_MENU);
-	return (GetMenuState(hMainMenu, nCommand, MF_BYCOMMAND) & MF_CHECKED) != 0;
-}
-
-static void SendCommandMessage(HWND hwnd, int nCommand){
-	if (hwnd && IsWindow(hwnd))
-		SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(nCommand, 0), 0);
-}
-
-static void SendCommand(int nCommand){
-	SendCommandMessage(fpi.hParent, nCommand);
-}
-
-
 static HWND CreateWorkWindow(void){
 	return CreateWindow(TEXT("STATIC"),TEXT(""),0,0,0,0,0,NULL,NULL,m_hinstDLL,NULL);
 }
 
-static void GetCurPath(LPTSTR lpszBuf, int nBufSize) {
+static void GetCurPath(HWND hWnd, LPTSTR lpszBuf, int nBufSize) {
 	HWND hwndWork = CreateWorkWindow();
 	if (hwndWork){
-		SendMessage(fpi.hParent, WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_GET_CURPATH, (LPARAM)hwndWork);
+		SendMessage(hWnd, WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_GET_CURPATH, (LPARAM)hwndWork);
 		SendMessage(hwndWork, WM_GETTEXT, (WPARAM)nBufSize, (LPARAM)lpszBuf);
 		DestroyWindow(hwndWork);
 	}
 }
 
-static void SetCurPath(LPCTSTR lpszPath) {
+static void SetCurPath(HWND hWnd, LPCTSTR lpszPath) {
 	HWND hwndWork = CreateWorkWindow();
 	if (hwndWork){
 		SendMessage(hwndWork, WM_SETTEXT, (WPARAM)0, (LPARAM)lpszPath);
-		SendMessage(fpi.hParent, WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_SET_CURPATH, (LPARAM)hwndWork);
+		SendMessage(hWnd, WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_SET_CURPATH, (LPARAM)hwndWork);
 		DestroyWindow(hwndWork);
 	}
 }
 
-// サブクラス化したウィンドウプロシージャ
-static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
-	switch(msg){
+static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg) {
+	switch(pMsg->msg){
 	case WM_SYSCOMMAND:
 	case WM_COMMAND:
-		if(IDM_BM_FIRST<=LOWORD(wp) && LOWORD(wp)<IDM_BM_FIRST+MAX_BM_SIZE){
-			LPCTSTR lpszBMPath = GetBookmark(LOWORD(wp)-IDM_BM_FIRST);
+		if(IDM_BM_FIRST<=LOWORD(pMsg->wp) && LOWORD(pMsg->wp)<IDM_BM_FIRST+MAX_BM_SIZE){
+			LPCTSTR lpszBMPath = GetBookmark(LOWORD(pMsg->wp)-IDM_BM_FIRST);
 			if(!lpszBMPath[0]) break;
-			SetCurPath(lpszBMPath);
+			SetCurPath(pMsg->hWnd, lpszBMPath);
 			break;
 		}
-		switch (LOWORD(wp)){
+		switch (LOWORD(pMsg->wp)){
 		case IDM_BM_ADD: //しおりに追加
-			if(AddBookMark(GetSubMenu(GetMenu(hWnd), GetMenuPosFromString(GetMenu(hWnd), TEXT("しおり(&B)"))), hWnd)!=-1){
-				UpdateDriveList();
+			if(AddBookMark(GetSubMenu(GetMenu(pMsg->hWnd), GetMenuPosFromString(GetMenu(pMsg->hWnd), TEXT("しおり(&B)"))), pMsg->hWnd)!=-1){
+				UpdateDriveList(pMsg->hWnd);
 			}
 			break;
 
 		case IDM_BM_ORG:
-			DialogBox(m_hinstDLL, TEXT("BOOKMARK_DIALOG"), hWnd, (DLGPROC)BookMarkDlgProc);
-			DrawBookMark(GetSubMenu(GetMenu(hWnd), GetMenuPosFromString(GetMenu(hWnd), TEXT("しおり(&B)"))));
-			UpdateDriveList();
+			DialogBox(m_hinstDLL, TEXT("BOOKMARK_DIALOG"), pMsg->hWnd, (DLGPROC)BookMarkDlgProc);
+			DrawBookMark(GetSubMenu(GetMenu(pMsg->hWnd), GetMenuPosFromString(GetMenu(pMsg->hWnd), TEXT("しおり(&B)"))));
+			UpdateDriveList(pMsg->hWnd);
 			break;
 		}
 		break;
 	case WM_F4B24_IPC:
-		switch (wp){
+		switch (pMsg->wp){
 			case WM_F4B24_HOOK_UPDATE_DRIVELISTE:
-				HookComboUpdate((HWND)lp);
+				HookComboUpdate((HWND)pMsg->lp);
 				break;
 			case WM_F4B24_HOOK_GET_TREE_ROOT:
-				if (HookTreeRoot((HWND)lp)) return TRUE;
-				break;
+			if (HookTreeRoot((HWND)pMsg->lp)) {
+				pMsg->lMsgResult = TRUE;
+				return TRUE;
+			}
 		}
 		break;
 	}
-	return CallWindowProc(m_hOldProc, hWnd, msg, wp, lp);
+	return FALSE;
 }
 
-/* 起動時に一度だけ呼ばれます */
-static BOOL OnInit(){
-	LoadState();
 
-	EnableMenuItem(GetMenu(fpi.hParent), IDM_BM_ADD, MF_BYCOMMAND | MF_ENABLED);
-	EnableMenuItem(GetMenu(fpi.hParent), IDM_BM_ORG, MF_BYCOMMAND | MF_ENABLED);
-	m_hOldProc = (WNDPROC)SetWindowLong(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
+static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode) {
+	if (eCode == GENERAL_PLUGIN_EVENT_INIT) {
+		LoadState(hWnd);
 
-	UpdateDriveList();
+		EnableMenuItem(GetMenu(hWnd), IDM_BM_ADD, MF_BYCOMMAND | MF_ENABLED);
+		EnableMenuItem(GetMenu(hWnd), IDM_BM_ORG, MF_BYCOMMAND | MF_ENABLED);
 
+		UpdateDriveList(hWnd);
+	} else if (eCode == GENERAL_PLUGIN_EVENT_QUIT) {
+		SaveState();
+		ClearBookmark();
+	}
 	return TRUE;
 }
-
-/* 終了時に一度だけ呼ばれます */
-static void OnQuit(){
-	SaveState();
-	ClearBookmark();
-}
-
-/* 曲が変わる時に呼ばれます */
-static void OnTrackChange(){
-}
-
-/* 再生状態が変わる時に呼ばれます */
-static void OnStatusChange(){
-}
-
-/* 設定画面を呼び出します（未実装）*/
-static void OnConfig(){
-}
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-__declspec(dllexport) FITTLE_PLUGIN_INFO *GetPluginInfo(){
-	return &fpi;
-}
-#ifdef __cplusplus
-}
-#endif
 
 // しおりをメニューに描画
 static void DrawBookMark(HMENU hBMMenu){
@@ -371,7 +325,7 @@ static int AddBookMark(HMENU hBMMenu, HWND hWnd){
 	}
 
 	szBuf[0] = TEXT('\0');
-	GetCurPath(szBuf, MAX_FITTLE_PATH);
+	GetCurPath(hWnd, szBuf, MAX_FITTLE_PATH);
 	if (!szBuf[0]) return -1;
 
 	i = AppendBookmark(szBuf);

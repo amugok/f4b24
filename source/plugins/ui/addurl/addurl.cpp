@@ -5,14 +5,16 @@
  * All Rights Reserved
  */
 
-#include "../../../fittle/resource/resource.h"
-#include "../../../fittle/src/plugin.h"
+#include <windows.h>
 #include <shlwapi.h>
+#include "../../../fittle/resource/resource.h"
+#include "../../../fittle/src/gplugin.h"
 
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")
 #pragma comment(lib,"user32.lib")
 #pragma comment(lib,"shlwapi.lib")
+#pragma comment(linker, "/EXPORT:GetGPluginInfo=_GetGPluginInfo@0")
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/ENTRY:DllMain")
@@ -29,50 +31,37 @@
 #define IsURLPathA(X) StrStrA(X, "://")
 #define IsURLPathW(X) StrStrW(X, L"://")
 
-static BOOL OnInit();
-static void OnQuit();
-static void OnTrackChange();
-static void OnStatusChange();
-static void OnConfig();
-
 static BOOL CALLBACK AddURLDlgProc(HWND, UINT, WPARAM, LPARAM);
 static void AddURL(HWND hWnd);
 
-static FITTLE_PLUGIN_INFO fpi = {
-	PDK_VER,
-	OnInit,
-	OnQuit,
-	OnTrackChange,
-	OnStatusChange,
-	OnConfig,
-	NULL,
-	NULL
+static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg);
+static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode);
+
+static GENERAL_PLUGIN_INFO gpinfo = {
+	GPDK_VER,
+	HookWndProc,
+	OnEvent
 };
 
-static BOOL fIsUnicode = FALSE;
-static WNDPROC hOldProc = 0;
-static HMODULE hDLL = 0;
+#ifdef __cplusplus
+extern "C"
+#endif
+GENERAL_PLUGIN_INFO * CALLBACK GetGPluginInfo(void){
+	return &gpinfo;
+}
+
+static BOOL m_fIsUnicode = FALSE;
+static HMODULE m_hDLL = 0;
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 	(void)lpvReserved;
 	if (fdwReason == DLL_PROCESS_ATTACH){
-		hDLL = hinstDLL;
+		m_hDLL = hinstDLL;
 		DisableThreadLibraryCalls(hinstDLL);
 	}else if (fdwReason == DLL_PROCESS_DETACH){
 	}
 	return TRUE;
 }
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-__declspec(dllexport) FITTLE_PLUGIN_INFO *GetPluginInfo(){
-	return &fpi;
-}
-#ifdef __cplusplus
-}
-#endif
 
 static void UpdateMenuItems(HMENU hMenu){
 	UINT uState = GetMenuState(hMenu, IDM_LIST_MOVETOP, MF_BYCOMMAND);
@@ -97,44 +86,28 @@ static void UpdateMenuItems(HMENU hMenu){
 	}
 }
 
-// サブクラス化したウィンドウプロシージャ
-LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
-	switch(msg){
+static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg) {
+	switch(pMsg->msg){
 	case WM_COMMAND:
-		if(LOWORD(wp)==IDM_LIST_URL){
-			AddURL(hWnd);
-			return 0;
+		if(LOWORD(pMsg->wp)==IDM_LIST_URL){
+			AddURL(pMsg->hWnd);
+			//pMsg->lMsgResult = 0;
+			return TRUE;
 		}
 		break;
 	case WM_INITMENUPOPUP:
-		UpdateMenuItems((HMENU)wp);
+		UpdateMenuItems((HMENU)pMsg->wp);
 		break;
 	}
-	return (fIsUnicode ? CallWindowProcW : CallWindowProcA)(hOldProc, hWnd, msg, wp, lp);
+	return FALSE;
 }
 
-/* 起動時に一度だけ呼ばれます */
-static BOOL OnInit(){
-	fIsUnicode = ((GetVersion() & 0x80000000) == 0) || IsWindowUnicode(fpi.hParent);
-	hOldProc = (WNDPROC)(fIsUnicode ? SetWindowLongW : SetWindowLongA)(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
+static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode) {
+	if (eCode == GENERAL_PLUGIN_EVENT_INIT) {
+		m_fIsUnicode = ((GetVersion() & 0x80000000) == 0) || IsWindowUnicode(hWnd);
+	} else if (eCode == GENERAL_PLUGIN_EVENT_QUIT) {
+	}
 	return TRUE;
-}
-
-/* 終了時に一度だけ呼ばれます */
-static void OnQuit(){
-	return;
-}
-
-/* 曲が変わる時に呼ばれます */
-static void OnTrackChange(){
-}
-
-/* 再生状態が変わる時に呼ばれます */
-static void OnStatusChange(){
-}
-
-/* 設定画面を呼び出します（未実装）*/
-static void OnConfig(){
 }
 
 static BOOL CALLBACK AddURLDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
@@ -150,19 +123,19 @@ static BOOL CALLBACK AddURLDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			pszBuf = (LPVOID)lp;
 
 			// クリップボードに有効なURIが入っていればエディットボックスにコピー
-			if(IsClipboardFormatAvailable(fIsUnicode ? CF_UNICODETEXT : CF_TEXT)){
+			if(IsClipboardFormatAvailable(m_fIsUnicode ? CF_UNICODETEXT : CF_TEXT)){
 				if(OpenClipboard(NULL)){
-					HANDLE hMem = GetClipboardData(fIsUnicode ? CF_UNICODETEXT : CF_TEXT);
+					HANDLE hMem = GetClipboardData(m_fIsUnicode ? CF_UNICODETEXT : CF_TEXT);
 					if (hMem){
 						LPVOID pMem = (LPVOID)GlobalLock(hMem);
 						if (pMem){
-							if (fIsUnicode)
+							if (m_fIsUnicode)
 								lstrcpynW(szTemp.W, (LPCWSTR)pMem, MAX_FITTLE_PATH);
 							else
 								lstrcpynA(szTemp.A, (LPCSTR)pMem, MAX_FITTLE_PATH);
 							GlobalUnlock(hMem);
 							CloseClipboard();
-							if (fIsUnicode){
+							if (m_fIsUnicode){
 								if(IsURLPathW(szTemp.W) || FILE_EXISTW(szTemp.W)){
 									SetWindowTextW(GetDlgItem(hDlg, IDC_EDIT1), szTemp.W);
 									SendMessageW(GetDlgItem(hDlg, IDC_EDIT1), EM_SETSEL, (WPARAM)0, (LPARAM)lstrlenW(szTemp.W));
@@ -186,7 +159,7 @@ static BOOL CALLBACK AddURLDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 				case IDOK:	// 設定保存
 					BOOL fRet;
 					fRet = FALSE;
-					if (fIsUnicode){
+					if (m_fIsUnicode){
 						GetWindowTextW(GetDlgItem(hDlg, IDC_EDIT1), szTemp.W, MAX_FITTLE_PATH);
 						if(lstrlenW(szTemp.W)){
 							lstrcpynW((LPWSTR)pszBuf, szTemp.W, MAX_FITTLE_PATH);
@@ -253,15 +226,15 @@ static void AddURL(HWND hWnd){
 		WCHAR W[MAX_FITTLE_PATH];
 		CHAR A[MAX_FITTLE_PATH];
 	} szLabel;
-	if (fIsUnicode){
+	if (m_fIsUnicode){
 		szLabel.W[0] = L'\0';
-		if(DialogBoxParamW(hDLL, L"TAB_NAME_DIALOG", hWnd, AddURLDlgProc, (LPARAM)szLabel.W)){
-			SendCopyDataW(fpi.hParent, 1, szLabel.W);
+		if(DialogBoxParamW(m_hDLL, L"TAB_NAME_DIALOG", hWnd, AddURLDlgProc, (LPARAM)szLabel.W)){
+			SendCopyDataW(hWnd, 1, szLabel.W);
 		}
 	}else{
 		szLabel.A[0] = '\0';
-		if(DialogBoxParamA(hDLL, "TAB_NAME_DIALOG", hWnd, AddURLDlgProc, (LPARAM)szLabel.A)){
-			SendCopyDataA(fpi.hParent, 1, szLabel.A);
+		if(DialogBoxParamA(m_hDLL, "TAB_NAME_DIALOG", hWnd, AddURLDlgProc, (LPARAM)szLabel.A)){
+			SendCopyDataA(hWnd, 1, szLabel.A);
 		}
 	}
 }

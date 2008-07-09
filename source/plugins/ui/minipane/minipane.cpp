@@ -8,6 +8,7 @@
 #include "../../../fittle/resource/resource.h"
 #include "../../../fittle/src/fittle.h"
 #include "../../../fittle/src/plugin.h"
+#include "../../../fittle/src/gplugin.h"
 #include "../../../fittle/src/f4b24.h"
 
 #if defined(_MSC_VER)
@@ -17,6 +18,9 @@
 #pragma comment(lib,"comctl32.lib")
 #pragma comment(lib,"shlwapi.lib")
 #pragma comment(lib,"shell32.lib")
+#ifdef UNICODE
+#pragma comment(linker, "/EXPORT:GetGPluginInfo=_GetGPluginInfo@0")
+#endif
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/ENTRY:DllMain")
@@ -30,12 +34,59 @@
 
 static BOOL CALLBACK MiniPanelProc(HWND, UINT, WPARAM, LPARAM);
 static void LoadConfig();
+
+#ifdef UNICODE
+
+static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg);
+static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode);
+
+static GENERAL_PLUGIN_INFO gpinfo = {
+	GPDK_VER,
+	HookWndProc,
+	OnEvent
+};
+
+#ifdef __cplusplus
+extern "C"
+#endif
+GENERAL_PLUGIN_INFO * CALLBACK GetGPluginInfo(void){
+	return &gpinfo;
+}
+
+static HWND m_hwndMain = NULL;
+
+#else
+
 static BOOL OnInit();
 static void OnQuit();
 static void OnTrackChange();
 static void OnStatusChange();
 static void OnConfig();
 
+static FITTLE_PLUGIN_INFO fpi = {
+	PDK_VER,
+	OnInit,
+	OnQuit,
+	OnTrackChange,
+	OnStatusChange,
+	OnConfig,
+	NULL,
+	NULL
+};
+#define m_hwndMain fpi.hParent
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+__declspec(dllexport) FITTLE_PLUGIN_INFO *GetPluginInfo(){
+	return &fpi;
+}
+#ifdef __cplusplus
+}
+#endif
+
+#endif
 enum {PM_LIST=0, PM_RANDOM, PM_SINGLE};	// プレイモード
 
 enum {
@@ -81,17 +132,6 @@ static struct {
 	int nMiniPanelEnd;
 	int nMiniWidth;
 } m_sta;
-
-static FITTLE_PLUGIN_INFO fpi = {
-	PDK_VER,
-	OnInit,
-	OnQuit,
-	OnTrackChange,
-	OnStatusChange,
-	OnConfig,
-	NULL,
-	NULL
-};
 
 void GetModuleParentDir(LPTSTR szParPath){
 	TCHAR szPath[MAX_FITTLE_PATH];
@@ -186,7 +226,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 }
 
 static LRESULT FittlePluginInterface(int nCommand){
-	return SendMessage(fpi.hParent, WM_FITTLE, nCommand, 0);
+	return SendMessage(m_hwndMain, WM_FITTLE, nCommand, 0);
 }
 
 static int IsCheckedMainMenu(int nCommand){
@@ -213,7 +253,7 @@ static int GetRepeatFlag(){
 static void GetF4B24String(int nCode, LPTSTR pszBuf, int nBufSize){
 	HWND hwndWork = CreateWindow(TEXT("STATIC"),TEXT(""),0,0,0,0,0,NULL,NULL,m_hinstDLL,NULL);
 	if (hwndWork){
-		SendMessage(fpi.hParent, WM_F4B24_IPC, (WPARAM)nCode, (LPARAM)hwndWork);
+		SendMessage(m_hwndMain, WM_F4B24_IPC, (WPARAM)nCode, (LPARAM)hwndWork);
 		if (nBufSize > 0) pszBuf[0] = TEXT('\0');
 		GetWindowText(hwndWork, pszBuf, nBufSize);
 		//SendMessage(hwndWork, WM_GETTEXT, (WPARAM)nBufSize, (LPARAM)pszBuf);
@@ -264,7 +304,7 @@ static void SendCommandMessage(HWND hwnd, int nCommand){
 }
 
 static void SendCommand(int nCommand){
-	SendCommandMessage(fpi.hParent, nCommand);
+	SendCommandMessage(m_hwndMain, nCommand);
 }
 static void PanelClose(){
 	SendCommandMessage(m_hMiniPanel, IDCANCEL);
@@ -291,144 +331,6 @@ static void SetMiniToolCheck(int nCommand, int nSwitch){
 	if (m_hMiniTool && IsWindow(m_hMiniTool))
 		SendMessage(m_hMiniTool,  TB_CHECKBUTTON, (WPARAM)nCommand, (LPARAM)MAKELONG(nSwitch, 0));
 }
-
-// サブクラス化したウィンドウプロシージャ
-static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
-	switch(msg){
-	case WM_ACTIVATE:
-		{
-//			HWND hConfig = FindWindowEx(hWnd, NULL, TEXT("#32770"), TEXT("設定"));
-			HWND hConfig = FindWindow(TEXT("#32770"), TEXT("設定"));
-			if (hConfig && IsWindow(hConfig) && GetWindowThreadProcessId(hWnd, NULL) == GetWindowThreadProcessId(hConfig, NULL)){
-				typedef void (CALLBACK * LPFNOLDMODE)(HWND hwnd);
-				LPFNOLDMODE pfnoldmode = (LPFNOLDMODE)GetProcAddress(m_hdllConfig, "OldMode");
-				if (pfnoldmode){
-					pfnoldmode(hConfig);
-				}
-			}
-		}
-		break;
-	case WM_SETFOCUS:
-		if(!m_hMiniPanel) break;
-		SetFocus(m_hMiniPanel);
-		return TRUE;
-
-	case WM_SYSCOMMAND:
-	case WM_COMMAND:
-		switch (LOWORD(wp)){
-		case IDM_PM_TOGGLE:
-		case IDM_PM_LIST:
-		case IDM_PM_RANDOM:
-		case IDM_PM_SINGLE:
-			PostMessage(m_hMiniPanel, WM_F4B24_IPC, WM_F4B24_INTERNAL_ON_PLAY_MODE, 0);
-			break;
-		case IDM_PM_REPEAT:
-			PostMessage(m_hMiniPanel, WM_F4B24_IPC, WM_F4B24_INTERNAL_ON_REPEAT_MODE, 0);
-			break;
-		case IDM_MINIPANEL:
-			if(!m_hMiniPanel){
-				ShowWindow(hWnd, SW_HIDE);
-				m_sta.nMiniPanelEnd = 1;
-				m_hMiniPanel = CreateDialogParam(m_hinstDLL, TEXT("MINI_PANEL"), hWnd, MiniPanelProc, 0);
-			}else{
-				PanelClose();
-			}
-			return TRUE;
-		case IDM_TRAY_WINVIEW:
-			if(m_hMiniPanel){
-				PanelClose();
-				return TRUE;
-			}
-			break;
-		}
-	case WM_FITTLE:
-		if (wp == GET_MINIPANEL)		{
-			return (m_hMiniPanel && IsWindow(m_hMiniPanel)) ? (LRESULT)m_hMiniPanel : (LRESULT)0;
-		}
-		break;
-	case WM_INITMENUPOPUP:
-		EnableMenuItem((HMENU)wp, IDM_MINIPANEL, MF_BYCOMMAND | MF_ENABLED);
-		break;
-	}
-	return CallWindowProc(m_hOldProc, hWnd, msg, wp, lp);
-}
-
-/* 起動時に一度だけ呼ばれます */
-static BOOL OnInit(){
-	HMENU hMainMenu = (HMENU)FittlePluginInterface(GET_MENU);
-	EnableMenuItem(hMainMenu, IDM_MINIPANEL, MF_BYCOMMAND | MF_ENABLED);
-
-	if (SendMessage(fpi.hParent, WM_F4B24_IPC, WM_F4B24_IPC_GET_IF_VERSION, 0) < 12){
-		TCHAR m_szPathFCP[MAX_FITTLE_PATH];
-		GetModuleFileName(m_hinstDLL, m_szPathFCP, MAX_FITTLE_PATH);
-		lstrcpy(PathFindExtension(PathFindFileName(m_szPathFCP)), TEXT(".fcp"));
-		m_hdllConfig = LoadLibrary(m_szPathFCP);
-		m_fHookConfig = (m_hdllConfig != NULL);
-	}
-
-	hMiniMenu = LoadMenu(m_hinstDLL, TEXT("TRAYMENU"));
-	m_hOldProc = (WNDPROC)SetWindowLong(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
-
-	LoadState();
-
-	return TRUE;
-}
-
-/* 終了時に一度だけ呼ばれます */
-static void OnQuit(){
-	SaveState();
-	FreeImageList();
-	FreeMiniMenu();
-	return;
-}
-
-/* 曲が変わる時に呼ばれます */
-static void OnTrackChange(){
-	m_nTitleDisplayPos = 1;	// 表示位置リセット
-	UpdatePanelTitle();
-	UpdatePanelTime();
-	if (m_hMiniPanel) InvalidateRect(m_hMiniPanel, NULL, FALSE);
-}
-
-/* 再生状態が変わる時に呼ばれます */
-static void OnStatusChange(){
-	if (m_hMiniPanel)
-	{
-		switch (FittlePluginInterface(GET_STATUS)){
-		case 0/*BASS_ACTIVE_STOPPED*/:
-			SetMiniToolCheck(IDM_PAUSE, FALSE);
-			KillTimer(m_hMiniPanel, ID_SEEKTIMER);
-			InvalidateRect(m_hMiniPanel, NULL, TRUE);
-			m_szTag[0] = 0;
-			break;
-		case 1/*BASS_ACTIVE_PLAYING*/:
-		case 2/*BASS_ACTIVE_STALLED*/:
-			SetMiniToolCheck(IDM_PAUSE, FALSE);
-			SetTimer(m_hMiniPanel, ID_SEEKTIMER, 500, 0);
-			InvalidateRect(m_hMiniPanel, NULL, FALSE);
-			break;
-		case 3/*BASS_ACTIVE_PAUSED*/:
-			SetMiniToolCheck(IDM_PAUSE, TRUE);
-			KillTimer(m_hMiniPanel, ID_SEEKTIMER);
-			break;
-		}
-	}
-}
-
-/* 設定画面を呼び出します（未実装）*/
-static void OnConfig(){
-}
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-__declspec(dllexport) FITTLE_PLUGIN_INFO *GetPluginInfo(){
-	return &fpi;
-}
-#ifdef __cplusplus
-}
-#endif
 
 #define TB_BTN_NUM 8
 #define TB_BMP_NUM 9
@@ -567,7 +469,7 @@ static void DoTrayClickAction(HWND hWnd, int nKind){
 		SendCommand(IDM_END);
 		break;
 	case 8:
-		PopupTrayMenu(fpi.hParent);
+		PopupTrayMenu(m_hwndMain);
 		break;
 	case 9:
 		SendCommand(IDM_PLAYPAUSE);
@@ -793,12 +695,12 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 
 				case ID_RBTNCLKTIMER:
 					KillTimer(hDlg, ID_RBTNCLKTIMER);
-					DoTrayClickAction(fpi.hParent, 2);
+					DoTrayClickAction(m_hwndMain, 2);
 					return TRUE;
 
 				case ID_MBTNCLKTIMER:
 					KillTimer(hDlg, ID_MBTNCLKTIMER);
-					DoTrayClickAction(fpi.hParent, 4);
+					DoTrayClickAction(m_hwndMain, 4);
 					return TRUE;
 
 			}
@@ -826,7 +728,7 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 					m_hMiniPanel = NULL;
 					m_hMiniTool = NULL;
 
-					ShowWindow(fpi.hParent, SW_SHOW);
+					ShowWindow(m_hwndMain, SW_SHOW);
 					DestroyWindow(hDlg);
 					return TRUE;
 
@@ -857,12 +759,12 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 
 		case WM_RBUTTONDBLCLK:
 			KillTimer(hDlg, ID_RBTNCLKTIMER);
-			DoTrayClickAction(fpi.hParent, 3);
+			DoTrayClickAction(m_hwndMain, 3);
 			return TRUE;
 
 		case WM_MBUTTONDBLCLK:
 			KillTimer(hDlg, ID_MBTNCLKTIMER);
-			DoTrayClickAction(fpi.hParent, 5);
+			DoTrayClickAction(m_hwndMain, 5);
 			return TRUE;
 
 		case WM_LBUTTONDOWN:
@@ -870,7 +772,7 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			return FALSE;
 
 		case WM_LBUTTONDBLCLK:
-			DoTrayClickAction(fpi.hParent, 1);
+			DoTrayClickAction(m_hwndMain, 1);
 			return TRUE;
 
 		case WM_MOUSEWHEEL:
@@ -908,7 +810,7 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			hDrop = (HDROP)wp;
 			DragQueryFile(hDrop, 0, szPath, MAX_FITTLE_PATH);
 			DragFinish(hDrop);
-			SendCopyData(fpi.hParent, 0, szPath);
+			SendCopyData(m_hwndMain, 0, szPath);
 
 			return TRUE;
 
@@ -944,3 +846,167 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			return FALSE;
 	}
 }
+
+
+static BOOL OnInitSub(){
+	HMENU hMainMenu = (HMENU)FittlePluginInterface(GET_MENU);
+	EnableMenuItem(hMainMenu, IDM_MINIPANEL, MF_BYCOMMAND | MF_ENABLED);
+
+	if (SendMessage(m_hwndMain, WM_F4B24_IPC, WM_F4B24_IPC_GET_IF_VERSION, 0) < 12){
+		TCHAR m_szPathFCP[MAX_FITTLE_PATH];
+		GetModuleFileName(m_hinstDLL, m_szPathFCP, MAX_FITTLE_PATH);
+		lstrcpy(PathFindExtension(PathFindFileName(m_szPathFCP)), TEXT(".fcp"));
+		m_hdllConfig = LoadLibrary(m_szPathFCP);
+		m_fHookConfig = (m_hdllConfig != NULL);
+	}
+
+	hMiniMenu = LoadMenu(m_hinstDLL, TEXT("TRAYMENU"));
+
+	LoadState();
+
+	return TRUE;
+}
+
+/* 終了時に一度だけ呼ばれます */
+static void OnQuit(){
+	SaveState();
+	FreeImageList();
+	FreeMiniMenu();
+	return;
+}
+
+/* 曲が変わる時に呼ばれます */
+static void OnTrackChange(){
+	m_nTitleDisplayPos = 1;	// 表示位置リセット
+	UpdatePanelTitle();
+	UpdatePanelTime();
+	if (m_hMiniPanel) InvalidateRect(m_hMiniPanel, NULL, FALSE);
+}
+
+/* 再生状態が変わる時に呼ばれます */
+static void OnStatusChange(){
+	if (m_hMiniPanel)
+	{
+		switch (FittlePluginInterface(GET_STATUS)){
+		case 0/*BASS_ACTIVE_STOPPED*/:
+			SetMiniToolCheck(IDM_PAUSE, FALSE);
+			KillTimer(m_hMiniPanel, ID_SEEKTIMER);
+			InvalidateRect(m_hMiniPanel, NULL, TRUE);
+			m_szTag[0] = 0;
+			break;
+		case 1/*BASS_ACTIVE_PLAYING*/:
+		case 2/*BASS_ACTIVE_STALLED*/:
+			SetMiniToolCheck(IDM_PAUSE, FALSE);
+			SetTimer(m_hMiniPanel, ID_SEEKTIMER, 500, 0);
+			InvalidateRect(m_hMiniPanel, NULL, FALSE);
+			break;
+		case 3/*BASS_ACTIVE_PAUSED*/:
+			SetMiniToolCheck(IDM_PAUSE, TRUE);
+			KillTimer(m_hMiniPanel, ID_SEEKTIMER);
+			break;
+		}
+	}
+}
+
+/* 設定画面を呼び出します（未実装）*/
+static void OnConfig(){
+}
+
+static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg) {
+	switch(pMsg->msg){
+	case WM_SETFOCUS:
+		if(!m_hMiniPanel) break;
+		SetFocus(m_hMiniPanel);
+		pMsg->lMsgResult = TRUE;
+		return TRUE;
+
+	case WM_SYSCOMMAND:
+	case WM_COMMAND:
+		switch (LOWORD(pMsg->wp)){
+		case IDM_PM_TOGGLE:
+		case IDM_PM_LIST:
+		case IDM_PM_RANDOM:
+		case IDM_PM_SINGLE:
+			PostMessage(m_hMiniPanel, WM_F4B24_IPC, WM_F4B24_INTERNAL_ON_PLAY_MODE, 0);
+			break;
+		case IDM_PM_REPEAT:
+			PostMessage(m_hMiniPanel, WM_F4B24_IPC, WM_F4B24_INTERNAL_ON_REPEAT_MODE, 0);
+			break;
+		case IDM_MINIPANEL:
+			if(!m_hMiniPanel){
+				ShowWindow(pMsg->hWnd, SW_HIDE);
+				m_sta.nMiniPanelEnd = 1;
+				m_hMiniPanel = CreateDialogParam(m_hinstDLL, TEXT("MINI_PANEL"), pMsg->hWnd, MiniPanelProc, 0);
+			}else{
+				PanelClose();
+			}
+			pMsg->lMsgResult = TRUE;
+			return TRUE;
+		case IDM_TRAY_WINVIEW:
+			if(m_hMiniPanel){
+				PanelClose();
+				pMsg->lMsgResult = TRUE;
+				return TRUE;
+			}
+			break;
+		}
+	case WM_FITTLE:
+		if (pMsg->wp == GET_MINIPANEL) {
+			pMsg->lMsgResult = (m_hMiniPanel && IsWindow(m_hMiniPanel)) ? (LRESULT)m_hMiniPanel : (LRESULT)0;
+			return TRUE;
+		}
+		break;
+	case WM_INITMENUPOPUP:
+		EnableMenuItem((HMENU)pMsg->wp, IDM_MINIPANEL, MF_BYCOMMAND | MF_ENABLED);
+		break;
+	}
+	return FALSE;
+}
+
+#ifdef UNICODE
+
+static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode) {
+	if (eCode == GENERAL_PLUGIN_EVENT_INIT) {
+		m_hwndMain = hWnd;
+		return OnInitSub();
+	} else if (eCode == GENERAL_PLUGIN_EVENT_QUIT) {
+		OnQuit();
+	} else if (eCode == GENERAL_PLUGIN_EVENT_TRACK_CHANGE) {
+		OnTrackChange();
+	} else if (eCode == GENERAL_PLUGIN_EVENT_STATUS_CHANGE) {
+		OnStatusChange();
+	}
+	return TRUE;
+}
+
+
+#else
+
+// サブクラス化したウィンドウプロシージャ
+static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
+	GENERAL_PLUGIN_HOOK_WNDPROC hwk = { hWnd, msg, wp, lp, 0};
+	if (msg ==  WM_ACTIVATE) {
+		HWND hConfig = FindWindowEx(hWnd, NULL, TEXT("#32770"), TEXT("設定"));
+//		HWND hConfig = FindWindow(TEXT("#32770"), TEXT("設定"));
+		if (hConfig && IsWindow(hConfig) && GetWindowThreadProcessId(hWnd, NULL) == GetWindowThreadProcessId(hConfig, NULL)){
+			typedef void (CALLBACK * LPFNOLDMODE)(HWND hwnd);
+			LPFNOLDMODE pfnoldmode = (LPFNOLDMODE)GetProcAddress(m_hdllConfig, "OldMode");
+			if (pfnoldmode){
+				pfnoldmode(hConfig);
+			}
+		}
+	}
+	if (HookWndProc(&hwk)) return hwk.lMsgResult;
+	return CallWindowProc(m_hOldProc, hWnd, msg, wp, lp);
+}
+
+/* 起動時に一度だけ呼ばれます */
+static BOOL OnInit(){
+	m_hOldProc = (WNDPROC)SetWindowLong(m_hwndMain, GWL_WNDPROC, (LONG)WndProc);
+	return OnInitSub();
+}
+
+
+
+#endif
+
