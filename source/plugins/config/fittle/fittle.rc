@@ -128,7 +128,7 @@ STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "全般"
 FONT 9, "MS UI Gothic"
 BEGIN
-    GROUPBOX        "動作",IDC_STATIC,5,5,193,113
+    GROUPBOX        "動作",IDC_STATIC,5,5,193,125
     CONTROL         "プレイリスト内のファイルの存在確認を行う",IDC_CHECK12,
                     "Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,15,15,
                     171,11
@@ -141,19 +141,21 @@ BEGIN
                     BS_AUTOCHECKBOX | WS_TABSTOP,15,53,180,10
     CONTROL         "再生位置も復元する",IDC_CHECK10,"Button",
                     BS_AUTOCHECKBOX | WS_TABSTOP,25,65,152,10
+    CONTROL         "最後に再生した曲を選択する",IDC_CHECK14,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,25,80,152,10
     CONTROL         "システムの優先度を上げる",IDC_CHECK4,"Button",
-                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,15,77,104,11
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,15,90,104,11
     CONTROL         "閉じるボタンで最小化する",IDC_CHECK5,"Button",
-                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,15,89,104,11
+                    BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,15,102,104,11
     CONTROL         "サブフォルダを検索で圧縮ファイルも検索する",IDC_CHECK6,
-                    "Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,15,101,
+                    "Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,15,114,
                     178,11
-    GROUPBOX        "シーク量の設定",IDC_STATIC,5,125,193,40
-    COMBOBOX        IDC_COMBO1,15,140,26,103,CBS_DROPDOWNLIST | WS_VSCROLL | 
+    GROUPBOX        "シーク量の設定",IDC_STATIC,5,135,193,40
+    COMBOBOX        IDC_COMBO1,15,151,26,103,CBS_DROPDOWNLIST | WS_VSCROLL | 
                     WS_TABSTOP
-    LTEXT           "秒",IDC_STATIC,45,143,10,12
+    LTEXT           "秒",IDC_STATIC,45,153,10,12
     LTEXT           "一度にシークする量を指定してください\n単位は秒で1～60の間で指定できます",
-                    IDC_STATIC,60,140,133,18
+                    IDC_STATIC,60,151,133,18
 END
 
 HOTKEY_SHEET DIALOGEX 0, 0, 201, 175

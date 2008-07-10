@@ -61,6 +61,13 @@
 	ListView_SetItemState(hLV, nIndex, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED)); \
 	ListView_EnsureVisible(hLV, nIndex, TRUE)
 
+// 全ての選択状態を解除後、指定インデックスのアイテムを選択、表示予約
+#define ListView_SingleSelectP(hLV, nIndex) \
+	ListView_SetItemState(hLV, -1, 0, (LVIS_SELECTED | LVIS_FOCUSED)); \
+	ListView_SetItemState(hLV, nIndex, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED)); \
+	PostMessage(hLV, LVM_ENSUREVISIBLE, (WPARAM)nIndex, (LPARAM)TRUE);
+
+
 // ウィンドウをサブクラス化、プロシージャハンドルをウィンドウに関連付ける
 #define SET_SUBCLASS(hWnd, Proc) \
 	SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)Proc))
@@ -1006,7 +1013,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						}
 						GetLongPathName(XARGV[i], szCmdParPath, MAX_FITTLE_PATH); // 98以降
 						nFileIndex = GetIndexFromPath(GetListTab(m_hTab, 0)->pRoot, szCmdParPath);
-						ListView_SingleSelect(GetListTab(m_hTab, 0)->hList, nFileIndex);
+						ListView_SingleSelectP(GetListTab(m_hTab, 0)->hList, nFileIndex);
 						bCmd = TRUE;
 						break;
 				}
@@ -1061,7 +1068,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					}else{
 						WAstrcpyt(szLastPath, &g_cfg.szLastFile, MAX_FITTLE_PATH);
 						nFileIndex = GetIndexFromPath(GetCurListTab(m_hTab)->pRoot, szLastPath);
-						ListView_SingleSelect(GetCurListTab(m_hTab)->hList, nFileIndex);
+						ListView_SingleSelectP(GetCurListTab(m_hTab)->hList, nFileIndex);
 						SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_PLAY, 0), 0);
 						// ポジションも復元
 						if(g_cfg.nResPosFlag){
@@ -1070,9 +1077,19 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 							BASS_ChannelPlay(g_cInfo[g_bNow].hChan,  FALSE);
 						}
 					}
-				}else if(GetKeyState(VK_SHIFT) < 0){
-					// Shiftキーが押されていたら再生
-					PostMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_NEXT, 0), 0);
+				}else if (g_cfg.nSelLastPlayed) {
+					WAstrcpyt(szLastPath, &g_cfg.szLastFile, MAX_FITTLE_PATH);
+					nFileIndex = GetIndexFromPath(GetCurListTab(m_hTab)->pRoot, szLastPath);
+					ListView_SingleSelectP(GetCurListTab(m_hTab)->hList, nFileIndex);
+					if(GetKeyState(VK_SHIFT) < 0){
+						// Shiftキーが押されていたら再生
+						PostMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_PLAY, 0), 0);
+					}
+				}else{
+					if(GetKeyState(VK_SHIFT) < 0){
+						// Shiftキーが押されていたら再生
+						PostMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_NEXT, 0), 0);
+					}
 				}
 				TIMECHECK("レジューム")
 			}
@@ -2529,6 +2546,8 @@ static void LoadConfig(){
 	g_cfg.nResume = WAGetIniInt("Main", "Resume", 0);
 	// 終了時の再生位置も記録復元する
 	g_cfg.nResPosFlag = WAGetIniInt("Main", "ResPosFlag", 0);
+	// 終了時に再生していた曲を起動時に選択する
+	g_cfg.nSelLastPlayed = WAGetIniInt("Main", "SelLastPlayed", 0);
 	// 閉じるボタンで最小化する
 	g_cfg.nCloseMin = WAGetIniInt("Main", "CloseMin", 0);
 	// サブフォルダを検索で圧縮ファイルも検索する

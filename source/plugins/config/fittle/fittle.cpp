@@ -29,48 +29,7 @@ static HMODULE m_hDLL = 0;
 #include "../../../fittle/src/wastr.h"
 #include "../../../fittle/src/wastr.cpp"
 
-static struct {
-	int nBkColor;				// 背景の色
-	int nTextColor;				// 文字の色
-	int nPlayTxtCol;			// 再生曲文字列
-	int nPlayBkCol;				// 再生曲背景
-	int nPlayView;				// 再生曲の表示方法
-	int nHighTask;				// システムの優先度
-	int nGridLine;				// グリッドラインを表示
-	int nSingleExpand;			// フォルダを一つしか開かない
-	int nExistCheck;			// 存在確認
-	int nTimeInList;			// プレイリストで更新日時を取得する
-	int nTreeIcon;				// ツリー、コンボのアイコン表示
-	int nTrayOpt;				// タスクトレイモード
-	int nHideShow;				// 隠しフォルダを表示するか
-	int nTabBottom;				// タブを下に表示する
-	int nTabMulti;				// 多段で表示する
-	int nAllSub;				// 全てのフォルダがサブフォルダを持つ
-	int nPathTip;				// ヒントでフルパスを表示
-	int nInfoTip;				// 曲名お知らせ機能
-	int nTagReverse;			// タイトル、アーティストを反転
-	int nShowHeader;			// ヘッダコントロールを表示する
-	int nSeekAmount;			// シーク量
-	int nVolAmount;				// 音量変化量(隠し設定?)
-	int nResume;				// 終了時に再生していた曲を起動時にも再生する
-	int nResPosFlag;			// 終了時の再生位置も記録復元する
-	int nCloseMin;				// 閉じるボタンで最小化する
-	int nZipSearch;				// サブフォルダを検索で圧縮ファイルも検索する
-	int nTabHide;				// タブが一つの時はタブを隠す
-
-	WASTR szStartPath;	// スタートアップパス
-	WASTR szFilerPath;	// ファイラのパス
-
-	int nHotKey[HOTKEY_COUNT];	// ホットキー
-
-	int nTrayClick[6];			// クリック時の動作
-
-	WASTR szFontName;		// フォントの名前
-	int nFontHeight;			// フォントの高さ
-	int nFontStyle;				// フォントのスタイル
-
-	WASTR szToolPath;
-} m_cfg;				// 設定構造体
+static struct CONFIG m_cfg;				// 設定構造体
 
 static DWORD CALLBACK GetConfigPageCount(void);
 static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel, LPSTR pszConfigPath, int nConfigPathSize);
@@ -171,6 +130,8 @@ static void LoadConfig(){
 	m_cfg.nResume = WAGetIniInt("Main", "Resume", 0);
 	// 終了時の再生位置も記録復元する
 	m_cfg.nResPosFlag = WAGetIniInt("Main", "ResPosFlag", 0);
+	// 終了時に再生していた曲を起動時に選択する
+	m_cfg.nSelLastPlayed = WAGetIniInt("Main", "SelLastPlayed", 1);
 	// 閉じるボタンで最小化する
 	m_cfg.nCloseMin = WAGetIniInt("Main", "CloseMin", 0);
 	// サブフォルダを検索で圧縮ファイルも検索する
@@ -235,6 +196,7 @@ static void SaveConfig(){
 	WASetIniInt("Main", "VolAmount", m_cfg.nVolAmount);
 	WASetIniInt("Main", "Resume", m_cfg.nResume);
 	WASetIniInt("Main", "ResPosFlag", m_cfg.nResPosFlag);
+	WASetIniInt("Main", "SelLastPlayed", m_cfg.nSelLastPlayed);
 	WASetIniInt("Main", "CloseMin", m_cfg.nCloseMin);
 	WASetIniInt("Main", "ZipSearch", m_cfg.nZipSearch);
 	WASetIniInt("Main", "TabHide", m_cfg.nTabHide);
@@ -271,6 +233,7 @@ static BOOL GeneralCheckChanged(HWND hDlg){
 	if (m_cfg.nTagReverse != (int)SendDlgItemMessage(hDlg, IDC_CHECK2, BM_GETCHECK, 0, 0)) return TRUE;
 	if (m_cfg.nResume != (int)SendDlgItemMessage(hDlg, IDC_CHECK3, BM_GETCHECK, 0, 0)) return TRUE;
 	if (m_cfg.nResPosFlag != (int)SendDlgItemMessage(hDlg, IDC_CHECK10, BM_GETCHECK, 0, 0)) return TRUE;
+	if (m_cfg.nSelLastPlayed != (int)SendDlgItemMessage(hDlg, IDC_CHECK14, BM_GETCHECK, 0, 0)) return TRUE;
 	if (m_cfg.nHighTask != (int)SendDlgItemMessage(hDlg, IDC_CHECK4, BM_GETCHECK, 0, 0)) return TRUE;
 	if (m_cfg.nCloseMin != (int)SendDlgItemMessage(hDlg, IDC_CHECK5, BM_GETCHECK, 0, 0)) return TRUE;
 	if (m_cfg.nZipSearch != (int)SendDlgItemMessage(hDlg, IDC_CHECK6, BM_GETCHECK, 0, 0)) return TRUE;
@@ -294,8 +257,11 @@ static BOOL CALLBACK GeneralSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 			SendDlgItemMessage(hDlg, IDC_CHECK2, BM_SETCHECK, (WPARAM)m_cfg.nTagReverse, 0);
 			SendDlgItemMessage(hDlg, IDC_CHECK3, BM_SETCHECK, (WPARAM)m_cfg.nResume, 0);
 			SendDlgItemMessage(hDlg, IDC_CHECK10, BM_SETCHECK, (WPARAM)m_cfg.nResPosFlag, 0);
+			SendDlgItemMessage(hDlg, IDC_CHECK14, BM_SETCHECK, (WPARAM)m_cfg.nSelLastPlayed, 0);
 			if(!m_cfg.nResume){
 				EnableWindow(GetDlgItem(hDlg, IDC_CHECK10), FALSE);
+			}else{
+				EnableWindow(GetDlgItem(hDlg, IDC_CHECK14), FALSE);
 			}
 			SendDlgItemMessage(hDlg, IDC_CHECK4, BM_SETCHECK, (WPARAM)m_cfg.nHighTask, 0);
 			SendDlgItemMessage(hDlg, IDC_CHECK5, BM_SETCHECK, (WPARAM)m_cfg.nCloseMin, 0);
@@ -316,6 +282,7 @@ static BOOL CALLBACK GeneralSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 				m_cfg.nTagReverse = (int)SendDlgItemMessage(hDlg, IDC_CHECK2, BM_GETCHECK, 0, 0);
 				m_cfg.nResume = (int)SendDlgItemMessage(hDlg, IDC_CHECK3, BM_GETCHECK, 0, 0);
 				m_cfg.nResPosFlag = (int)SendDlgItemMessage(hDlg, IDC_CHECK10, BM_GETCHECK, 0, 0);
+				m_cfg.nSelLastPlayed = (int)SendDlgItemMessage(hDlg, IDC_CHECK14, BM_GETCHECK, 0, 0);
 				m_cfg.nHighTask = (int)SendDlgItemMessage(hDlg, IDC_CHECK4, BM_GETCHECK, 0, 0);
 
 				m_cfg.nCloseMin = (int)SendDlgItemMessage(hDlg, IDC_CHECK5, BM_GETCHECK, 0, 0);
@@ -333,8 +300,10 @@ static BOOL CALLBACK GeneralSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 				if(LOWORD(wp)==IDC_CHECK3){
 					if(SendDlgItemMessage(hDlg, IDC_CHECK3, BM_GETCHECK, 0, 0)){
 						EnableWindow(GetDlgItem(hDlg, IDC_CHECK10), TRUE);
+						EnableWindow(GetDlgItem(hDlg, IDC_CHECK14), FALSE);
 					}else{
 						EnableWindow(GetDlgItem(hDlg, IDC_CHECK10), FALSE);
+						EnableWindow(GetDlgItem(hDlg, IDC_CHECK14), TRUE);
 					}
 				}
 			}

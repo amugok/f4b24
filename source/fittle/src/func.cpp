@@ -160,8 +160,8 @@ LPTSTR MyPathAddBackslash(LPTSTR pszPath){
 	}
 }
 
-#ifdef _DEBUG
-#if 1
+#define ALTYPE 1
+#if ALTYPE == 1
 /* リークチェック */
 void *HAlloc(DWORD dwSize){
 	return malloc(dwSize);
@@ -175,7 +175,7 @@ void *HRealloc(LPVOID pPtr, DWORD dwSize){
 void HFree(LPVOID pPtr){
 	free(pPtr);
 }
-#else
+#elif ALTYPE == 2
 /* 開放ポインタアクセスチェック */
 typedef struct {
 	DWORD dwSize;
@@ -204,7 +204,6 @@ void HFree(LPVOID pPtr){
 	HW *o = ((HW *)pPtr) - 1;
 	VirtualProtect(o, o->dwSize, PAGE_GUARD, &dwOldProtect);
 }
-#endif
 #else
 void *HAlloc(DWORD dwSize){
 	return HeapAlloc(GetProcessHeap(), 0, dwSize);

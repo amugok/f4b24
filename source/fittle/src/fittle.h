@@ -113,6 +113,7 @@ struct CONFIG{
 	int nVolAmount;				// 音量変化量(隠し設定?)
 	int nResume;				// 終了時に再生していた曲を起動時にも再生する
 	int nResPosFlag;			// 終了時の再生位置も記録復元する
+	int nSelLastPlayed;			// 終了時に再生していた曲を起動時に選択する
 	int nCloseMin;				// 閉じるボタンで最小化する
 	int nZipSearch;				// サブフォルダを検索で圧縮ファイルも検索する
 	int nTabHide;				// タブが一つの時はタブを隠す
