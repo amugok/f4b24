@@ -165,22 +165,25 @@ static BOOL CALLBACK ExtractArchive(LPTSTR pszArchivePath, LPTSTR pszFileName, v
 	{
 		CHAR cmd[MAX_PATH*2*2];
 		int ret;
-#ifdef UNICODE
-		wsprintfA(cmd, "--i -qq \"%S\" \"%S\"", pszArchivePath, pszFileName);
-#else
 		int i;
 		TCHAR szPlayFile[MAX_PATH*2] = {0};
 		LPTSTR p = pszFileName;
 		// エスケープシーケンスの処理
 		for(i=0;*p;p++){
+#ifdef UNICODE
+#else
 			if(IsDBCSLeadByte(*p)){
 				szPlayFile[i++] = *p++;
 				szPlayFile[i++] = *p;
 				continue;
 			}
+#endif
 			if(*p==TEXT('[') || *p==TEXT(']') || *p==TEXT('!') || *p==TEXT('^') || *p==TEXT('-') || *p==TEXT('\\')) szPlayFile[i++] = TEXT('\\');
 			szPlayFile[i++] = *p;
 		}
+#ifdef UNICODE
+		wsprintfA(cmd, "--i -qq \"%S\" \"%S\"", pszArchivePath, szPlayFile);
+#else
 		wsprintfA(cmd, "--i -qq \"%s\" \"%s\"", pszArchivePath, szPlayFile);
 #endif
 		ret = lpUnLhaExtractMem(NULL, cmd, (LPBYTE)*ppBuf, dwBufferSize, NULL, NULL, &dwOutputSize);
