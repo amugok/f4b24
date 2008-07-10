@@ -294,8 +294,8 @@ static void CALLBACK Start(void *pchinfo, float sVolume, BOOL fFloat){
 		for (i = 1; i< info->chans ; i++)
 			BASS_ASIO_ChannelJoin(FALSE, ch + i, ch);
 		BASS_ASIO_ChannelSetFormat(FALSE, ch, BASS_ASIO_FORMAT_FLOAT);
-		BASS_ASIO_ChannelSetRate(FALSE, ch, info->freq);
 		BASS_ASIO_SetRate(info->freq);
+		BASS_ASIO_ChannelSetRate(FALSE, ch, info->freq);
 		m_nChanOut = ch;
 		m_nChanNum = info->chans;
 		if (m_nChanOut){
