@@ -299,8 +299,8 @@ BOOL WAChooseFont(LPWASTR pFontName, int *pFontHeight, int *pFontStyle, HWND hWn
 #endif
 HPROPSHEETPAGE WACreatePropertySheetPage(HMODULE hmod, LPCSTR lpszTemplate, DLGPROC lpfnDlgProc){
 	union {
-		PROPSHEETPAGEA_V1 A;
-		PROPSHEETPAGEW_V1 W;
+		PROPSHEETPAGEA A;
+		PROPSHEETPAGEW W;
 	} psp;
 	WASTR dlgtemp;
 	WAstrcpyA(&dlgtemp, lpszTemplate);

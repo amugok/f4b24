@@ -138,9 +138,9 @@ void GetModuleParentDir(LPTSTR szParPath){
 }
 
 static void UpdateDriveList(HWND hWnd){
-	SendMessage(hWnd, WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_UPDATE_DRIVELIST, (LPARAM)0);
+//	PostMessage(hWnd, WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_UPDATE_DRIVELIST, (LPARAM)0);
 //	SetDrivesToCombo(m_hCombo);
-//	SendMessage(hWnd, WM_DEVICECHANGE, 0x8000 ,0);
+	SendMessage(hWnd, WM_DEVICECHANGE, 0x8000 ,0);
 }
 
 // éwíËÇµÇΩï∂éöóÒÇéùÇ¬ÉÅÉjÉÖÅ[çÄñ⁄ÇíTÇ∑
@@ -281,6 +281,7 @@ static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode) {
 		EnableMenuItem(GetMenu(hWnd), IDM_BM_ADD, MF_BYCOMMAND | MF_ENABLED);
 		EnableMenuItem(GetMenu(hWnd), IDM_BM_ORG, MF_BYCOMMAND | MF_ENABLED);
 
+	} else if (eCode == GENERAL_PLUGIN_EVENT_INIT2) {
 		UpdateDriveList(hWnd);
 	} else if (eCode == GENERAL_PLUGIN_EVENT_QUIT) {
 		SaveState();

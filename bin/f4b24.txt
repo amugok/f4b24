@@ -1,7 +1,7 @@
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test29
+              for BASS 2.4 test30
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
@@ -75,8 +75,8 @@ Pluginsフォルダ
 	output.fcp      bass.fop bassasio.fop replaygain.fgp cue.fap cueu.fap 設定
 	wadsp.fcp       wadsp.dll 設定
 	addurl.fgp      URLを追加 Ansi/Unicode両対応 要test29以降
-	bookmark.fgp    しおり 要test29以降
-	bookmarku.fgp   しおり Unicode対応 要test29以降
+	bookmark.fgp    しおり 要test30以降
+	bookmarku.fgp   しおり Unicode対応 要test30以降
 	fconfig.fgp     設定画面 fcpプラグインが無いと何もできない Ansi/Unicode両対応 要test29以降
 	minipaneu.fgp   ミニパネル Unicode対応 要test29以降
 	replaygain.fgp  ReplayGain Ansi/Unicode両対応 要test29以降
@@ -97,6 +97,9 @@ Pluginsフォルダ
 	wadsp.dll       -> wadsp.fgp
 
 実験履歴
+	test30/test30u
+		test29のfgp仕様ではしおりの初期化が間に合っていなかった問題の修正
+
 	test29/test29u
 		設定の適用時に強制的にフォルダタブが選択されていた問題に対処
 		BASS初期化時のサンプリングレート指定を追加

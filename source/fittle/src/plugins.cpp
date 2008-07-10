@@ -84,53 +84,42 @@ static BOOL CALLBACK RegisterFittlePlugin(HMODULE hPlugin, LPVOID user){
 	return RegisterGeneralPluginSub(hPlugin, 0, "GetPluginInfo");
 }
 
-void InitPlugins(HWND hWnd){
-	m_hWnd = hWnd;
-	WAEnumPlugins(NULL, "Plugins\\fgp\\", "*.fgp", RegisterGeneralPlugin, 0);
-	WAEnumPlugins(NULL, "Plugins\\Fittle\\", "*.dll", RegisterFittlePlugin, 0);
-}
-
-
-void QuitPlugins(){
-	FreeGeneralPlugins();
-	return;
-}
-
-void OnTrackChagePlugins(){
+static void RaiseEventPlugins(GENERAL_PLUGIN_EVENT eCode){
 	struct GENERAL_PLUGIN_NODE *pList = m_pGeneralPluginList;
 	while (pList) {
 		struct GENERAL_PLUGIN_NODE *pNext = pList->pNext;
 		if (pList->nType == 1) {
-			pList->info.pGeneral->OnEvent(m_hWnd, GENERAL_PLUGIN_EVENT_TRACK_CHANGE);
-		} else {
+			pList->info.pGeneral->OnEvent(m_hWnd, eCode);
+		} else if (eCode == GENERAL_PLUGIN_EVENT_TRACK_CHANGE) {
 			pList->info.pFittle->OnTrackChange();
-		}
-		pList = pNext;
-	}
-}
-
-void OnStatusChangePlugins(){
-	struct GENERAL_PLUGIN_NODE *pList = m_pGeneralPluginList;
-	while (pList) {
-		struct GENERAL_PLUGIN_NODE *pNext = pList->pNext;
-		if (pList->nType == 1) {
-			pList->info.pGeneral->OnEvent(m_hWnd, GENERAL_PLUGIN_EVENT_STATUS_CHANGE);
-		} else {
+		} else if (eCode == GENERAL_PLUGIN_EVENT_STATUS_CHANGE) {
 			pList->info.pFittle->OnStatusChange();
 		}
 		pList = pNext;
 	}
 }
 
+void InitPlugins(HWND hWnd){
+	m_hWnd = hWnd;
+	WAEnumPlugins(NULL, "Plugins\\fgp\\", "*.fgp", RegisterGeneralPlugin, 0);
+	WAEnumPlugins(NULL, "Plugins\\Fittle\\", "*.dll", RegisterFittlePlugin, 0);
+	RaiseEventPlugins(GENERAL_PLUGIN_EVENT_INIT2);
+}
+
+void QuitPlugins(){
+	FreeGeneralPlugins();
+}
+
+void OnTrackChagePlugins(){
+	RaiseEventPlugins(GENERAL_PLUGIN_EVENT_TRACK_CHANGE);
+}
+
+void OnStatusChangePlugins(){
+	RaiseEventPlugins(GENERAL_PLUGIN_EVENT_STATUS_CHANGE);
+}
+
 void OnConfigChangePlugins(){
-	struct GENERAL_PLUGIN_NODE *pList = m_pGeneralPluginList;
-	while (pList) {
-		struct GENERAL_PLUGIN_NODE *pNext = pList->pNext;
-		if (pList->nType == 1) {
-			pList->info.pGeneral->OnEvent(m_hWnd, GENERAL_PLUGIN_EVENT_CONFIG_CHANGE);
-		}
-		pList = pNext;
-	}
+	RaiseEventPlugins(GENERAL_PLUGIN_EVENT_CONFIG_CHANGE);
 }
 
 BOOL OnWndProcPlugins(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp, LRESULT *lplresult) {
@@ -149,5 +138,3 @@ BOOL OnWndProcPlugins(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp, LRESULT *lplres
 	*lplresult = hwk.lMsgResult;
 	return FALSE;
 }
-
-
