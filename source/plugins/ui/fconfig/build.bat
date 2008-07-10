@@ -51,7 +51,7 @@ goto exitcmd
 
 set PREFIX=..\..\..\..\bin\Plugins\fgp\
 set CFLAGS=/GF /Gy /Ox /Os /MD
-set VER_STR=0807070_
+set VER_STR=0807100_
 
 call %0 fconfig fgp
 

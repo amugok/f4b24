@@ -11,10 +11,10 @@ All rights reserved.
 このソフトはオープンソース化されたfittleを基にした非公式で実験的なバージョンです
 
 改変の方針
-	改変点も含めソースを公開する
-	基本的には本体に機能を追加しない
-	本体から分離可能な機能があれば削除する
-	削除した機能は何らかの方法で補う
+	改変点も含めソースを公開します
+	基本的には本体に機能を追加しません
+	本体から分離可能な機能があれば削除します
+	削除した機能は何らかの方法で補います
 
 主な変更点
 	bass 2.4専用
@@ -22,13 +22,13 @@ All rights reserved.
 
 Pluginsフォルダ
 	test29からプラグインはPluginsフォルダ内のサブフォルダから読み込むようにしました
-	これは整理などのためではなく起動時に発生する無駄なdll読み込みによる速度低下を目的としたものです
+	これは整理などのためではなく起動時に発生する無駄なdll読み込みによる速度低下の回避を目的としたものです
 
 	Plugins\bass\
 		bass.dllやbassasio.dll その他bassアドオンを入れる
 
 	Plugins\fap\
-		拡張子fapのプラグインを入れる
+		拡張子fapのプラグインを入れる アーカイバDLL等はここに入れてもよい
 
 	Plugins\fcp\
 		拡張子fcpのプラグインを入れる
@@ -74,13 +74,13 @@ Pluginsフォルダ
 	fittle.fcp      fittle.exe 設定
 	output.fcp      bass.fop bassasio.fop replaygain.fgp cue.fap cueu.fap 設定
 	wadsp.fcp       wadsp.dll 設定
-	addurl.fgp      URLを追加 Ansi/Unicode両対応 test13以降推奨
-	bookmark.fgp    しおり 要test18以降
-	bookmarku.fgp   しおり Unicode対応 要test18以降
-	fconfig.fgp     設定画面 fcpプラグインが無いと何もできない Ansi/Unicode両対応 要test12以降
-	minipaneu.fgp   ミニパネル Unicode対応 要test17以降
-	replaygain.fgp  ReplayGain Ansi/Unicode両対応 要test25以降
-	wadsp.fgp       WinampDSPプラグイン対応 Ansi/Unicode両対応 要test25以降 要bass_wadsp.dll
+	addurl.fgp      URLを追加 Ansi/Unicode両対応 要test29以降
+	bookmark.fgp    しおり 要test29以降
+	bookmarku.fgp   しおり Unicode対応 要test29以降
+	fconfig.fgp     設定画面 fcpプラグインが無いと何もできない Ansi/Unicode両対応 要test29以降
+	minipaneu.fgp   ミニパネル Unicode対応 要test29以降
+	replaygain.fgp  ReplayGain Ansi/Unicode両対応 要test29以降
+	wadsp.fgp       WinampDSPプラグイン対応 Ansi/Unicode両対応 要test29以降 要bass_wadsp.dll
 	bass.fop        bass.dllによる音声出力 要test28以降
 	bassasio.fop    bassasio.dllによる音声出力 要test28以降 要bassasio.dll
 
