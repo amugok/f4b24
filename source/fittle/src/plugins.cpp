@@ -24,23 +24,6 @@ static struct GENERAL_PLUGIN_NODE {
 } *m_pGeneralPluginList = NULL;
 static HWND m_hWnd = NULL;
 
-static void FreeGeneralPlugins(){
-	struct GENERAL_PLUGIN_NODE *pList = m_pGeneralPluginList;
-	while (pList) {
-		struct GENERAL_PLUGIN_NODE *pNext = pList->pNext;
-		if (pList->nType == 1) {
-			if (pList->info.pGeneral->OnEvent(m_hWnd, GENERAL_PLUGIN_EVENT_QUIT)) {
-				FreeLibrary(pList->hDll);
-			}
-		} else {
-			pList->info.pFittle->OnQuit();
-		}
-		HFree(pList);
-		pList = pNext;
-	}
-	m_pGeneralPluginList = NULL;
-}
-
 static BOOL InitPlugin(GENERAL_PLUGIN_NODE *pNode){
 	if (pNode->nType == 1) {
 		return pNode->info.pGeneral->OnEvent(m_hWnd, GENERAL_PLUGIN_EVENT_INIT);
@@ -94,6 +77,8 @@ static void RaiseEventPlugins(GENERAL_PLUGIN_EVENT eCode){
 			pList->info.pFittle->OnTrackChange();
 		} else if (eCode == GENERAL_PLUGIN_EVENT_STATUS_CHANGE) {
 			pList->info.pFittle->OnStatusChange();
+		} else if (eCode == GENERAL_PLUGIN_EVENT_QUIT) {
+			pList->info.pFittle->OnQuit();
 		}
 		pList = pNext;
 	}
@@ -106,8 +91,22 @@ void InitPlugins(HWND hWnd){
 	RaiseEventPlugins(GENERAL_PLUGIN_EVENT_INIT2);
 }
 
+static void FreePlugins(){
+	struct GENERAL_PLUGIN_NODE *pList = m_pGeneralPluginList;
+	m_pGeneralPluginList = NULL;
+	while (pList) {
+		struct GENERAL_PLUGIN_NODE *pNext = pList->pNext;
+		if (pList->nType == 1) {
+			FreeLibrary(pList->hDll);
+		}
+		HFree(pList);
+		pList = pNext;
+	}
+}
+
 void QuitPlugins(){
-	FreeGeneralPlugins();
+	RaiseEventPlugins(GENERAL_PLUGIN_EVENT_QUIT);
+	FreePlugins();
 }
 
 void OnTrackChagePlugins(){

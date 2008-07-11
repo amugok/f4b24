@@ -1,7 +1,7 @@
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test30
+              for BASS 2.4 test31
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
@@ -97,6 +97,9 @@ Pluginsフォルダ
 	wadsp.dll       -> wadsp.fgp
 
 実験履歴
+	test31/test31u
+		fgpの終了時にアクセス違反が発生する可能性があったらしい問題に対処
+
 	test30/test30u
 		test29のfgp仕様ではしおりの初期化が間に合っていなかった問題の修正
 

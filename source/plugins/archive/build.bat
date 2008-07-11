@@ -69,6 +69,7 @@ call %0 cueu fap
 call %0 lhau fap
 call %0 raru fap
 call %0 taru fap
+set VER_STR=0807110U
 call %0 zipu fap
 
 set CFLAGS=%CFLAGSBASE%

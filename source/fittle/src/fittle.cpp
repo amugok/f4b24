@@ -39,11 +39,11 @@
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test30u")
+#define F4B24_VERSION_STRING TEXT("test31u")
 #else
-#define F4B24_VERSION_STRING TEXT("test30")
+#define F4B24_VERSION_STRING TEXT("test31")
 #endif
-#define F4B24_VERSION 30
+#define F4B24_VERSION 31
 #define F4B24_IF_VERSION 28
 #ifndef _DEBUG
 #define FITTLE_TITLE FITTLE_VERSION TEXT(" for BASS 2.4 ") F4B24_VERSION_STRING
@@ -63,8 +63,7 @@
 
 // 全ての選択状態を解除後、指定インデックスのアイテムを選択、表示予約
 #define ListView_SingleSelectP(hLV, nIndex) \
-	ListView_SetItemState(hLV, -1, 0, (LVIS_SELECTED | LVIS_FOCUSED)); \
-	ListView_SetItemState(hLV, nIndex, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED)); \
+	ListView_SingleSelect(hLV, nIndex); \
 	PostMessage(hLV, LVM_ENSUREVISIBLE, (WPARAM)nIndex, (LPARAM)TRUE);
 
 
