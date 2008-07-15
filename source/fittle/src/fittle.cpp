@@ -54,19 +54,6 @@
 /* 1:出力プラグインなしでも音声出力可能 0:音声出力はプラグインに任せる */
 #define DEFAULT_DEVICE_ENABLE 0
 
-//--マクロ--
-// 全ての選択状態を解除後、指定インデックスのアイテムを選択、表示
-#define ListView_SingleSelect(hLV, nIndex) \
-	ListView_SetItemState(hLV, -1, 0, (LVIS_SELECTED | LVIS_FOCUSED)); \
-	ListView_SetItemState(hLV, nIndex, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED)); \
-	ListView_EnsureVisible(hLV, nIndex, TRUE)
-
-// 全ての選択状態を解除後、指定インデックスのアイテムを選択、表示予約
-#define ListView_SingleSelectP(hLV, nIndex) \
-	ListView_SingleSelect(hLV, nIndex); \
-	PostMessage(hLV, LVM_ENSUREVISIBLE, (WPARAM)nIndex, (LPARAM)TRUE);
-
-
 // ウィンドウをサブクラス化、プロシージャハンドルをウィンドウに関連付ける
 #define SET_SUBCLASS(hWnd, Proc) \
 	SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)Proc))
@@ -80,7 +67,8 @@
 
 enum {
 	WM_F4B24_INTERNAL_PREPARE_NEXT_MUSIC = 1,
-	WM_F4B24_INTERNAL_PLAY_NEXT = 2
+	WM_F4B24_INTERNAL_PLAY_NEXT = 2, 
+	WM_F4B24_INTERNAL_RESTORE_POSITION = 3
 };
 // --列挙型の宣言--
 enum {PM_LIST=0, PM_RANDOM, PM_SINGLE};	// プレイモード
@@ -291,6 +279,23 @@ static void lstrcpyntW(LPWSTR lpDst, LPCTSTR lpSrc, int nDstMax){
 #else
 	MultiByteToWideChar(CP_ACP, 0, lpSrc, -1, lpDst, nDstMax); //S-JIS->Unicode
 #endif
+}
+
+// 全ての選択状態を解除後、指定インデックスのアイテムを選択、表示
+static void ListView_SingleSelect(HWND hLV, int nIndex){
+	ListView_SetItemState(hLV, -1, 0, (LVIS_SELECTED | LVIS_FOCUSED));
+	if (nIndex >= 0){
+		ListView_SetItemState(hLV, nIndex, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED));
+		ListView_EnsureVisible(hLV, nIndex, TRUE);
+	}
+}
+
+// 全ての選択状態を解除後、指定インデックスのアイテムを選択、表示予約
+static void ListView_SingleSelectP(HWND hLV, int nIndex) {
+	ListView_SingleSelect(hLV, nIndex);
+	if (nIndex >= 0){
+		PostMessage(hLV, LVM_ENSUREVISIBLE, (WPARAM)nIndex, (LPARAM)TRUE);
+	}
 }
 
 static void lstrcpynAt(LPTSTR lpDst, LPCSTR lpSrc, int nDstMax){
@@ -1068,13 +1073,9 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						WAstrcpyt(szLastPath, &g_cfg.szLastFile, MAX_FITTLE_PATH);
 						nFileIndex = GetIndexFromPath(GetCurListTab(m_hTab)->pRoot, szLastPath);
 						ListView_SingleSelectP(GetCurListTab(m_hTab)->hList, nFileIndex);
-						SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_PLAY, 0), 0);
+						PostMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_PLAY, 0), 0);
 						// ポジションも復元
-						if(g_cfg.nResPosFlag){
-							BASS_ChannelStop(g_cInfo[g_bNow].hChan);
-							BASS_ChannelSetPosition(g_cInfo[g_bNow].hChan, g_cfg.nResPos + g_cInfo[g_bNow].qStart, BASS_POS_BYTE);
-							BASS_ChannelPlay(g_cInfo[g_bNow].hChan,  FALSE);
-						}
+						PostMessage(hWnd, WM_F4B24_IPC, WM_F4B24_INTERNAL_RESTORE_POSITION, 0);
 					}
 				}else if (g_cfg.nSelLastPlayed) {
 					WAstrcpyt(szLastPath, &g_cfg.szLastFile, MAX_FITTLE_PATH);
@@ -2303,7 +2304,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 				PostMessage(GetParent(m_hStatus), WM_USER+1, 0, 0); 
 				break;
-
 			case WM_F4B24_INTERNAL_PREPARE_NEXT_MUSIC:
 				g_pNextFile = SelectNextFile(TRUE);
 				m_nGaplessState = GS_OK;
@@ -2325,6 +2325,14 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					}
 				}
 				break;
+			case WM_F4B24_INTERNAL_RESTORE_POSITION:
+				if(g_cfg.nResPosFlag){
+					BASS_ChannelStop(g_cInfo[g_bNow].hChan);
+					BASS_ChannelSetPosition(g_cInfo[g_bNow].hChan, g_cfg.nResPos + g_cInfo[g_bNow].qStart, BASS_POS_BYTE);
+					BASS_ChannelPlay(g_cInfo[g_bNow].hChan, FALSE);
+				}
+				break;
+
 			case WM_F4B24_IPC_GET_VERSION:
 				return F4B24_VERSION;
 			case WM_F4B24_IPC_GET_IF_VERSION:
