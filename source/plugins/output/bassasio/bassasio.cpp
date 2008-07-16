@@ -112,6 +112,8 @@ static int m_nDevice = 0;
 #include "../../../fittle/src/wastr.h"
 #include "../../../fittle/src/wastr.cpp"
 
+static int m_nChShift = 0;
+
 #define OUTPUT_PLUGIN_ID_BASE (0x20000)
 
 static int CALLBACK GetDeviceCount(void);
@@ -154,6 +156,11 @@ static OUTPUT_PLUGIN_INFO opinfo = {
 	0,0,0,0
 };
 
+static void LoadConfig(void){
+	WASetIniFile(NULL, "Fittle.ini");
+	m_nChShift = WAGetIniInt("BASSASIO", "ChannelShift", 0);
+}
+
 static BOOL LoadBASSASIO(void){
 	int i;
 	HMODULE h[2];
@@ -187,6 +194,7 @@ static BOOL LoadBASSASIO(void){
 			*pft->ppFunc = fp;
 		}
 	}
+	LoadConfig();
 	return TRUE;
 }
 
@@ -299,8 +307,8 @@ static void CALLBACK Start(void *pchinfo, float sVolume, BOOL fFloat){
 	End();
 
 	if (BASS_ASIO_Init(m_nDevice)) {
-		int ch = 0;
 		int i;
+		int ch = m_nChShift;
 		BASS_ASIO_ChannelEnable(FALSE, ch, &AsioProc, (void*)NULL);
 		for (i = 1; i< info->chans ; i++)
 			BASS_ASIO_ChannelJoin(FALSE, ch + i, ch);
