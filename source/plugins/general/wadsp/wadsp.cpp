@@ -28,13 +28,14 @@
 #endif
 
 typedef DWORD HWADSP;
+typedef DWORD HDSP;
 
 typedef LRESULT (CALLBACK WINAMPWINPROC)(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 typedef void (WINAPI *LPBASS_WADSP_Init)(HWND hwndMain);
 typedef HWADSP (WINAPI *LPBASS_WADSP_Load)(const void *dspfile, int x, int y, int width, int height, WINAMPWINPROC *proc);
 typedef void (WINAPI *LPBASS_WADSP_Start)(HWADSP plugin, DWORD module, DWORD hchan);
-typedef int (WINAPI *LPBASS_WADSP_ChannelSetDSP)(HWADSP plugin, DWORD hchan, int priority);
+typedef HDSP (WINAPI *LPBASS_WADSP_ChannelSetDSP)(HWADSP plugin, DWORD hchan, int priority);
 typedef int (WINAPI *LPBASS_WADSP_ChannelRemoveDSP)(HWADSP plugin);
 typedef void (WINAPI *LPBASS_WADSP_Stop)(HWADSP plugin);
 typedef void (WINAPI *LPBASS_WADSP_Free)(void);
@@ -44,6 +45,7 @@ typedef LPCSTR (WINAPI *LPBASS_WADSP_GetName)(HWADSP plugin);
 typedef struct WADSPNODE {
 	struct WADSPNODE *pNext;
 	HWADSP h;
+	HDSP hdsp;
 } WADSPNODE;
 
 static LPBASS_WADSP_Init BASS_WADSP_Init = NULL;
@@ -76,8 +78,13 @@ static /*const*/ struct IMPORT_FUNC_TABLE {
 
 static HMODULE hWaDsp = NULL;
 static WADSPNODE *pDspListTop = NULL;
+static DWORD hTarget = 0;
 
-static BOOL m_fInitialized = FALSE;
+static enum {
+	NOT_INITIALIZED,
+	INITIALIZED,
+	TERMINATED
+} m_fInitialized = NOT_INITIALIZED;
 
 #include "../../../fittle/src/wastr.h"
 #include "../../../fittle/src/wastr.cpp"
@@ -148,6 +155,7 @@ static BOOL CALLBACK LoadDSPPluginProc(LPWASTR lpPath, LPVOID user){
 	WADSPNODE *pNew = (WADSPNODE *)HAlloc(sizeof(WADSPNODE));
 	if (pNew) {
 		pNew->h = BASS_WADSP_Load(lpPath, 0, 0, 5, 5, NULL);
+		pNew->hdsp = 0;
 		if(pNew->h){
 			BASS_WADSP_Start(pNew->h, 0, 0);
 			pNew->pNext = pDspListTop;
@@ -160,34 +168,45 @@ static BOOL CALLBACK LoadDSPPluginProc(LPWASTR lpPath, LPVOID user){
 }
 
 static BOOL InitBassWaDsp(HWND hWnd){
-	if (m_fInitialized) return TRUE;
-	m_fInitialized = TRUE;
+	if (m_fInitialized != NOT_INITIALIZED) return m_fInitialized == INITIALIZED;
+	m_fInitialized = INITIALIZED;
 	BASS_WADSP_Init(hWnd);
 	WAEnumFiles(NULL, "Plugins\\wadsp\\", "dsp_*.dll", LoadDSPPluginProc, 0);
 	return TRUE;
 }
 
+static void DetachDSP(WADSPNODE *pDsp) {
+	if (pDsp->hdsp) {
+		BASS_WADSP_ChannelRemoveDSP(pDsp->h);
+		//BASS_WADSP_Stop(pDsp->h);
+		pDsp->hdsp = 0;
+	}
+}
+
 static BOOL SetBassWaDsp(HWND hWnd, DWORD hChan, BOOL fSw){
-	if (InitBassWaDsp(hWnd)) {
+	if (hChan && InitBassWaDsp(hWnd)) {
 		WADSPNODE *pDsp = pDspListTop;
 		while (pDsp){
 			WADSPNODE *pNext = pDsp->pNext;
+			DetachDSP(pDsp);
 			if (fSw) {
-				BASS_WADSP_ChannelSetDSP(pDsp->h, hChan, 0);
-			} else {
-				BASS_WADSP_ChannelRemoveDSP(pDsp->h);
+				//BASS_WADSP_Start(pDsp->h, 0, 0);
+				pDsp->hdsp = BASS_WADSP_ChannelSetDSP(pDsp->h, hChan, 0);
+				pDsp = pNext;
 			}
-			pDsp = pNext;
 		}
 	}
 	return TRUE;
 }
 
 static void FreeBassWaDsp(){
-	if (m_fInitialized) {
+	hTarget = 0;
+	if (m_fInitialized == INITIALIZED) {
 		WADSPNODE *pDsp = pDspListTop;
+		m_fInitialized = TERMINATED;
 		while (pDsp){
 			WADSPNODE *pNext = pDsp->pNext;
+			DetachDSP(pDsp);
 			BASS_WADSP_Stop(pDsp->h);
 			HFree(pDsp);
 			pDsp = pNext;
@@ -195,16 +214,23 @@ static void FreeBassWaDsp(){
 		pDspListTop = NULL;
 		if(BASS_WADSP_Free) BASS_WADSP_Free();
 	}
+/*
+	if (hWaDsp) {
+		FreeLibrary(hWaDsp);
+		hWaDsp = NULL;
+	}
+*/
 }
 
 static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg){
 	switch(pMsg->msg){
 	case WM_F4B24_IPC:
-		if (pMsg->wp == WM_F4B24_HOOK_CREATE_DECODE_STREAM) {
-			SetBassWaDsp(pMsg->hWnd, (DWORD)pMsg->lp, TRUE);
-		} else if (pMsg->wp == WM_F4B24_HOOK_FREE_DECODE_STREAM) {
-			SetBassWaDsp(pMsg->hWnd, (DWORD)pMsg->lp, FALSE);
-		} else if (pMsg->wp == WM_F4B24_IPC_INVOKE_WADSP_SETUP){
+		if (pMsg->wp == WM_F4B24_HOOK_START_DECODE_STREAM) {
+			DWORD hChan = (DWORD)pMsg->lp;
+			SetBassWaDsp(pMsg->hWnd, hChan, TRUE);
+//		} else if (pMsg->wp == WM_F4B24_HOOK_FREE_STREAM) {
+//			SetBassWaDsp(pMsg->hWnd, 0, FALSE);
+		} else if (pMsg->wp == WM_F4B24_IPC_INVOKE_WADSP_SETUP && InitBassWaDsp(pMsg->hWnd)){
 			int i;
 			WADSPNODE *pDsp = pDspListTop;
 			for (i = 0; pDsp; i++){

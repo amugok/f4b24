@@ -31,7 +31,8 @@
 #define BASS_SAMPLE_FLOAT		256
 #define BASS_DATA_FLOAT		0x40000000
 #define BASS_STREAMPROC_END		0x80000000
-#define BASS_DEVICE_DEFAULT		2
+
+#define BASS_DEVICE_DEFAULT		2
 
 #define BASS_STREAM_DECODE		0x200000
 #define BASS_MUSIC_DECODE		BASS_STREAM_DECODE
@@ -255,12 +256,23 @@ static int CALLBACK GetStatus(void){
 	return OUTPUT_PLUGIN_STATUS_STOP;
 }
 
+static void CheckStartDecodeStream(DWORD hChan) {
+	static DWORD hOldChan = 0;
+	static DWORD dwResult;
+	if (hOldChan != hChan) {
+		hOldChan = hChan;
+//		SendMessage(opinfo.hWnd, WM_F4B24_IPC, WM_F4B24_HOOK_START_DECODE_STREAM, (LPARAM)hChan);
+		SendMessageTimeout(opinfo.hWnd, WM_F4B24_IPC, WM_F4B24_HOOK_START_DECODE_STREAM, (LPARAM)hChan, SMTO_ABORTIFHUNG, 100, &dwResult);
+	}
+}
+
 // メインストリームプロシージャ
 static DWORD CALLBACK MainStreamProc(DWORD handle, void *buf, DWORD len, void *user){
 	DWORD r;
 	BASS_CHANNELINFO bci;
 	float sAmp = 0;
 	DWORD hChan = opinfo.GetDecodeChannel(&sAmp);
+	CheckStartDecodeStream(hChan);
 	if(BASS_ChannelGetInfo(handle ,&bci) && BASS_ChannelIsActive(hChan)){
 		BOOL fFloat = bci.flags & BASS_SAMPLE_FLOAT;
 		r = BASS_ChannelGetData(hChan, buf, fFloat ? len | BASS_DATA_FLOAT : len);

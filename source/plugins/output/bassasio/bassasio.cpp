@@ -267,6 +267,16 @@ static int CALLBACK GetStatus(void){
 	return OUTPUT_PLUGIN_STATUS_STOP;
 }
 
+static void CheckStartDecodeStream(DWORD hChan) {
+	static DWORD hOldChan = 0;
+	static DWORD dwResult;
+	if (hOldChan != hChan) {
+		hOldChan = hChan;
+//		SendMessage(opinfo.hWnd, WM_F4B24_IPC, WM_F4B24_HOOK_START_DECODE_STREAM, (LPARAM)hChan);
+		SendMessageTimeout(opinfo.hWnd, WM_F4B24_IPC, WM_F4B24_HOOK_START_DECODE_STREAM, (LPARAM)hChan, SMTO_ABORTIFHUNG, 100, &dwResult);
+	}
+}
+
 static DWORD CALLBACK AsioProc(BOOL input, DWORD channel, void *buffer, DWORD length, void *user)
 {
 	DWORD r = 0;
@@ -274,6 +284,7 @@ static DWORD CALLBACK AsioProc(BOOL input, DWORD channel, void *buffer, DWORD le
 	float sAmp;
 	DWORD hChan = opinfo.GetDecodeChannel(&sAmp);
 	if (BASS_ChannelIsActive(hChan)){
+		CheckStartDecodeStream(hChan);
 		r = BASS_ChannelGetData(hChan, buffer, length | BASS_DATA_FLOAT);
 		if (r == (DWORD)-1) r = 0;
 		if(opinfo.IsEndCue() || !BASS_ChannelIsActive(hChan)){
@@ -299,7 +310,8 @@ static void CALLBACK Start(void *pchinfo, float sVolume, BOOL fFloat){
 		m_nChanOut = ch;
 		m_nChanNum = info->chans;
 		if (m_nChanOut){
-			SendMessage(opinfo.hWnd, WM_F4B24_IPC, WM_F4B24_HOOK_CREATE_STREAM, (LPARAM)m_nChanOut);
+			SendMessage(opinfo.hWnd, WM_F4B24_IPC, WM_F4B24_HOOK_CREATE_STREAM, (LPARAM)0);
+			SendMessage(opinfo.hWnd, WM_F4B24_IPC, WM_F4B24_HOOK_CREATE_ASIO_STREAM, (LPARAM)m_nChanOut);
 		}
 		SetVolume(sVolume);
 		Play();
@@ -308,7 +320,8 @@ static void CALLBACK Start(void *pchinfo, float sVolume, BOOL fFloat){
 
 static void CALLBACK End(void){
 	if (m_nChanOut >= 0) {
-		SendMessage(opinfo.hWnd, WM_F4B24_IPC, WM_F4B24_HOOK_FREE_STREAM, (LPARAM)m_nChanOut);
+		SendMessage(opinfo.hWnd, WM_F4B24_IPC, WM_F4B24_HOOK_FREE_ASIO_STREAM, (LPARAM)m_nChanOut);
+		SendMessage(opinfo.hWnd, WM_F4B24_IPC, WM_F4B24_HOOK_FREE_STREAM, (LPARAM)0);
 		BASS_ASIO_Stop();
 		BASS_ASIO_Free();
 		m_nChanOut = -1;

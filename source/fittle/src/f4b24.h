@@ -50,3 +50,6 @@
 #define WM_F4B24_HOOK_REPLAY_GAIN 502			/* test25 or later */
 #define WM_F4B24_HOOK_CREATE_DECODE_STREAM 503	/* test25 or later */
 #define WM_F4B24_HOOK_FREE_DECODE_STREAM 504	/* test28 or later */
+#define WM_F4B24_HOOK_START_DECODE_STREAM 505	/* test32 or later */
+#define WM_F4B24_HOOK_CREATE_ASIO_STREAM 506	/* test32 or later */
+#define WM_F4B24_HOOK_FREE_ASIO_STREAM 507		/* test32 or later */
