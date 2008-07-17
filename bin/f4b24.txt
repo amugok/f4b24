@@ -1,7 +1,7 @@
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test31
+              for BASS 2.4 test32
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
@@ -45,17 +45,16 @@ Pluginsフォルダ
 	Plugins\wadsp\
 		Winamp用dspプラグインを入れる
 
-追加したプラグイン(公式でも利用可能)
-	minipane.dll    ミニパネル
-	minipane.fcp    minipane.dll/minipaneu.dll 設定
+追加したプログラム
+	fconfig.exe     設定画面 fcpプラグインが提供する設定画面の表示 標準で同梱
+
+追加したFittleプラグイン(公式でも利用可能)
+	minipane.dll    ミニパネル minipane.fcpを同じ場所に置けば設定画面も拡張される Win9x/Meや公式で使わない場合minipaneu.fgpを推奨
 	taskvol.dll     タスクバー上ホイールで音量を変える 強制終了時にエクスプローラごと落ちる問題に対処
 	xdelfile.dll    ファイル削除機能無効化
 
-追加したプログラム
-	fconfig.exe     設定画面 fcpプラグインが無いと何もできない
-
-追加した専用プラグイン
-	cue.fap         cueシート対応 Ansi版専用 要test14以降
+追加した専用書庫プラグイン
+	cue.fap         cueシート対応 Ansi版専用 cueシート注釈によるreplaygain対応 要test14以降
 	arj.fap         arj書庫対応 Ansi版専用 要統合アーカイバプロジェクト版unarj32j.dll
 	cab.fap         cab書庫対応 Ansi版専用 要IE5以降(cabinet.dll又はfdi.dll)
 	gca.fap         gca書庫対応 Ansi版専用
@@ -63,7 +62,7 @@ Pluginsフォルダ
 	rar.fap         rar書庫対応 Ansi版専用 要RARLABオフィシャル版unrar.dll
 	tar.fap         tar書庫対応 Ansi版専用 要統合アーカイバプロジェクト版tar32.dll
 	zip.fap         zip書庫対応 Ansi版専用 要統合アーカイバプロジェクト版unzip32.dll
-	cueu.fap        cueシート対応 Unicode版専用
+	cueu.fap        cueシート対応 Unicode版専用 cueシート注釈によるreplaygain対応
 	arju.fap        arj書庫対応 Unicode版専用 要統合アーカイバプロジェクト版unarj32j.dll
 	cabu.fap        cab書庫対応 Unicode版専用 要IE5以降(cabinet.dll又はfdi.dll)
 	gcau.fap        gca書庫対応 Unicode版専用 ただしUnicode非対応
@@ -71,17 +70,24 @@ Pluginsフォルダ
 	raru.fap        rar書庫対応 Unicode版専用 要RARLABオフィシャル版unrar.dll
 	taru.fap        tar書庫対応 Unicode版専用 ただしUnicode非対応 要統合アーカイバプロジェクト版tar32.dll
 	zipu.fap        zip書庫対応 Unicode版専用 ただしUnicode非対応 要統合アーカイバプロジェクト版unzip32.dll
-	fittle.fcp      fittle.exe 設定
+
+追加した専用設定プラグイン
+	fittle.fcp      fittle.exe 設定 標準で同梱
+	minipane.fcp    minipane.dll/minipaneu.fgp 設定
 	output.fcp      bass.fop bassasio.fop replaygain.fgp cue.fap cueu.fap 設定
-	wadsp.fcp       wadsp.dll 設定
+	wadsp.fcp       wadsp.fgp 設定
+
+追加した専用一般プラグイン
 	addurl.fgp      URLを追加 Ansi/Unicode両対応 要test29以降
-	bookmark.fgp    しおり 要test30以降
+	bookmark.fgp    しおり 要test30以降 Win9x/Me以外では非推奨
 	bookmarku.fgp   しおり Unicode対応 要test30以降
-	fconfig.fgp     設定画面 fcpプラグインが無いと何もできない Ansi/Unicode両対応 要test29以降
-	minipaneu.fgp   ミニパネル Unicode対応 要test29以降
+	fconfig.fgp     設定画面 fconfig.exeとほぼ同等機能 simalistの設定画面を使わない場合不要 Ansi/Unicode両対応 要test29以降
+	minipaneu.fgp   ミニパネル Unicode対応 要test29以降 Win9x/Me非対応
 	replaygain.fgp  ReplayGain Ansi/Unicode両対応 要test29以降
-	wadsp.fgp       WinampDSPプラグイン対応 Ansi/Unicode両対応 要test29以降 要bass_wadsp.dll
-	bass.fop        bass.dllによる音声出力 要test28以降
+	wadsp.fgp       WinampDSPプラグイン対応 Ansi/Unicode両対応 要test32以降 要bass_wadsp.dll
+
+追加した専用出力プラグイン
+	bass.fop        bass.dllによる音声出力 要test28以降 標準で同梱
 	bassasio.fop    bassasio.dllによる音声出力 要test28以降 要bassasio.dll
 
 廃止した専用プラグイン
@@ -97,11 +103,15 @@ Pluginsフォルダ
 	wadsp.dll       -> wadsp.fgp
 
 実験履歴
+	test32/test32u
+		前回最後に再生したファイルがみつからない場合リストが全選択される問題に対処
+		wadsp.fgpの安定性向上のためのbass.fopの変更
+
 	test31/test31u
 		fgpの終了時にアクセス違反が発生する可能性があったらしい問題に対処
 
 	test30/test30u
-		test29のfgp仕様ではしおりの初期化が間に合っていなかった問題の修正
+		test29のfgp仕様ではしおりの初期化が間に合っていなかった問題に対処
 
 	test29/test29u
 		設定の適用時に強制的にフォルダタブが選択されていた問題に対処
@@ -113,7 +123,7 @@ Pluginsフォルダ
 		音声出力機能を削除してみた
 
 	test27/test27u
-		Ansi版でもWindows98で起動できなかった問題を修正
+		Ansi版でもWindows98で起動できなかった問題に対処
 
 	test26/test26u
 		BASSが音量増幅機能を持たないため無音になる場合があった問題に対処
