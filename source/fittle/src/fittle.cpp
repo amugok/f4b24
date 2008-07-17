@@ -36,7 +36,9 @@
 #if (_MSC_VER >= 1200) && (_MSC_VER < 1500)
 #pragma comment(linker, "/OPT:NOWIN98")
 #elif (_MSC_VER >= 1500)
-
+#pragma comment(lib, "../../extra/smartvc9/smartvc9.lib")
+#pragma comment(linker,"/NODEFAULTLIB:msvcrt.lib")
+#pragma comment(linker,"/ENTRY:SmartStartup")
 #endif
 #endif
 

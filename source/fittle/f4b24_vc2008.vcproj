@@ -112,6 +112,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalOptions="/QIfist"
 				Optimization="3"
 				InlineFunctionExpansion="0"
 				EnableIntrinsicFunctions="true"
@@ -148,7 +149,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)\Fittle.exe"
+				OutputFile="../../bin/Fittle.exe"
 				LinkIncremental="1"
 				GenerateManifest="false"
 				GenerateDebugInformation="false"
