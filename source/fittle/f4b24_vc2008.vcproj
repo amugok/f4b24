@@ -112,7 +112,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/QIfist"
 				Optimization="3"
 				InlineFunctionExpansion="0"
 				EnableIntrinsicFunctions="true"
