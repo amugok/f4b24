@@ -33,7 +33,11 @@
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/MERGE:.rdata=.text")
+#if (_MSC_VER >= 1200) && (_MSC_VER < 1500)
 #pragma comment(linker, "/OPT:NOWIN98")
+#elif (_MSC_VER >= 1500)
+
+#endif
 #endif
 
 // ソフト名（バージョンアップ時に忘れずに更新）

@@ -160,7 +160,7 @@ LPTSTR MyPathAddBackslash(LPTSTR pszPath){
 	}
 }
 
-#define ALTYPE 1
+#define ALTYPE 0
 #if ALTYPE == 1
 /* リークチェック */
 void *HAlloc(DWORD dwSize){
