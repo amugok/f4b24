@@ -175,9 +175,9 @@ static BOOL CALLBACK ExtractArchive(LPTSTR pszArchivePath, LPTSTR pszFileName, v
 		CHAR cmd[MAX_PATH*2*2];
 		int ret;
 #ifdef UNICODE
-		wsprintfA(cmd, "--display-dialog=0 \"%S\" \"%S\"", pszArchivePath, pszFileName);
+		wsprintfA(cmd, "--display-dialog=0 \"%S\" \"%s\"", pszArchivePath, iinfo.szFileName);
 #else
-		wsprintfA(cmd, "--display-dialog=0 \"%s\" \"%s\"", pszArchivePath, pszFileName);
+		wsprintfA(cmd, "--display-dialog=0 \"%s\" \"%s\"", pszArchivePath, iinfo.szFileName);
 #endif
 		ret = lpUnLhaExtractMem(NULL, cmd, (LPBYTE)*ppBuf, dwBufferSize, NULL, NULL, &dwOutputSize);
 #if 1

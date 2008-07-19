@@ -166,23 +166,20 @@ static BOOL CALLBACK ExtractArchive(LPTSTR pszArchivePath, LPTSTR pszFileName, v
 		CHAR cmd[MAX_PATH*2*2];
 		int ret;
 		int i;
-		TCHAR szPlayFile[MAX_PATH*2] = {0};
-		LPTSTR p = pszFileName;
+		CHAR szPlayFile[MAX_PATH*2] = {0};
+		LPSTR p = iinfo.szFileName;
 		// エスケープシーケンスの処理
 		for(i=0;*p;p++){
-#ifdef UNICODE
-#else
 			if(IsDBCSLeadByte(*p)){
 				szPlayFile[i++] = *p++;
 				szPlayFile[i++] = *p;
 				continue;
 			}
-#endif
-			if(*p==TEXT('[') || *p==TEXT(']') || *p==TEXT('!') || *p==TEXT('^') || *p==TEXT('-') || *p==TEXT('\\')) szPlayFile[i++] = TEXT('\\');
+			if(*p=='[' || *p==']' || *p=='!' || *p=='^' || *p=='-' || *p=='\\') szPlayFile[i++] = '\\';
 			szPlayFile[i++] = *p;
 		}
 #ifdef UNICODE
-		wsprintfA(cmd, "--i -qq \"%S\" \"%S\"", pszArchivePath, szPlayFile);
+		wsprintfA(cmd, "--i -qq \"%S\" \"%s\"", pszArchivePath, szPlayFile);
 #else
 		wsprintfA(cmd, "--i -qq \"%s\" \"%s\"", pszArchivePath, szPlayFile);
 #endif
