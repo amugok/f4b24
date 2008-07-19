@@ -298,6 +298,8 @@ static DWORD CALLBACK AsioProc(BOOL input, DWORD channel, void *buffer, DWORD le
 		if(opinfo.IsEndCue() || !BASS_ChannelIsActive(hChan)){
 			opinfo.PlayNext(opinfo.hWnd);
 		}
+	} else {
+		opinfo.PlayNext(opinfo.hWnd);
 	}
 	return r;
 }

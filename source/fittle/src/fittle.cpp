@@ -35,7 +35,7 @@
 #pragma comment(linker,"/MERGE:.rdata=.text")
 #if (_MSC_VER >= 1200) && (_MSC_VER < 1500)
 #pragma comment(linker, "/OPT:NOWIN98")
-#elif (_MSC_VER >= 1500)
+#elif (_MSC_VER >= 1500) && (_MSC_VER < 1600)
 #pragma comment(lib, "../../extra/smartvc9/smartvc9.lib")
 #pragma comment(linker,"/NODEFAULTLIB:msvcrt.lib")
 #pragma comment(linker,"/ENTRY:SmartStartup")
@@ -45,16 +45,16 @@
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test32u")
+#define F4B24_VERSION_STRING TEXT("test33u")
 #else
-#define F4B24_VERSION_STRING TEXT("test32")
+#define F4B24_VERSION_STRING TEXT("test33")
 #endif
-#define F4B24_VERSION 32
+#define F4B24_VERSION 33
 #define F4B24_IF_VERSION 28
 #ifndef _DEBUG
-#define FITTLE_TITLE FITTLE_VERSION TEXT(" for BASS 2.4 ") F4B24_VERSION_STRING
+#define FITTLE_TITLE TEXT("Fittle - f4b24") F4B24_VERSION_STRING
 #else
-#define FITTLE_TITLE FITTLE_VERSION TEXT(" for BASS 2.4 ") F4B24_VERSION_STRING TEXT(" <Debug>")
+#define FITTLE_TITLE TEXT("Fittle - f4b24") F4B24_VERSION_STRING TEXT(" <Debug>")
 #endif
 
 /* 1:出力プラグインなしでも音声出力可能 0:音声出力はプラグインに任せる */
@@ -334,7 +334,7 @@ static HMODULE ExpandArgs(int *pARGC, LPTSTR **pARGV){
 	/* Visual C++以外の場合MSVCRT.DLLに引数を解析させる */
 	typedef struct { int newmode; } GMASTARTUPINFO;
 	typedef void (__cdecl *LPFNGETMAINARGS) (int *pargc, char ***pargv, char ***penvp, int dowildcard, GMASTARTUPINFO * startinfo);
-	HMODULE h = LoadLibrary("MSVCRT.DLL");
+	HMODULE h = LoadLibraryA("MSVCRT.DLL");
 	*pARGC = 1;
 	if (h){
 		LPFNGETMAINARGS pfngma = (LPFNGETMAINARGS)GetProcAddress(h, "__getmainargs");
@@ -577,7 +577,7 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 	return (int)msg.wParam;
 }
 
-#if 1 
+#if 1
 #define TIMESTART
 #define TIMECHECK(m) 
 #else
@@ -635,6 +635,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 		case WM_USER+1:
 			OnChangeTrack();
+			OPResetOnPlayNextBySystem();
 			break;
 
 		case WM_CREATE:

@@ -320,6 +320,7 @@ static DWORD CALLBACK MainStreamProc(DWORD handle, void *buf, DWORD len, void *u
 			opinfo.PlayNext(opinfo.hWnd);
 		}
 	}else{
+		opinfo.PlayNext(opinfo.hWnd);
 		r = BASS_STREAMPROC_END;
 	}
 	return r;

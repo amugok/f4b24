@@ -16,6 +16,7 @@ static struct OUTPUT_PLUGIN_NODE {
 
 /* 初期化された出力プラグインIF */
 static OUTPUT_PLUGIN_INFO *m_pOutputPlugin = NULL;
+static volatile BOOL m_fOnSetupNext = FALSE;
 
 /* bass.dll単体だと音量増幅ができないため処理をユーザー選択する */
 static float CalcBassVolume(DWORD dwVol){
@@ -86,9 +87,16 @@ static BOOL CALLBACK OPCBIsEndCue(void){
 	return fRet;
 }
 
+static void OPResetOnPlayNextBySystem(void){
+	m_fOnSetupNext = FALSE;
+}
+
 static void CALLBACK OPCBPlayNext(HWND hWnd){
-	m_bCueEnd = FALSE;
-	PostMessage(hWnd, WM_F4B24_IPC, WM_F4B24_INTERNAL_PLAY_NEXT, 0);
+	if (!m_fOnSetupNext) {
+		m_fOnSetupNext = TRUE;
+		m_bCueEnd = FALSE;
+		PostMessage(hWnd, WM_F4B24_IPC, WM_F4B24_INTERNAL_PLAY_NEXT, 0);
+	}
 }
 
 static DWORD CALLBACK OPCBGetDecodeChannel(float *pGain) {
@@ -129,9 +137,10 @@ static DWORD CALLBACK Default_StreamProc(DWORD handle, void *buf, DWORD len, voi
 		r = BASS_ChannelGetData(hChan, buf, fFloat ? len | BASS_DATA_FLOAT : len);
 		if (r == (DWORD)-1) r = 0;
 		if(OPCBIsEndCue() || !BASS_ChannelIsActive(hChan)){
-		OPCBPlayNext(m_hwndDefault);
+			OPCBPlayNext(m_hwndDefault);
 		}
 	}else{
+		OPCBPlayNext(m_hwndDefault);
 		r = BASS_STREAMPROC_END;
 	}
 	return r;
