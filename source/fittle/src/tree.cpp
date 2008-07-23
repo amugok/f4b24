@@ -32,8 +32,13 @@ static int m_iListIcon = -1;
 int SetDrivesToCombo(HWND hCB){
 	DWORD dwSize;
 	LPTSTR szBuff;
+	int nDriveIndex;
+	TCHAR szPath[MAX_FITTLE_PATH];
 	COMBOBOXEXITEM citem = {0};
 	int i;
+
+	SendMessage(hCB, WM_GETTEXT, (WPARAM)MAX_FITTLE_PATH, (LPARAM)szPath);
+	if (!szPath[0]) lstrcpy(szPath, TEXT("C:\\"));
 
 	citem.mask = CBEIF_TEXT | CBEIF_LPARAM | CBEIF_IMAGE | CBEIF_SELECTEDIMAGE;
 	citem.cchTextMax = MAX_FITTLE_PATH;
@@ -57,8 +62,20 @@ int SetDrivesToCombo(HWND hCB){
 
 	SendMessage(GetParent(hCB), WM_F4B24_IPC, (WPARAM)WM_F4B24_HOOK_UPDATE_DRIVELISTE, (LPARAM)hCB);
 
-	SendMessage(hCB, CB_SETCURSEL, 
-		(WPARAM)SendMessage(hCB, CB_FINDSTRINGEXACT, (WPARAM)-1, (LPARAM)(LPTSTR)TEXT("C:\\")), 0);
+//	SendMessage(hCB, CB_SETCURSEL, 
+//		(WPARAM)SendMessage(hCB, CB_FINDSTRINGEXACT, (WPARAM)-1, (LPARAM)(LPTSTR)TEXT("C:\\")), 0);
+
+	nDriveIndex = (int)SendMessage(hCB, CB_FINDSTRINGEXACT, (WPARAM)0, (LPARAM)szPath);
+	//assert(nDriveIndex>=0);
+
+	if(nDriveIndex>=0){
+		SendMessage(hCB, CB_SETCURSEL, (WPARAM)nDriveIndex, 0);
+	}else{
+		SendMessage(hCB, CB_SETCURSEL, (WPARAM)-1, 0);
+		SendMessage(hCB, WM_SETTEXT, (WPARAM)0, (LPARAM)szPath);
+		//return NULL;
+	}
+
 	// アイコン取得
 	if(g_cfg.nTreeIcon) RefreshComboIcon(hCB);
 	return i;
@@ -138,15 +155,20 @@ HTREEITEM MakeDriveNode(HWND hCB, HWND hTV){
 
 	//コンボボックスの選択文字列取得
 	nNowCBIndex = (int)SendMessage(hCB, CB_GETCURSEL, 0, 0);
-	SendMessage(hCB, CB_GETLBTEXT, (WPARAM)nNowCBIndex, (LPARAM)szNowDrive);
+	if (nNowCBIndex >= 0)
+		SendMessage(hCB, CB_GETLBTEXT, (WPARAM)nNowCBIndex, (LPARAM)szNowDrive);
+	else
+		SendMessage(hCB, WM_GETTEXT, (WPARAM)MAX_FITTLE_PATH, (LPARAM)szNowDrive);
 	//ツリービューにドライブ追加
 	TreeView_DeleteAllItems(hTV);
 	tvi.hInsertAfter = TVI_LAST;
 	tvi.item.mask = TVIF_TEXT | TVIF_IMAGE | TVIF_SELECTEDIMAGE;
 	tvi.hParent = TVI_ROOT;
 	tvi.item.pszText = szNowDrive;
-	tvi.item.iImage = tvi.item.iSelectedImage = 
-		(int)SendMessage(hCB, CB_GETITEMDATA, (int)nNowCBIndex, 0);
+	if (nNowCBIndex >= 0)
+		tvi.item.iImage = tvi.item.iSelectedImage = (int)SendMessage(hCB, CB_GETITEMDATA, (int)nNowCBIndex, 0);
+	else
+		tvi.item.iImage = tvi.item.iSelectedImage = -1;
 	hDriveNode = TreeView_InsertItem(hTV, &tvi);
 	// ダミーノードを追加
 	tvi.hParent = hDriveNode;
@@ -278,15 +300,17 @@ HTREEITEM MakeTreeFromPath(HWND hTV, HWND hCB, LPTSTR szSetPath){
 
 	// szDriveNameにドライブを設定
 	MyPathAddBackslash(szDriveName);
-	nDriveIndex = (int)SendMessage(hCB, CB_FINDSTRINGEXACT, (WPARAM)-1, (LPARAM)szDriveName);
 
-	assert(nDriveIndex>=0);
+	nDriveIndex = (int)SendMessage(hCB, CB_FINDSTRINGEXACT, (WPARAM)0, (LPARAM)szDriveName);
+	//assert(nDriveIndex>=0);
 
-	if(nDriveIndex<0){
-		return NULL;
+	if(nDriveIndex>=0){
+		SendMessage(hCB, CB_SETCURSEL, (WPARAM)nDriveIndex, 0);
+	}else{
+		SendMessage(hCB, CB_SETCURSEL, (WPARAM)-1, 0);
+		SendMessage(hCB, WM_SETTEXT, (WPARAM)0, (LPARAM)szDriveName);
+		//return NULL;
 	}
-
-	SendMessage(hCB, CB_SETCURSEL, (WPARAM)nDriveIndex, 0);
 
 	i = lstrlen(szDriveName);
 	hDriveNode = MakeDriveNode(hCB, hTV);
