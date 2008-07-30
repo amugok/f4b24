@@ -376,7 +376,7 @@ static void CALLBACK SetVolume(float sVolume){
 	if (m_nChanOut >= 0) {
 		float sAmp;
 		DWORD hChan = opinfo.GetDecodeChannel(&sAmp);
-		if (sAmp > 0)
+		if (sAmp >= 0)
 			sAmp *= sVolume;
 		else
 			sAmp = sVolume;
@@ -389,7 +389,7 @@ static void CALLBACK FadeIn(float sVolume, DWORD dwTime){
 		DWORD hChan = opinfo.GetDecodeChannel(&sAmp);
 		DWORD dwTimeOrg = GetTickCount();
 		DWORD dwTimeNow = 0;
-		if (sAmp > 0)
+		if (sAmp >= 0)
 			sAmp *= sVolume;
 		else
 			sAmp = sVolume;
@@ -408,7 +408,7 @@ static void CALLBACK FadeOut(DWORD dwTime){
 		DWORD hChan = opinfo.GetDecodeChannel(&sAmp);
 		DWORD dwTimeOrg = GetTickCount();
 		DWORD dwTimeNow = 0;
-		if (sAmp > 0)
+		if (sAmp >= 0)
 			sAmp *= m_sVolume;
 		else
 			sAmp = m_sVolume;

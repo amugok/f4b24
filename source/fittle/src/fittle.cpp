@@ -6,6 +6,12 @@
  * All Rights Reserved
  */
 
+#if defined(_MSC_VER) && defined(_DEBUG)
+#define _CRTDBG_MAP_ALLOC
+#include <crtdbg.h>
+#include <stdio.h>
+#endif
+
 #include "fittle.h"
 #include "func.h"
 #include "tree.h"
@@ -20,11 +26,6 @@
 #include "f4b24.h"
 #include "oplugin.h"
 #include "gplugin.h"
-
-#if defined(_MSC_VER) && defined(_DEBUG)
-#define _CRTDBG_MAP_ALLOC
-#include <crtdbg.h>
-#endif
 
 // ƒ‰ƒCƒuƒ‰ƒŠ‚ðƒŠƒ“ƒN
 #if defined(_MSC_VER)
@@ -2807,7 +2808,7 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 	}
 
 	g_cInfo[bFlag].sGain = 1;
-	g_cInfo[bFlag].sAmp = 0;
+	g_cInfo[bFlag].sAmp = fBypassVol;
 	g_cInfo[bFlag].hChan = BASS_StreamCreateFile((BOOL)g_cInfo[bFlag].pBuff,
 												(g_cInfo[bFlag].pBuff?(void *)g_cInfo[bFlag].pBuff:(void *)szFilePath),
 												0, (DWORD)g_cInfo[bFlag].qDuration,

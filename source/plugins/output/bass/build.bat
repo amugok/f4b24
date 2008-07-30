@@ -51,7 +51,7 @@ goto exitcmd
 
 set PREFIX=..\..\..\..\bin\Plugins\fop\
 set CFLAGS=/GF /Gy /Ox /Os /MD
-set VER_STR=0807290_
+set VER_STR=0807300_
 
 call %0 bass fop
 

@@ -17,6 +17,7 @@ static struct OUTPUT_PLUGIN_NODE {
 /* 初期化された出力プラグインIF */
 static OUTPUT_PLUGIN_INFO *m_pOutputPlugin = NULL;
 static volatile BOOL m_fOnSetupNext = FALSE;
+static const float fBypassVol = -0.00001f;
 
 /* bass.dll単体だと音量増幅ができないため処理をユーザー選択する */
 static float CalcBassVolume(DWORD dwVol){
@@ -24,7 +25,7 @@ static float CalcBassVolume(DWORD dwVol){
 	switch (g_cfg.nReplayGainMixer) {
 	case 0:
 		/*  内蔵 */
-		g_cInfo[g_bNow].sAmp = (fVol == (float)1) ? 0 : fVol;
+		g_cInfo[g_bNow].sAmp = (fVol == (float)1) ? fBypassVol : fVol;
 		fVol = 1;
 		break;
 	case 1:
@@ -33,12 +34,12 @@ static float CalcBassVolume(DWORD dwVol){
 			g_cInfo[g_bNow].sAmp = fVol;
 			fVol = 1;
 		}else{
-			g_cInfo[g_bNow].sAmp = 0;
+			g_cInfo[g_bNow].sAmp = fBypassVol;
 		}
 		break;
 	case 2:
 		/*  BASS */
-		g_cInfo[g_bNow].sAmp = 0;
+		g_cInfo[g_bNow].sAmp = fBypassVol;
 		if (fVol > 1) fVol = 1;
 		break;
 	}
@@ -338,8 +339,17 @@ static void OPStop(){
 	else
 		NULLDRV_Stop;
 }
-static void OPSetVolume(DWORD dwVol){
-	float sVolume = CalcBassVolume(dwVol);
+static void OPSetVolume(int iVol){
+	float sVolume = CalcBassVolume(iVol < 0 ? 0 : iVol);
+#if defined(_MSC_VER) && defined(_DEBUG)
+	char buf[128];
+#if _MSC_VER >= 1500
+	_snprintf_s(buf, 128, "%d - %f\n", iVol, sVolume);
+#else
+	sprintf(buf, "%d - %f\n", dwVol, (double)sVolume);
+#endif
+	OutputDebugStringA(buf);
+#endif
 	if (m_pOutputPlugin)
 		m_pOutputPlugin->SetVolume(sVolume);
 	else

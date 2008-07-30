@@ -7,8 +7,8 @@
 
 /* OPDK‚Ìƒo[ƒWƒ‡ƒ“ */
 #ifndef OPDK_VER
-#define OPDK_VER 0
-#elif OPDK_VER > 0
+#define OPDK_VER 1
+#elif OPDK_VER > 1
 #error "Incorrect OPDK version."
 #endif
 
@@ -46,7 +46,7 @@ typedef struct OUTPUT_PLUGIN_INFO_TAG {
 	void (CALLBACK * PlayNext)(HWND hWnd);
 	DWORD (CALLBACK * GetDecodeChannel)(float *pAmp);
 
-#if OPDK_VER >= 1
+#if OPDK_VER >= 2
 #endif
 /*
 	int (CALLBACK * GetRate)(void);

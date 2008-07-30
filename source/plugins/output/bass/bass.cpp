@@ -277,7 +277,7 @@ static DWORD CALLBACK MainStreamProc(DWORD handle, void *buf, DWORD len, void *u
 		BOOL fFloat = bci.flags & BASS_SAMPLE_FLOAT;
 		r = BASS_ChannelGetData(hChan, buf, fFloat ? len | BASS_DATA_FLOAT : len);
 		if (r == (DWORD)-1) r = 0;
-		if (sAmp > 0 && r > 0 && r < BASS_STREAMPROC_END) {
+		if (sAmp >= 0 && r > 0 && r < BASS_STREAMPROC_END) {
 			DWORD i;
 			if (BASS_ChannelGetInfo(hChan ,&bci)) {
 				if (fFloat || (bci.flags & BASS_SAMPLE_FLOAT)){

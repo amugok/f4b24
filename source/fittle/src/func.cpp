@@ -194,7 +194,7 @@ LPVOID HRealloc(LPVOID pPtr, DWORD dwSize){
 	HW *o = ((HW *)pPtr) - 1;
 	LPVOID n = HAlloc(dwSize);
 	if (n) {
-		CopyMemory(n, o + 1, o->dwSize);
+		CopyMemory(n, pPtr, o->dwSize);
 		HFree(pPtr);
 	}
 	return n;
