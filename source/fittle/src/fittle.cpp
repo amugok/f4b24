@@ -45,11 +45,11 @@
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test34u")
+#define F4B24_VERSION_STRING TEXT("test35u")
 #else
-#define F4B24_VERSION_STRING TEXT("test34")
+#define F4B24_VERSION_STRING TEXT("test35")
 #endif
-#define F4B24_VERSION 34
+#define F4B24_VERSION 35
 #define F4B24_IF_VERSION 28
 #ifndef _DEBUG
 #define FITTLE_TITLE TEXT("Fittle - f4b24") F4B24_VERSION_STRING
@@ -2922,7 +2922,8 @@ static BOOL PlayByUser(HWND hWnd, struct FILEINFO *pPlayFile){
 	}
 }
 
-// 次のファイルをオープンする関数(99％地点で発動)
+// user:0 トラックの再生時間99%で発生するイベント ギャップレス再生を円滑に行うため次のファイルを予めオープンしておく
+// user:1 cue再生時にトラックの再生終了時間で発生するイベント 次の曲へ
 static void CALLBACK EventSync(DWORD /*handle*/, DWORD /*channel*/, DWORD /*data*/, void *user){
 	if(user==0){
 		PostMessage(GetParent(m_hStatus), WM_F4B24_IPC, WM_F4B24_INTERNAL_PREPARE_NEXT_MUSIC, 0);
@@ -3195,13 +3196,14 @@ static BOOL _BASS_ChannelSetPosition(DWORD handle, int nPos){
 
 	int nStatus = OPGetStatus();
 
-	qPos = g_cInfo[g_bNow].qDuration;
-	qPos = qPos*nPos/1000 + g_cInfo[g_bNow].qStart;
+	qPos = g_cInfo[g_bNow].qDuration * nPos / 1000;
+	if (qPos >= g_cInfo[g_bNow].qDuration) qPos = g_cInfo[g_bNow].qDuration - 1;
 
 	OPSetFadeOut(150);
 
 	OPStop();
-	bRet = BASS_ChannelSetPosition(handle, qPos, BASS_POS_BYTE);
+
+	bRet = BASS_ChannelSetPosition(handle, qPos + g_cInfo[g_bNow].qStart, BASS_POS_BYTE);
 
 	OPSetVolume(SendMessage(m_hVolume, TBM_GETPOS, 0, 0));
 
@@ -3215,6 +3217,7 @@ static BOOL _BASS_ChannelSetPosition(DWORD handle, int nPos){
 	return bRet;
 }
 
+// 秒単位でファイルをシーク
 static void _BASS_ChannelSeekSecond(DWORD handle, float fSecond, int nSign){
 	QWORD qPos;
 	QWORD qSeek;
@@ -3815,6 +3818,7 @@ static LRESULT CALLBACK NewSliderProc(HWND hSB, UINT msg, WPARAM wp, LPARAM lp){
 	return CallWindowProc((WNDPROC)(LONG64)GetWindowLongPtr(hSB, GWLP_USERDATA), hSB, msg, wp, lp);
 }
 
+// 分割バーの新しいプロシージャ
 static LRESULT CALLBACK NewSplitBarProc(HWND hSB, UINT msg, WPARAM wp, LPARAM lp){
 	static int s_nPreX;
 	static int s_nMouseState = 0;
@@ -3919,6 +3923,7 @@ static LPCTSTR GetColumnText(HWND hwndList, int nRow, int nColumn, LPTSTR pWork,
 	return NULL;
 }
 
+// タブの新しいプロシージャ
 static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 	static int s_nDragTab = -1;
 	TCHITTESTINFO tchti;
@@ -4687,6 +4692,7 @@ static int GetMenuPosFromString(HMENU hMenu, LPTSTR lpszText){
 	return 0;
 }
 
+// マウスホイール操作情報をカーソル位置の窓に引き渡す
 static LRESULT CALLBACK MyHookProc(int nCode, WPARAM wp, LPARAM lp){
 	MSG *msg;
 	msg = (MSG *)lp;
