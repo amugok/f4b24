@@ -15,6 +15,19 @@
 #include "bass_tag.h"
 #include "archive.h"
 
+static void AddColumn(HWND hList, int c, LPTSTR l, int w){
+	char szKey[7] = "Width0";
+	LVCOLUMN lvcol;
+	lvcol.mask = LVCF_TEXT | LVCF_FMT | LVCF_WIDTH | LVCF_SUBITEM;
+	lvcol.fmt = (c & 0x100) ? LVCFMT_RIGHT : LVCFMT_LEFT;
+	c &= 0xff;
+	szKey[5] = '0' + c;
+	lvcol.cx = WAGetIniInt("Column", szKey, w);
+	lvcol.iSubItem = 0;
+	lvcol.pszText = l;
+	ListView_InsertColumn(hList, 0, &lvcol);
+}
+
 // 新しいタブもろもろを作成
 struct LISTTAB *MakeNewTab(HWND hTab, LPTSTR szTabName, int nItem){
 	struct LISTTAB *pNew = NULL;
@@ -59,24 +72,10 @@ struct LISTTAB *MakeNewTab(HWND hTab, LPTSTR szTabName, int nItem){
 	pNew->hList = hList;
 
 	// カラムの設定
-	LVCOLUMN lvcol;
-	lvcol.mask = LVCF_TEXT | LVCF_FMT | LVCF_WIDTH | LVCF_SUBITEM;
-	lvcol.fmt = LVCFMT_LEFT;
-	lvcol.cx = WAGetIniInt("Column", "Width0", 200);
-	lvcol.iSubItem = 0;
-	lvcol.pszText = TEXT("ファイル名");
-	ListView_InsertColumn(hList, 0, &lvcol);
-	lvcol.cx = WAGetIniInt("Column", "Width1", 70);
-	lvcol.fmt = LVCFMT_RIGHT;
-	lvcol.pszText = TEXT("サイズ");
-	ListView_InsertColumn(hList, 1, &lvcol);
-	lvcol.fmt = LVCFMT_LEFT;
-	lvcol.cx = WAGetIniInt("Column", "Width2", 40);
-	lvcol.pszText = TEXT("種類");
-	ListView_InsertColumn(hList, 2, &lvcol);
-	lvcol.cx = WAGetIniInt("Column", "Width3", 130);
-	lvcol.pszText = TEXT("更新日時");
-	ListView_InsertColumn(hList, 3, &lvcol);
+	AddColumn(hList, 0x000, TEXT("ファイル名"), 200);
+	AddColumn(hList, 0x101, TEXT("サイズ"), 70);
+	AddColumn(hList, 0x002, TEXT("種類"), 40);
+	AddColumn(hList, 0x003, TEXT("更新日時"), 130);
 
 	pNew->nSortState = WAGetIniInt("Column", "Sort", 0);;	// フルパスでソート
 
