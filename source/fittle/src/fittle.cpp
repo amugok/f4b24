@@ -46,12 +46,12 @@
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test35.1u")
+#define F4B24_VERSION_STRING TEXT("test36u")
 #else
-#define F4B24_VERSION_STRING TEXT("test35.1")
+#define F4B24_VERSION_STRING TEXT("test36")
 #endif
-#define F4B24_VERSION 35
-#define F4B24_IF_VERSION 28
+#define F4B24_VERSION 36
+#define F4B24_IF_VERSION 36
 #ifndef _DEBUG
 #define FITTLE_TITLE TEXT("Fittle - f4b24") F4B24_VERSION_STRING
 #else
@@ -2357,6 +2357,9 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				return g_cfg.nReplayGainPreAmp;
 			case WM_F4B24_IPC_INVOKE_OUTPUT_PLUGIN_SETUP:
 				return OPSetup(hWnd);
+			case WM_F4B24_IPC_TRAYICONMENU:
+				PopupTrayMenu(hWnd);
+				break;
 
 			case WM_F4B24_IPC_GET_VERSION_STRING:
 				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)FITTLE_VERSION);
@@ -2457,7 +2460,7 @@ static void DoTrayClickAction(HWND hWnd, int nKind){
 			SendMessage(hWnd, WM_COMMAND, (WPARAM)IDM_END, 0);
 			break;
 		case 8:
-			PopupTrayMenu(hWnd);
+			SendMessage(hWnd, WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_TRAYICONMENU, 0);
 			break;
 		case 9:
 			SendMessage(hWnd, WM_COMMAND, (WPARAM)IDM_PLAYPAUSE, 0);
