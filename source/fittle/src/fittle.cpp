@@ -46,9 +46,9 @@
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test35u")
+#define F4B24_VERSION_STRING TEXT("test35.1u")
 #else
-#define F4B24_VERSION_STRING TEXT("test35")
+#define F4B24_VERSION_STRING TEXT("test35.1")
 #endif
 #define F4B24_VERSION 35
 #define F4B24_IF_VERSION 28
@@ -3793,7 +3793,8 @@ static LRESULT CALLBACK NewSliderProc(HWND hSB, UINT msg, WPARAM wp, LPARAM lp){
 				}else{
 					SendMessage(hSB, TBM_SETPOS, TRUE, (WPARAM)SendMessage(hSB, TBM_GETPOS, 0, 0) + SLIDER_DIVIDED/50);
 				}
-			}
+			}else
+				break;
 			return 0;
 
 		case WM_HSCROLL:
@@ -4700,10 +4701,46 @@ static LRESULT CALLBACK MyHookProc(int nCode, WPARAM wp, LPARAM lp){
 
 	if(nCode<0)
 		return CallNextHookEx(m_hHook, nCode, wp, lp);
-	
+
 	if(msg->message==WM_MOUSEWHEEL){
+#define WHEEL_TYPE 2
+#if WHEEL_TYPE == 1
+		/* Fittle非互換 taskvol特別扱い */
+		HWND hPosWnd = WindowFromPoint(msg->pt);
+		if (hPosWnd){
+			BOOL fMatch = FALSE;
+			DWORD dwPosProcessId = 0;
+			DWORD dwPosThreadId = GetWindowThreadProcessId(hPosWnd, &dwPosProcessId);
+			if (GetCurrentProcessId() == dwPosProcessId) {
+				fMatch = TRUE;
+			} else if (GetModuleHandleA("taskvol.dll")){
+				HWND hWndTaskTray = FindWindowA("Shell_TrayWnd", NULL);
+				if (hWndTaskTray && (hWndTaskTray == hPosWnd || IsChild(hWndTaskTray, hPosWnd)))
+					fMatch = TRUE;
+			}
+			if (fMatch) {
+				SendMessage(hPosWnd, WM_MOUSEWHEEL, msg->wParam, msg->lParam);
+				msg->message = WM_NULL;
+			}
+		}
+#elif WHEEL_TYPE == 2
+		/* Fittle互換 無限ループ注意 */
+		HWND hPosWnd = WindowFromPoint(msg->pt);
+		if (hPosWnd){
+			DWORD dwPosProcessId = 0;
+			DWORD dwPosThreadId = GetWindowThreadProcessId(hPosWnd, &dwPosProcessId);
+			msg->message = WM_NULL;
+			if (GetCurrentProcessId() == dwPosProcessId) {
+				SendMessage(hPosWnd, WM_MOUSEWHEEL, msg->wParam, msg->lParam);
+			} else {
+				PostMessage(hPosWnd, WM_MOUSEWHEEL, msg->wParam, msg->lParam);
+			}
+		}
+#else
+		/* Fittle互換 */
 		SendMessage(WindowFromPoint(msg->pt), WM_MOUSEWHEEL, msg->wParam, msg->lParam);
 		msg->message = WM_NULL;
+#endif
 	}
 
 	return CallNextHookEx(m_hHook, nCode, wp, lp);
