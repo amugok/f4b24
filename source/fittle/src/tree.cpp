@@ -118,6 +118,7 @@ void RefreshComboIcon(HWND hCB){
 
 // bShowがTRUEならアイコン表示、FALSEならアイコン非表示
 int InitTreeIconIndex(HWND hCB, HWND hTV, BOOL bShow){
+	WASTR szDir;
 	TCHAR szIconPath[MAX_FITTLE_PATH];
 	SHFILEINFO shfi;
 	HIMAGELIST hSysImglst;
@@ -129,7 +130,8 @@ int InitTreeIconIndex(HWND hCB, HWND hTV, BOOL bShow){
 			ImageList_SetBkColor(hSysImglst, (COLORREF)g_cfg.nBkColor);
 
 		// リストアイコンインデックス取得
-		GetModuleParentDir(szIconPath);
+		WAGetModuleParentDir(NULL, &szDir);
+		WAstrcpyt(szIconPath, &szDir, MAX_FITTLE_PATH);
 		SHGetFileInfo(szIconPath, 0, &shfi, sizeof(SHFILEINFO),
 			SHGFI_SMALLICON | SHGFI_SYSICONINDEX);
 		DestroyIcon(shfi.hIcon);

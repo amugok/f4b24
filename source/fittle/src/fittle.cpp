@@ -1579,9 +1579,12 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case IDM_README:	// Readme.txtを表示
-					GetModuleParentDir(szNowDir);
-					lstrcat(szNowDir, TEXT("Readme.txt"));
-					ShellExecute(hWnd, NULL, szNowDir, NULL, NULL, SW_SHOWNORMAL);
+					{
+						WASTR szPath;
+						WAGetModuleParentDir(NULL, &szPath);
+						WAstrcatA(&szPath, "Readme.txt");
+						WAShellExecute(hWnd, &szPath, NULL);
+					}
 					break;
 
 				case IDM_VER:	// バージョン情報
@@ -4617,39 +4620,27 @@ static void ApplyConfig(HWND hWnd){
 }
 
 // 外部設定プログラムを起動する
-static void ExecuteSettingDialog(HWND hWnd, LPCTSTR lpszConfigPath){
-	PROCESS_INFORMATION pi;
-	STARTUPINFO si;
+static void ExecuteSettingDialog(HWND hWnd, LPCSTR lpszConfigPath){
 
-	TCHAR szCmd[MAX_FITTLE_PATH];
-	TCHAR szPath[MAX_FITTLE_PATH];
+	WASTR szCmd;
+	WASTR szPara;
 
-	(void)hWnd;
+	WAGetModuleParentDir(NULL, &szCmd);
+	WAstrcatA(&szCmd, "fconfig.exe");
+	WAstrcpyA(&szPara, lpszConfigPath);
 
-	GetModuleParentDir(szPath);
-	lstrcat(szPath, TEXT("fconfig.exe"));
-	
-	wsprintf(szCmd, TEXT("\"%s\" %s"), szPath, lpszConfigPath);
-	
-
-	ZeroMemory(&si,sizeof(si));
-	si.cb=sizeof(si);
-
-	if (CreateProcess(NULL,(LPTSTR)szCmd,NULL,NULL,FALSE,NORMAL_PRIORITY_CLASS, NULL,NULL,&si,&pi)){
-		CloseHandle(pi.hThread);
-		CloseHandle(pi.hProcess);
-	}
+	WAShellExecute(hWnd, &szCmd, &szPara);
 }
 
 // 設定画面を開く
 static void ShowSettingDialog(HWND hWnd, int nPage){
-	static const LPCTSTR table[] = {
-		TEXT("fittle/general"),
-		TEXT("fittle/path"),
-		TEXT("fittle/control"),
-		TEXT("fittle/tasktray"),
-		TEXT("fittle/hotkey"),
-		TEXT("fittle/about")
+	static const LPCSTR table[] = {
+		"fittle/general",
+		"fittle/path",
+		"fittle/control",
+		"fittle/tasktray",
+		"fittle/hotkey",
+		"fittle/about"
 	};
 	if (nPage < 0 || nPage > WM_F4B24_IPC_SETTING_LP_MAX) nPage = 0;
 	ExecuteSettingDialog(hWnd, table[nPage]);

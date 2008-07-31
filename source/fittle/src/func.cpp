@@ -138,15 +138,6 @@ void SetOLECursor(int nIndex){
 	return;
 }
 
-void GetModuleParentDir(LPTSTR szParPath){
-	TCHAR szPath[MAX_FITTLE_PATH];
-
-	GetModuleFileName(NULL, szPath, MAX_FITTLE_PATH);
-	GetLongPathName(szPath, szParPath, MAX_FITTLE_PATH); // 98à»ç~
-	*PathFindFileName(szParPath) = TEXT('\0');
-	return;
-}
-
 LPTSTR MyPathAddBackslash(LPTSTR pszPath){
 	if(PathIsDirectory(pszPath)){
 		return PathAddBackslash(pszPath);

@@ -18,9 +18,8 @@ extern int WAstrcmp(LPCWASTR pValue1, LPCWASTR pValue2);
 extern void WAstrcpy(LPWASTR pBuf, LPCWASTR pValue);
 extern void WAstrcpyt(LPTSTR pszBuf, LPCWASTR pValue, int n);
 extern void WAstrcpyT(LPWASTR pBuf, LPCTSTR pszValue);
-extern void WAstrcpyonA(LPWASTR pBuf, int o, LPCSTR pValue, int n);
 extern void WAstrcpyA(LPWASTR pBuf, LPCSTR pValue);
-extern void WAstrcatWX(LPWASTR pBuf, LPCWSTR pValue);
+extern void WAstrcat(LPWASTR pBuf, LPCWASTR pValue);
 extern void WAstrcatA(LPWASTR pBuf, LPCSTR pValue);
 extern void WAGetModuleParentDir(HMODULE h, LPWASTR pBuf);
 extern void WAGetIniDir(HMODULE h, LPWASTR pBuf);
@@ -47,4 +46,5 @@ extern BOOL WAEnumPlugins(HMODULE hParent, LPCSTR lpszSubDir, LPCSTR lpszMask, B
 extern HANDLE WAOpenFile(LPCWASTR pPath);
 extern HANDLE WACreateFile(LPCWASTR pPath);
 extern void WADeleteFile(LPCWASTR pPath);
+extern void WAShellExecute(HWND hWnd, LPCWASTR pFile, LPCWASTR pPara);
 #endif

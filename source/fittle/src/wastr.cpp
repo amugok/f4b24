@@ -68,7 +68,7 @@ void WAstrcpyT(LPWASTR pBuf, LPCTSTR pszValue){
 }
 
 
-void WAstrcpyonA(LPWASTR pBuf, int o, LPCSTR pValue, int n){
+static void WAstrcpyonA(LPWASTR pBuf, int o, LPCSTR pValue, int n){
 	if (m_WAIsUnicode)
 		MultiByteToWideChar(CP_ACP, 0, pValue, -1, pBuf->W + o, n);
 	else
@@ -79,7 +79,7 @@ void WAstrcpyA(LPWASTR pBuf, LPCSTR pValue){
 	WAstrcpyonA(pBuf, 0, pValue, WA_MAX_SIZE);
 }
 
-void WAstrcatWX(LPWASTR pBuf, LPCWSTR pValue){
+static void WAstrcatWX(LPWASTR pBuf, LPCWSTR pValue){
 	int l = lstrlenW(pBuf->W);
 	lstrcpynW(pBuf->W + l, pValue, WA_MAX_SIZE - l);
 }
@@ -87,6 +87,13 @@ void WAstrcatWX(LPWASTR pBuf, LPCWSTR pValue){
 void WAstrcatA(LPWASTR pBuf, LPCSTR pValue){
 	int l = WAstrlen(pBuf);
 	WAstrcpyonA(pBuf, l, pValue, WA_MAX_SIZE - l);
+}
+
+void WAstrcat(LPWASTR pBuf, LPCWASTR pValue){
+	if (m_WAIsUnicode)
+		WAstrcatWX(pBuf, pValue->W);
+	else
+		WAstrcatA(pBuf, pValue->A);
 }
 
 void WAGetModuleParentDir(HMODULE h, LPWASTR pBuf){
@@ -416,5 +423,12 @@ void WADeleteFile(LPCWASTR pPath){
 		DeleteFileW(pPath->W);
 	else
 		DeleteFileA(pPath->A);
+}
+
+void WAShellExecute(HWND hWnd, LPCWASTR pFile, LPCWASTR pPara){
+	if (WAIsUnicode())
+		ShellExecuteW(hWnd, NULL, pFile->W, pPara ? pPara->W : NULL, NULL, SW_SHOWNORMAL);
+	else
+		ShellExecuteA(hWnd, NULL, pFile->A, pPara ? pPara->A : NULL, NULL, SW_SHOWNORMAL);
 }
 

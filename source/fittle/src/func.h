@@ -25,7 +25,6 @@ void FormatDateTime(LPTSTR pszBuf, LPFILETIME pft);
 void FormatLocalDateTime(LPTSTR, LPFILETIME);
 BOOL GetTimeAndSize(LPCTSTR, LPTSTR, LPTSTR);
 void SetOLECursor(int);
-void GetModuleParentDir(LPTSTR);
 LPTSTR MyPathAddBackslash(LPTSTR);
 
 LPVOID HAlloc(DWORD dwSize);
