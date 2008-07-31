@@ -31,6 +31,7 @@ struct LISTTAB{
 };
 
 struct LISTTAB *MakeNewTab(HWND, LPTSTR, int);
+void SetListColor(HWND);
 struct LISTTAB *GetListTab(HWND, int);
 int TraverseList(struct LISTTAB *);
 int ChangeOrder(struct LISTTAB *, int);

@@ -26,6 +26,9 @@ void FormatLocalDateTime(LPTSTR, LPFILETIME);
 BOOL GetTimeAndSize(LPCTSTR, LPTSTR, LPTSTR);
 void SetOLECursor(int);
 LPTSTR MyPathAddBackslash(LPTSTR);
+void ListView_SingleSelect(HWND hLV, int nIndex);
+void ListView_SingleSelectView(HWND hLV, int nIndex);
+void ListView_SingleSelectViewP(HWND hLV, int nIndex);
 
 LPVOID HAlloc(DWORD dwSize);
 LPVOID HZAlloc(DWORD dwSize);

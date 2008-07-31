@@ -148,6 +148,34 @@ LPTSTR MyPathAddBackslash(LPTSTR pszPath){
 	}
 }
 
+static void ListView_SingleSelectViewSub(HWND hLV, int nIndex, int flag){
+	ListView_SetItemState(hLV, -1, 0, (LVIS_SELECTED | LVIS_FOCUSED));
+	if (nIndex >= 0){
+		ListView_SetItemState(hLV, nIndex, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED));
+		if (flag & 1) ListView_EnsureVisible(hLV, nIndex, TRUE);
+		if (flag & 2) PostMessage(hLV, LVM_ENSUREVISIBLE, (WPARAM)nIndex, (LPARAM)TRUE);
+	}
+}
+
+// 全ての選択状態を解除後、指定インデックスのアイテムを選択
+void ListView_SingleSelect(HWND hLV, int nIndex){
+	ListView_SingleSelectViewSub(hLV, nIndex, 0);
+}
+
+// 全ての選択状態を解除後、指定インデックスのアイテムを選択、表示
+void ListView_SingleSelectView(HWND hLV, int nIndex){
+	ListView_SingleSelectViewSub(hLV, nIndex, 1);
+}
+
+// 全ての選択状態を解除後、指定インデックスのアイテムを選択、表示予約
+void ListView_SingleSelectViewP(HWND hLV, int nIndex) {
+	ListView_SingleSelectViewSub(hLV, nIndex, 3);
+}
+
+
+
+
+
 #define ALTYPE 0
 #if ALTYPE == 1
 /* リークチェック */

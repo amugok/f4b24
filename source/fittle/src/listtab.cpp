@@ -90,10 +90,14 @@ struct LISTTAB *MakeNewTab(HWND hTab, LPTSTR szTabName, int nItem){
 	DragAcceptFiles(hList, TRUE);
 
 	// カラー
+	SetListColor(hList);
+	return pNew;
+}
+
+void SetListColor(HWND hList){
 	ListView_SetTextColor(hList, (COLORREF)g_cfg.nTextColor);
 	ListView_SetTextBkColor(hList, (COLORREF)g_cfg.nBkColor);
 	ListView_SetBkColor(hList, (COLORREF)g_cfg.nBkColor);
-	return pNew;
 }
 
 // インデックス -> リストタブ構造体へのポインタ
@@ -148,8 +152,7 @@ int TraverseList(struct LISTTAB *pListTab){
 		i++;
 	}
 	ListView_SetItemCountEx(pListTab->hList, i, LVSICF_NOINVALIDATEALL);
-	ListView_SetItemState(pListTab->hList, -1, 0, (LVIS_SELECTED | LVIS_FOCUSED));
-	ListView_SetItemState(pListTab->hList, 0, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED));
+	ListView_SingleSelect(pListTab->hList, 0);
 	
 	if(bVisible){
 		ShowWindow(pListTab->hList, SW_SHOW);
@@ -237,8 +240,7 @@ int DeleteFiles(struct LISTTAB *pListTab){
 		if(nIndex==ListView_GetItemCount(pListTab->hList)) nIndex--;
 		nIndex = ListView_GetNextItem(pListTab->hList, -1, LVNI_SELECTED);
 	}
-	ListView_SetItemState(pListTab->hList, -1, 0, LVIS_FOCUSED | LVIS_SELECTED);
-	ListView_SetItemState(pListTab->hList, nBefore, LVIS_FOCUSED | LVIS_SELECTED, LVIS_FOCUSED | LVIS_SELECTED);
+	ListView_SingleSelect(pListTab->hList, nBefore);
 	return nIndex;
 }
 

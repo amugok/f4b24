@@ -288,23 +288,6 @@ static void lstrcpyntW(LPWSTR lpDst, LPCTSTR lpSrc, int nDstMax){
 #endif
 }
 
-// 全ての選択状態を解除後、指定インデックスのアイテムを選択、表示
-static void ListView_SingleSelect(HWND hLV, int nIndex){
-	ListView_SetItemState(hLV, -1, 0, (LVIS_SELECTED | LVIS_FOCUSED));
-	if (nIndex >= 0){
-		ListView_SetItemState(hLV, nIndex, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED));
-		ListView_EnsureVisible(hLV, nIndex, TRUE);
-	}
-}
-
-// 全ての選択状態を解除後、指定インデックスのアイテムを選択、表示予約
-static void ListView_SingleSelectP(HWND hLV, int nIndex) {
-	ListView_SingleSelect(hLV, nIndex);
-	if (nIndex >= 0){
-		PostMessage(hLV, LVM_ENSUREVISIBLE, (WPARAM)nIndex, (LPARAM)TRUE);
-	}
-}
-
 static void lstrcpynAt(LPTSTR lpDst, LPCSTR lpSrc, int nDstMax){
 #if defined(UNICODE)
 	MultiByteToWideChar(CP_ACP, 0, lpSrc, -1, lpDst, nDstMax); //S-JIS->Unicode
@@ -1024,7 +1007,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						SetFolder(szCmdParPath);
 						GetLongPathName(XARGV[i], szCmdParPath, MAX_FITTLE_PATH); // 98以降
 						nFileIndex = GetIndexFromPath(GetListTab(m_hTab, 0)->pRoot, szCmdParPath);
-						ListView_SingleSelectP(GetListTab(m_hTab, 0)->hList, nFileIndex);
+						ListView_SingleSelectViewP(GetListTab(m_hTab, 0)->hList, nFileIndex);
 						bCmd = TRUE;
 						break;
 				}
@@ -1073,7 +1056,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					}else{
 						WAstrcpyt(szLastPath, &g_cfg.szLastFile, MAX_FITTLE_PATH);
 						nFileIndex = GetIndexFromPath(GetCurListTab(m_hTab)->pRoot, szLastPath);
-						ListView_SingleSelectP(GetCurListTab(m_hTab)->hList, nFileIndex);
+						ListView_SingleSelectViewP(GetCurListTab(m_hTab)->hList, nFileIndex);
 						PostMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_PLAY, 0), 0);
 						// ポジションも復元
 						PostMessage(hWnd, WM_F4B24_IPC, WM_F4B24_INTERNAL_RESTORE_POSITION, 0);
@@ -1081,7 +1064,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				}else if (g_cfg.nSelLastPlayed) {
 					WAstrcpyt(szLastPath, &g_cfg.szLastFile, MAX_FITTLE_PATH);
 					nFileIndex = GetIndexFromPath(GetCurListTab(m_hTab)->pRoot, szLastPath);
-					ListView_SingleSelectP(GetCurListTab(m_hTab)->hList, nFileIndex);
+					ListView_SingleSelectViewP(GetCurListTab(m_hTab)->hList, nFileIndex);
 					if(GetKeyState(VK_SHIFT) < 0){
 						// Shiftキーが押されていたら再生
 						PostMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_PLAY, 0), 0);
@@ -1268,7 +1251,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 							MakeTreeFromPath(m_hTree, m_hCombo, szParPath);
 							GetLongPathName(pRecieved, szParPath, MAX_FITTLE_PATH); // 98以降
 							nFileIndex = GetIndexFromPath(GetListTab(m_hTab, 0)->pRoot, szParPath);
-							ListView_SingleSelect(GetCurListTab(m_hTab)->hList, nFileIndex);
+							ListView_SingleSelectView(GetCurListTab(m_hTab)->hList, nFileIndex);
 							SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_PLAY, 0), 0);
 							return TRUE;
 					}
@@ -1468,7 +1451,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				case IDM_FIND:
 					nFileIndex = (int)DialogBoxParam(m_hInst, TEXT("FIND_DIALOG"), hWnd, FindDlgProc, (LPARAM)GetCurListTab(m_hTab)->pRoot);
 					if(nFileIndex!=-1){
-						ListView_SingleSelect(GetCurListTab(m_hTab)->hList, nFileIndex);
+						ListView_SingleSelectView(GetCurListTab(m_hTab)->hList, nFileIndex);
 						SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_PLAY, 0), 0);
 					}
 					break;
@@ -2633,6 +2616,7 @@ static void SaveState(HWND hWnd){
 	WASTR lastpath;
 	WINDOWPLACEMENT wpl;
 	REBARBANDINFO rbbi;
+	CHAR szSec[10];
 
 	wpl.length = sizeof(WINDOWPLACEMENT);
 
@@ -2663,17 +2647,16 @@ static void SaveState(HWND hWnd){
 
 	WASetIniInt("MiniPanel", "End", g_cfg.nMiniPanelEnd);
 
-	WASetIniInt("Column", "Width0", ListView_GetColumnWidth(GetCurListTab(m_hTab)->hList, 0));
-	WASetIniInt("Column", "Width1", ListView_GetColumnWidth(GetCurListTab(m_hTab)->hList, 1));
-	WASetIniInt("Column", "Width2", ListView_GetColumnWidth(GetCurListTab(m_hTab)->hList, 2));
-	WASetIniInt("Column", "Width3", ListView_GetColumnWidth(GetCurListTab(m_hTab)->hList, 3));
+	for(i=0;i<4;i++){
+		wsprintfA(szSec, "Width%d", i);
+		WASetIniInt("Column", szSec, ListView_GetColumnWidth(GetCurListTab(m_hTab)->hList, i));
+	}
 	WASetIniInt("Column", "Sort", GetCurListTab(m_hTab)->nSortState);
 
 	//　レバーの状態を保存
 	rbbi.cbSize = sizeof(REBARBANDINFO);
 	rbbi.fMask = RBBIM_STYLE | RBBIM_SIZE | RBBIM_ID;
 	for(i=0;i<BAND_COUNT;i++){
-		CHAR szSec[10];
 		SendMessage(GetDlgItem(hWnd, ID_REBAR), RB_GETBANDINFO, i, (WPARAM)&rbbi);
 		wsprintfA(szSec, "fStyle%d", i);
 		WASetIniInt("Rebar2", szSec, rbbi.fStyle);
@@ -2969,7 +2952,7 @@ static void OnChangeTrack(){
 	nPlayIndex = GetIndexFromPtr(GetPlayListTab(m_hTab)->pRoot, g_pNextFile);
 
 	// 表示を切り替え
-	ListView_SingleSelect(GetPlayListTab(m_hTab)->hList, nPlayIndex);
+	ListView_SingleSelectView(GetPlayListTab(m_hTab)->hList, nPlayIndex);
 	InvalidateRect(GetCurListTab(m_hTab)->hList, NULL, TRUE); // CUSTOMDRAWイベント発生
 
 	// ファイルのオープンに失敗した
@@ -3688,9 +3671,7 @@ static BOOL SetUIColor(void){
 	HWND hList;
 	for(int i=0;i<TabCtrl_GetItemCount(m_hTab);i++){
 		hList = GetListTab(m_hTab, i)->hList;
-		ListView_SetBkColor(hList, (COLORREF)g_cfg.nBkColor);
-		ListView_SetTextBkColor(hList, (COLORREF)g_cfg.nBkColor);
-		ListView_SetTextColor(hList, (COLORREF)g_cfg.nTextColor);
+		SetListColor(hList);
 	}
 	TreeView_SetBkColor(m_hTree, g_cfg.nBkColor);
 	TreeView_SetTextColor(m_hTree, g_cfg.nTextColor);
@@ -4204,7 +4185,7 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 			if(pt.x>rcItem.right && pt.y>=rcItem.top && pt.y<=rcItem.bottom){
 				MakeNewTab(hTC, szLabel, -1);
 				InsertList(GetListTab(hTC, nItem), -1, pSub);
-				ListView_SingleSelect(GetListTab(hTC, nItem)->hList, 0);
+				ListView_SingleSelectView(GetListTab(hTC, nItem)->hList, 0);
 				TabCtrl_SetCurFocus(hTC, nItem);
 			}
 			break;
@@ -4283,7 +4264,7 @@ LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
 							DrawTabFocus(m_hTab, i, FALSE);
 							SendToPlaylist(GetCurListTab(m_hTab), GetListTab(m_hTab, i));
 							nCount = ListView_GetItemCount(GetListTab(m_hTab ,i)->hList) - 1;
-							ListView_SingleSelect(GetListTab(m_hTab ,i)->hList, nCount);
+							ListView_SingleSelectView(GetListTab(m_hTab ,i)->hList, nCount);
 							break;
 						}
 					}
