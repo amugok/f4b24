@@ -956,7 +956,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			// ボリュームの設定
 			PostMessage(m_hVolume, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)WAGetIniInt("Main", "Volumes", SLIDER_DIVIDED));
 
-			TIMECHECK("諸々")
+			TIMECHECK("その他状態の復元")
 
 			// グローバルホットキー
 			RegHotKey(hWnd);
