@@ -58,32 +58,27 @@ struct LISTTAB *MakeNewTab(HWND hTab, LPTSTR szTabName, int nItem){
 	}
 	pNew->hList = hList;
 
-	// INIファイルの位置を取得
-	TCHAR szINIPath[MAX_FITTLE_PATH];
-	GetModuleParentDir(szINIPath);
-	lstrcat(szINIPath, TEXT("Fittle.ini"));
-
 	// カラムの設定
 	LVCOLUMN lvcol;
 	lvcol.mask = LVCF_TEXT | LVCF_FMT | LVCF_WIDTH | LVCF_SUBITEM;
 	lvcol.fmt = LVCFMT_LEFT;
-	lvcol.cx = GetPrivateProfileInt(TEXT("Column"), TEXT("Width0"), 200, szINIPath);
+	lvcol.cx = WAGetIniInt("Column", "Width0", 200);
 	lvcol.iSubItem = 0;
 	lvcol.pszText = TEXT("ファイル名");
 	ListView_InsertColumn(hList, 0, &lvcol);
-	lvcol.cx = GetPrivateProfileInt(TEXT("Column"), TEXT("Width1"), 70, szINIPath);
+	lvcol.cx = WAGetIniInt("Column", "Width1", 70);
 	lvcol.fmt = LVCFMT_RIGHT;
 	lvcol.pszText = TEXT("サイズ");
 	ListView_InsertColumn(hList, 1, &lvcol);
 	lvcol.fmt = LVCFMT_LEFT;
-	lvcol.cx = GetPrivateProfileInt(TEXT("Column"), TEXT("Width2"), 40, szINIPath);
+	lvcol.cx = WAGetIniInt("Column", "Width2", 40);
 	lvcol.pszText = TEXT("種類");
 	ListView_InsertColumn(hList, 2, &lvcol);
-	lvcol.cx = GetPrivateProfileInt(TEXT("Column"), TEXT("Width3"), 130, szINIPath);
+	lvcol.cx = WAGetIniInt("Column", "Width3", 130);
 	lvcol.pszText = TEXT("更新日時");
 	ListView_InsertColumn(hList, 3, &lvcol);
 
-	pNew->nSortState = GetPrivateProfileInt(TEXT("Column"), TEXT("Sort"), 0, szINIPath);;	// フルパスでソート
+	pNew->nSortState = WAGetIniInt("Column", "Sort", 0);;	// フルパスでソート
 
 	ListView_SetExtendedListViewStyle(hList, (g_cfg.nGridLine?LVS_EX_GRIDLINES:0) | LVS_EX_FULLROWSELECT | LVS_EX_INFOTIP | 0x00010000/*LVS_EX_DOUBLEBUFFER*/);
 

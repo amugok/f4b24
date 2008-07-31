@@ -92,14 +92,6 @@ BOOL IsPlayList(LPTSTR szFilePath){
 	return IsPlayListFast(szFilePath);
 }
 
-//Intå^Ç≈ê›íËÉtÉ@ÉCÉãèëÇ´çûÇ›
-int WritePrivateProfileInt(LPTSTR szAppName, LPTSTR szKeyName, int nData, LPTSTR szINIPath){
-	TCHAR szTemp[100];
-
-	wsprintf(szTemp, TEXT("%d"), nData);
-	return WritePrivateProfileString(szAppName, szKeyName, szTemp, szINIPath);
-}
-
 BOOL GetTimeAndSize(LPCTSTR pszFilePath, LPTSTR pszFileSize, LPTSTR pszFileTime){
 	HANDLE hFile;
 	FILETIME ft;
