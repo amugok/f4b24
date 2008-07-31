@@ -14,8 +14,11 @@
 #pragma comment(lib,"kernel32.lib")
 #pragma comment(lib,"user32.lib")
 #pragma comment(lib,"gdi32.lib")
+#pragma comment(lib,"comdlg32.lib")
 #pragma comment(lib,"comctl32.lib")
 #pragma comment(lib,"shlwapi.lib")
+#pragma comment(lib,"shell32.lib")
+#pragma comment(lib,"ole32.lib")
 #pragma comment(linker, "/EXPORT:GetGPluginInfo=_GetGPluginInfo@0")
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
@@ -24,10 +27,6 @@
 #pragma comment(linker,"/OPT:NOWIN98")
 #endif
 
-// ウィンドウをサブクラス化、プロシージャハンドルをウィンドウに関連付ける
-#define SET_SUBCLASS(hWnd, Proc) \
-	SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)Proc))
-
 typedef struct StringList {
 	struct StringList *pNext;
 	TCHAR szString[1];
@@ -35,6 +34,8 @@ typedef struct StringList {
 
 static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg);
 static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode);
+
+#include "../../../fittle/src/wastr.cpp"
 
 static GENERAL_PLUGIN_INFO gpinfo = {
 	GPDK_VER,
@@ -52,8 +53,8 @@ GENERAL_PLUGIN_INFO * CALLBACK GetGPluginInfo(void){
 static BOOL CALLBACK BookMarkDlgProc(HWND, UINT, WPARAM, LPARAM);
 static void DrawBookMark(HMENU);
 static int AddBookMark(HMENU, HWND);
-static void LoadBookMark(HMENU , LPTSTR);
-static void SaveBookMark(LPTSTR);
+static void LoadBookMark(HMENU);
+static void SaveBookMark();
 
 static void HookComboUpdate(HWND);
 static BOOL HookTreeRoot(HWND);
@@ -127,19 +128,7 @@ static int AppendBookmark(LPTSTR szPath){
 	return StringListAdd(&g_cfgbm.lpBookmark, szPath);
 }
 
-
-void GetModuleParentDir(LPTSTR szParPath){
-	TCHAR szPath[MAX_FITTLE_PATH];
-
-	GetModuleFileName(NULL, szPath, MAX_FITTLE_PATH);
-	GetLongPathName(szPath, szParPath, MAX_FITTLE_PATH); // 98以降
-	*PathFindFileName(szParPath) = '\0';
-	return;
-}
-
 static void UpdateDriveList(HWND hWnd){
-//	PostMessage(hWnd, WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_UPDATE_DRIVELIST, (LPARAM)0);
-//	SetDrivesToCombo(m_hCombo);
 	SendMessage(hWnd, WM_DEVICECHANGE, 0x8000 ,0);
 }
 
@@ -158,46 +147,27 @@ static int GetMenuPosFromString(HMENU hMenu, LPTSTR lpszText){
 
 // 設定を読込
 static void LoadState(HWND hWnd){
-	TCHAR m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
-
-	// INIファイルの位置を取得
-	GetModuleParentDir(m_szINIPath);
-	lstrcat(m_szINIPath, TEXT("fittle.ini"));
+	WASetIniFile(NULL, "Fittle.ini");
 
 	// しおりをルートとして扱う
-	g_cfgbm.nBMRoot = GetPrivateProfileInt(TEXT("BookMark"), TEXT("BMRoot"), 1, m_szINIPath);
+	g_cfgbm.nBMRoot = WAGetIniInt("BookMark", "BMRoot", 1);
 	// しおりをフルパスで表示
-	g_cfgbm.nBMFullPath = GetPrivateProfileInt(TEXT("BookMark"), TEXT("BMFullPath"), 1, m_szINIPath);
-
+	g_cfgbm.nBMFullPath = WAGetIniInt("BookMark", "BMFullPath", 1);
 
 	// しおりの読み込み
-	LoadBookMark(GetSubMenu(GetMenu(hWnd), GetMenuPosFromString(GetMenu(hWnd), TEXT("しおり(&B)"))), m_szINIPath);
-//	nTagReverse = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("TagReverse"), 0, m_szINIPath);
-}
-
-//Int型で設定ファイル書き込み
-static int WritePrivateProfileInt(LPTSTR szAppName, LPTSTR szKeyName, int nData, LPTSTR szINIPath){
-	TCHAR szTemp[100];
-
-	wsprintf(szTemp, TEXT("%d"), nData);
-	return WritePrivateProfileString(szAppName, szKeyName, szTemp, szINIPath);
+	LoadBookMark(GetSubMenu(GetMenu(hWnd), GetMenuPosFromString(GetMenu(hWnd), TEXT("しおり(&B)"))));
 }
 
 // 終了状態を保存
 static void SaveState(){
-	TCHAR m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
+	WASetIniFile(NULL, "Fittle.ini");
 
-	// INIファイルの位置を取得
-	GetModuleParentDir(m_szINIPath);
-	lstrcat(m_szINIPath, TEXT("fittle.ini"));
+	WASetIniInt("BookMark", "BMRoot", g_cfgbm.nBMRoot);
+	WASetIniInt("BookMark", "BMFullPath", g_cfgbm.nBMFullPath);
 
-	WritePrivateProfileInt(TEXT("BookMark"), TEXT("BMRoot"), g_cfgbm.nBMRoot, m_szINIPath);
-	WritePrivateProfileInt(TEXT("BookMark"), TEXT("BMFullPath"), g_cfgbm.nBMFullPath, m_szINIPath);
+	SaveBookMark();	// しおりの保存
 
-	SaveBookMark(m_szINIPath);	// しおりの保存
-
-//	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("x"), nMiniPanel_x, m_szINIPath);
-	WritePrivateProfileString(NULL, NULL, NULL, m_szINIPath);
+	WAFlushIni();
 
 }
 
@@ -477,17 +447,19 @@ static BOOL CALLBACK BookMarkDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM /*lp
 }
 
 // しおりを読み込む
-static void LoadBookMark(HMENU hBMMenu, LPTSTR pszINIPath){
+static void LoadBookMark(HMENU hBMMenu){
 	int i;
-	TCHAR szSec[10];
+	CHAR szSec[10];
+	WASTR szItem;
 	TCHAR szMenuBuff[MAX_FITTLE_PATH+4];
 
 	ClearBookmark();
 	for(i=0;i<MAX_BM_SIZE;i++){
 		int j;
-		wsprintf(szSec, TEXT("Path%d"), i);
+		wsprintfA(szSec, "Path%d", i);
 		szMenuBuff[0] = 0;
-		GetPrivateProfileString(TEXT("BookMark"), szSec, TEXT(""), szMenuBuff, MAX_FITTLE_PATH, pszINIPath);
+		WAGetIniStr("BookMark", szSec, &szItem);
+		WAstrcpyt(szMenuBuff, &szItem, MAX_FITTLE_PATH+4);
 		if(!szMenuBuff[0]) break;
 		j =  AppendBookmark(szMenuBuff);
 		if (j >= 0){
@@ -504,14 +476,16 @@ static void LoadBookMark(HMENU hBMMenu, LPTSTR pszINIPath){
 }
 
 // しおりを保存
-static void SaveBookMark(LPTSTR pszINIPath){
+static void SaveBookMark(){
 	int i;
-	TCHAR szSec[10];
+	CHAR szSec[10];
+	WASTR szItem;
 
 	for(i=0;i<MAX_BM_SIZE;i++){
 		LPCTSTR lpszBMPath = GetBookmark(i);
-		wsprintf(szSec, TEXT("Path%d"), i);
-		WritePrivateProfileString(TEXT("BookMark"), szSec, lpszBMPath[0] ? lpszBMPath : NULL, pszINIPath);
+		wsprintfA(szSec, "Path%d", i);
+		WAstrcpyT(&szItem, lpszBMPath);
+		WASetIniStr("BookMark", szSec, lpszBMPath[0] ? &szItem : NULL);
 		if (!lpszBMPath[0]) break;
 	}
 	return;

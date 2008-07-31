@@ -15,9 +15,11 @@
 #pragma comment(lib,"kernel32.lib")
 #pragma comment(lib,"user32.lib")
 #pragma comment(lib,"gdi32.lib")
+#pragma comment(lib,"comdlg32.lib")
 #pragma comment(lib,"comctl32.lib")
 #pragma comment(lib,"shlwapi.lib")
 #pragma comment(lib,"shell32.lib")
+#pragma comment(lib,"ole32.lib")
 #ifdef UNICODE
 #pragma comment(linker, "/EXPORT:GetGPluginInfo=_GetGPluginInfo@0")
 #endif
@@ -34,6 +36,8 @@
 
 static BOOL CALLBACK MiniPanelProc(HWND, UINT, WPARAM, LPARAM);
 static void LoadConfig();
+
+#include "../../../fittle/src/wastr.cpp"
 
 #ifdef UNICODE
 
@@ -101,15 +105,19 @@ static HWND m_hMiniTool = NULL;		// ミニパネルツールバー
 static HWND m_hMiniPanel = NULL;	// ミニパネルハンドル
 static WNDPROC m_hOldProc = 0;
 static HIMAGELIST m_hImageList = NULL;
+static HFONT m_hFont = 0;
+
+#ifdef UNICODE
+#else
 static HMODULE m_hdllConfig = NULL;
 static BOOL m_fHookConfig = FALSE;
-static HFONT m_hFont = 0;
+#endif
 
 static int m_nMiniHeight = 30;
 static int m_nTimeWidth = 70;
 
 static int m_nTitleDisplayPos = 1;
-static TCHAR m_szTime[100];			// 再生時間
+static CHAR m_szTime[100];			// 再生時間
 static TCHAR m_szTag[MAX_FITTLE_PATH];	// タグ
 
 /*設定関係*/
@@ -120,7 +128,7 @@ static struct {
 	int nMiniScroll;
 	int nMiniTimeShow;
 	int nMiniToolShow;
-	TCHAR szFontName[LF_FACESIZE];
+	WASTR szFontName;
 	int nFontHeight;
 	int nFontStyle;
 } m_cfg;
@@ -133,86 +141,56 @@ static struct {
 	int nMiniWidth;
 } m_sta;
 
-void GetModuleParentDir(LPTSTR szParPath){
-	TCHAR szPath[MAX_FITTLE_PATH];
-
-	GetModuleFileName(NULL, szPath, MAX_FITTLE_PATH);
-	GetLongPathName(szPath, szParPath, MAX_FITTLE_PATH); // 98以降
-	*PathFindFileName(szParPath) = '\0';
-	return;
-}
-
 // 終了状態を読込
 static void LoadState(){
-	TCHAR m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
-
-	// INIファイルの位置を取得
-	GetModuleParentDir(m_szINIPath);
-	lstrcat(m_szINIPath, TEXT("minipane.ini"));
-
-	m_sta.nMiniPanel_x = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("x"), 0, m_szINIPath);
-	m_sta.nMiniPanel_y = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("y"), 0, m_szINIPath);
-	m_sta.nMiniPanelEnd = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("End"), 0, m_szINIPath);
-	m_sta.nMiniWidth = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Width"), 402, m_szINIPath);
+	WASetIniFile(NULL, "minipane.ini");
+	m_sta.nMiniPanel_x = (int)WAGetIniInt("MiniPanel", "x", 0);
+	m_sta.nMiniPanel_y = (int)WAGetIniInt("MiniPanel", "y", 0);
+	m_sta.nMiniPanelEnd = (int)WAGetIniInt("MiniPanel", "End", 0);
+	m_sta.nMiniWidth = (int)WAGetIniInt("MiniPanel", "Width", 402);
 
 }
 
 // 設定を読込
 static void LoadConfig(){
-	TCHAR m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
-
-	// INIファイルの位置を取得
-	GetModuleParentDir(m_szINIPath);
-	lstrcat(m_szINIPath, TEXT("minipane.ini"));
+	int i;
+	WASetIniFile(NULL, "minipane.ini");
 
 	// クリック時の動作
-	m_cfg.nTrayClick[0] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click0"), 0, m_szINIPath);
-	m_cfg.nTrayClick[1] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click1"), 6, m_szINIPath);
-	m_cfg.nTrayClick[2] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click2"), 8, m_szINIPath);
-	m_cfg.nTrayClick[3] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click3"), 0, m_szINIPath);
-	m_cfg.nTrayClick[4] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click4"), 5, m_szINIPath);
-	m_cfg.nTrayClick[5] = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Click5"), 0, m_szINIPath);
+	for(i=0;i<6;i++){
+		CHAR szSec[10];
+		wsprintfA(szSec, "Click%d", i);
+		m_cfg.nTrayClick[i] = WAGetIniInt("MiniPanel", szSec, "\x0\x6\x8\x0\x5\x0"[i]);
+	}
 
 	// タグを反転
-	m_cfg.nTagReverse = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("TagReverse"), 0, m_szINIPath);
+	m_cfg.nTagReverse = WAGetIniInt("MiniPanel", "TagReverse", 0);
 
-	m_cfg.nMiniTop = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("TopMost"), 1, m_szINIPath);
-	m_cfg.nMiniScroll = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("Scroll"), 1, m_szINIPath);
-	m_cfg.nMiniTimeShow = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("TimeShow"), 1, m_szINIPath);
-	m_cfg.nMiniToolShow = (int)GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("ToolShow"), 1, m_szINIPath);
+	m_cfg.nMiniTop = (int)WAGetIniInt("MiniPanel", "TopMost", 1);
+	m_cfg.nMiniScroll = (int)WAGetIniInt("MiniPanel", "Scroll", 1);
+	m_cfg.nMiniTimeShow = (int)WAGetIniInt("MiniPanel", "TimeShow", 1);
+	m_cfg.nMiniToolShow = (int)WAGetIniInt("MiniPanel", "ToolShow", 1);
 
-	GetPrivateProfileString(TEXT("MiniPanel"), TEXT("FontName"), TEXT(""), m_cfg.szFontName, LF_FACESIZE, m_szINIPath);
-	m_cfg.nFontHeight = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("FontHeight"), 9, m_szINIPath);
-	m_cfg.nFontStyle = GetPrivateProfileInt(TEXT("MiniPanel"), TEXT("FontStyle"), 0, m_szINIPath);
+	WAGetIniStr("MiniPanel", "FontName", &m_cfg.szFontName);
+	m_cfg.nFontHeight = WAGetIniInt("MiniPanel", "FontHeight", 9);
+	m_cfg.nFontStyle = WAGetIniInt("MiniPanel", "FontStyle", 0);
 }
 
-//Int型で設定ファイル書き込み
-static int WritePrivateProfileInt(LPTSTR szAppName, LPTSTR szKeyName, int nData, LPTSTR szINIPath){
-	TCHAR szTemp[100];
-
-	wsprintf(szTemp, TEXT("%d"), nData);
-	return WritePrivateProfileString(szAppName, szKeyName, szTemp, szINIPath);
-}
 
 // 終了状態を保存
 static void SaveState(){
-	TCHAR m_szINIPath[MAX_FITTLE_PATH];	// INIファイルのパス
+	WASetIniFile(NULL, "minipane.ini");
 
-	// INIファイルの位置を取得
-	GetModuleParentDir(m_szINIPath);
-	lstrcat(m_szINIPath, TEXT("minipane.ini"));
+	WASetIniInt("MiniPanel", "x", m_sta.nMiniPanel_x);
+	WASetIniInt("MiniPanel", "y", m_sta.nMiniPanel_y);
+	WASetIniInt("MiniPanel", "End", m_sta.nMiniPanelEnd);
+	WASetIniInt("MiniPanel", "Width", m_sta.nMiniWidth);
+	WAFlushIni();
 
+	WASetIniFile(NULL, "Fittle.ini");
 
-	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("x"), m_sta.nMiniPanel_x, m_szINIPath);
-	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("y"), m_sta.nMiniPanel_y, m_szINIPath);
-	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("End"), m_sta.nMiniPanelEnd, m_szINIPath);
-	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("Width"), m_sta.nMiniWidth, m_szINIPath);
-	WritePrivateProfileString(NULL, NULL, NULL, m_szINIPath);
-
-	GetModuleParentDir(m_szINIPath);
-	lstrcat(m_szINIPath, TEXT("Fittle.ini"));
-	WritePrivateProfileInt(TEXT("MiniPanel"), TEXT("End"), m_sta.nMiniPanelEnd, m_szINIPath);
-	WritePrivateProfileString(NULL, NULL, NULL, m_szINIPath);
+	WASetIniInt("MiniPanel", "End", m_sta.nMiniPanelEnd);
+	WAFlushIni();
 }
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
@@ -293,7 +271,7 @@ static void UpdatePanelTime(){
 	int nPos = FittlePluginInterface(GET_POSITION);
 	int nLen = FittlePluginInterface(GET_DURATION);
 	if (nPos >= 0 && nLen >= 0)
-		wsprintf(m_szTime, TEXT("\t%02d:%02d / %02d:%02d"), nPos/60, nPos%60, nLen/60, nLen%60);
+		wsprintfA(m_szTime, "\t%02d:%02d / %02d:%02d", nPos/60, nPos%60, nLen/60, nLen%60);
 	else
 		m_szTag[0] = 0;
 }
@@ -552,8 +530,8 @@ static void UpdateFont(HWND hDlg){
 		m_hFont = 0;
 	}
 	ZeroMemory(&lf, sizeof(LOGFONT));
-	if (m_cfg.szFontName[0]) {
-		lstrcpyn(lf.lfFaceName, m_cfg.szFontName, LF_FACESIZE);
+	if (WAstrlen(&m_cfg.szFontName)) {
+		WAstrcpyt(lf.lfFaceName, &m_cfg.szFontName, LF_FACESIZE);
 	} else {
 #ifdef UNICODE
 		lstrcpy(lf.lfFaceName, TEXT("MS UI Gothic"));
@@ -655,7 +633,7 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 
 				rc.left = m_sta.nMiniWidth - s_nToolWidth - m_nTimeWidth - MINIPANEL_SEPARATOR;
 				FillRect(hDC, &rc, (HBRUSH)(COLOR_BTNFACE+1));
-				TextOut(hDC, rc.left + MINIPANEL_SEPARATOR, 6, m_szTime+1, lstrlen(m_szTime+1));
+				TextOutA(hDC, rc.left + MINIPANEL_SEPARATOR, 6, m_szTime+1, lstrlenA(m_szTime+1));
 			}
 
 			SelectObject(hDC, hOldFont);
@@ -852,6 +830,8 @@ static BOOL OnInitSub(){
 	HMENU hMainMenu = (HMENU)FittlePluginInterface(GET_MENU);
 	EnableMenuItem(hMainMenu, IDM_MINIPANEL, MF_BYCOMMAND | MF_ENABLED);
 
+#ifdef UNICODE
+#else
 	if (SendMessage(m_hwndMain, WM_F4B24_IPC, WM_F4B24_IPC_GET_IF_VERSION, 0) < 12){
 		TCHAR m_szPathFCP[MAX_FITTLE_PATH];
 		GetModuleFileName(m_hinstDLL, m_szPathFCP, MAX_FITTLE_PATH);
@@ -859,7 +839,8 @@ static BOOL OnInitSub(){
 		m_hdllConfig = LoadLibrary(m_szPathFCP);
 		m_fHookConfig = (m_hdllConfig != NULL);
 	}
-
+#endif
+	
 	hMiniMenu = LoadMenu(m_hinstDLL, TEXT("TRAYMENU"));
 
 	LoadState();
@@ -967,6 +948,7 @@ static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg) {
 
 static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode) {
 	if (eCode == GENERAL_PLUGIN_EVENT_INIT) {
+		WAIsUnicode();
 		m_hwndMain = hWnd;
 		return OnInitSub();
 	} else if (eCode == GENERAL_PLUGIN_EVENT_QUIT) {
@@ -1002,6 +984,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 /* 起動時に一度だけ呼ばれます */
 static BOOL OnInit(){
+	WAIsUnicode();
 	m_hOldProc = (WNDPROC)SetWindowLong(m_hwndMain, GWL_WNDPROC, (LONG)WndProc);
 	return OnInitSub();
 }

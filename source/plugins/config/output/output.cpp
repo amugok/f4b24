@@ -163,7 +163,7 @@ static void LoadConfig(){
 	int i;
 	CHAR szSec[10];
 
-	WASetIniFile(NULL, "fittle.ini");
+	WASetIniFile(NULL, "Fittle.ini");
 
 	// 音声出力デバイス
 	m_cfg.nOutputDevice = WAGetIniInt("Main", "OutputDevice", 0);
@@ -189,7 +189,7 @@ static void SaveConfig(){
 	int i;
 	CHAR szSec[10];
 
-	WASetIniFile(NULL, "fittle.ini");
+	WASetIniFile(NULL, "Fittle.ini");
 
 	WASetIniInt("Main", "OutputDevice", m_cfg.nOutputDevice);
 	WASetIniInt("Main", "OutputRate", m_cfg.nOutputRate);

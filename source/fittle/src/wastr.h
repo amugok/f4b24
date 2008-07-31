@@ -23,6 +23,7 @@ extern void WAstrcpyA(LPWASTR pBuf, LPCSTR pValue);
 extern void WAstrcatWX(LPWASTR pBuf, LPCWSTR pValue);
 extern void WAstrcatA(LPWASTR pBuf, LPCSTR pValue);
 extern void WAGetModuleParentDir(HMODULE h, LPWASTR pBuf);
+extern void WAGetIniDir(HMODULE h, LPWASTR pBuf);
 extern void WASetIniFile(HMODULE h, LPCSTR pFilename);
 extern void WAGetIniStr(LPCSTR pSec, LPCSTR pKey, LPWASTR pBuf);
 extern int WAGetIniInt(LPCSTR pSec, LPCSTR pKey, int nDefault);

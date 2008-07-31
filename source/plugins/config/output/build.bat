@@ -51,7 +51,7 @@ goto exitcmd
 
 set PREFIX=..\..\..\..\bin\Plugins\fcp\
 set CFLAGS=/GF /Gy /Ox /Os /MD
-set VER_STR=0807100_
+set VER_STR=0807310_
 
 call %0 output fcp
 

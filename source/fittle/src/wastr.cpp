@@ -98,10 +98,31 @@ void WAGetModuleParentDir(HMODULE h, LPWASTR pBuf){
 		*PathFindFileNameA(pBuf->A) = '\0';
 	}
 }
-void WASetIniFile(HMODULE h, LPCSTR pFilename){
-	WAGetModuleParentDir(h, &m_IniPath);
-	WAstrcatA(&m_IniPath,pFilename);
+
+void WAGetIniDir(HMODULE h, LPWASTR pBuf){
+	WAGetModuleParentDir(NULL, pBuf);
+	WAstrcatA(pBuf, "f4b24.ini");
+	switch (WAGetIniInt("Install", "IniLoc", 0)) {
+	case 1:
+		if (m_WAIsUnicode ? SHGetSpecialFolderPathW(NULL, pBuf->W, CSIDL_APPDATA, FALSE) : SHGetSpecialFolderPathA(NULL, pBuf->A, CSIDL_APPDATA, FALSE)){
+			WAstrcatA(pBuf, "\\Fittle\\");
+			return;
+		}
+		break;
+	case 2:
+		WAGetIniStr("Install", "IniPath", pBuf);
+		if(WAstrlen(pBuf))
+			return;
+		break;
+	}
+	WAGetModuleParentDir(h, pBuf);
 }
+
+void WASetIniFile(HMODULE h, LPCSTR pFilename){
+	WAGetIniDir(h, &m_IniPath);
+	WAstrcatA(&m_IniPath, pFilename);
+}
+
 void WAGetIniStr(LPCSTR pSec, LPCSTR pKey, LPWASTR pBuf){
 	WASTR sec, key;
 	WAstrcpyA(&sec, pSec);
@@ -125,9 +146,9 @@ void WASetIniStr(LPCSTR pSec, LPCSTR pKey, LPCWASTR pValue){
 	WAstrcpyA(&sec, pSec);
 	WAstrcpyA(&key, pKey);
 	if (m_WAIsUnicode)
-		WritePrivateProfileStringW(sec.W, key.W, pValue->W, m_IniPath.W);
+		WritePrivateProfileStringW(sec.W, key.W, pValue ? pValue->W : NULL, m_IniPath.W);
 	else
-		WritePrivateProfileStringA(sec.A, key.A, pValue->A, m_IniPath.A);
+		WritePrivateProfileStringA(sec.A, key.A, pValue ? pValue->A : NULL, m_IniPath.A);
 }
 void WASetIniInt(LPCSTR pSec, LPCSTR pKey, int iValue){
 	CHAR cnvA[12];

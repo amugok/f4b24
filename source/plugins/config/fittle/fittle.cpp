@@ -83,7 +83,7 @@ static void LoadConfig(){
 	int i;
 	CHAR szSec[10];
 
-	WASetIniFile(NULL, "fittle.ini");
+	WASetIniFile(NULL, "Fittle.ini");
 
 	// コントロールカラー
 	m_cfg.nBkColor = WAGetIniInt("Color", "BkColor", (int)GetSysColor(COLOR_WINDOW));
@@ -169,7 +169,7 @@ static void SaveConfig(){
 	int i;
 	CHAR szSec[10];
 
-	WASetIniFile(NULL, "fittle.ini");
+	WASetIniFile(NULL, "Fittle.ini");
 
 	WASetIniInt("Color", "BkColor", m_cfg.nBkColor);
 	WASetIniInt("Color", "TextColor", m_cfg.nTextColor);

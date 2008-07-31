@@ -53,11 +53,11 @@ set CFLAGS=/GF /Gy /Ox /Os /MD
 
 set PREFIX=..\..\..\..\bin\Plugins\fgp\
 
-set VER_STR=0807110A
+set VER_STR=0807310A
 
 call %0 bookmark fgp
 
-set VER_STR=0807110U
+set VER_STR=0807310U
 
 call %0 bookmarku fgp
 
