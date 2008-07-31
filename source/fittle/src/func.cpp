@@ -92,29 +92,34 @@ BOOL IsPlayList(LPTSTR szFilePath){
 	return IsPlayListFast(szFilePath);
 }
 
-BOOL GetTimeAndSize(LPCTSTR pszFilePath, LPTSTR pszFileSize, LPTSTR pszFileTime){
-	HANDLE hFile;
-	FILETIME ft;
-	SYSTEMTIME st;
+void FormatDateTime(LPTSTR pszBuf, LPFILETIME pft){
 	FILETIME lt;
-	DWORD dwSize;
+	FileTimeToLocalFileTime(pft, &lt);
+	FormatLocalDateTime(pszBuf, &lt);
+}
 
-	hFile = CreateFile(pszFilePath, GENERIC_READ, 0, NULL,
-		OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if(hFile==INVALID_HANDLE_VALUE){
+void FormatLocalDateTime(LPTSTR pszBuf, LPFILETIME pft){
+	SYSTEMTIME st;
+	FileTimeToSystemTime(pft, &st);
+	wsprintf(pszBuf, TEXT("%02d/%02d/%02d %02d:%02d:%02d"),
+			st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+}
+
+BOOL GetTimeAndSize(LPCTSTR pszFilePath, LPTSTR pszFileSize, LPTSTR pszFileTime){
+	WASTR szPath;
+	BY_HANDLE_FILE_INFORMATION bhfi;
+	HANDLE hFile;
+
+	WAstrcpyT(&szPath, pszFilePath);
+	hFile = WAOpenFile(&szPath);
+	if(hFile==INVALID_HANDLE_VALUE || !GetFileInformationByHandle(hFile, &bhfi)){
 		lstrcpy(pszFileSize, TEXT("-"));
 		lstrcpy(pszFileTime, TEXT("-"));
 		return FALSE;
 	}
 
-	GetFileTime(hFile, NULL, NULL, &ft);
-	FileTimeToLocalFileTime(&ft, &lt);
-	FileTimeToSystemTime(&lt, &st);
-	wsprintf(pszFileTime, TEXT("%02d/%02d/%02d %02d:%02d:%02d"),
-			st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
-
-	dwSize = GetFileSize(hFile, NULL);
-	wsprintf(pszFileSize, TEXT("%d KB"), dwSize/1024);
+	FormatDateTime(pszFileTime, &bhfi.ftLastWriteTime);
+	wsprintf(pszFileSize, TEXT("%d KB"), bhfi.nFileSizeLow / 1024);
 
 	CloseHandle(hFile);
 

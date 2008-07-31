@@ -407,7 +407,7 @@ int InsertList(struct LISTTAB *pTo, int nStart, struct FILEINFO *pSub){
 }
 
 BOOL LoadPlaylists(HWND hTab){
-	TCHAR szColPath[MAX_FITTLE_PATH];
+	WASTR szColPath;
 	TCHAR szTempPath[MAX_FITTLE_PATH];
 	LPTSTR szBuff, p;
 	TCHAR szTime[50] = TEXT("-"), szSize[50] = TEXT("-");
@@ -419,15 +419,15 @@ BOOL LoadPlaylists(HWND hTab){
 	DWORD dwAccBytes;
 
 	// ファイルをオープン＆リード
-	GetModuleParentDir(szColPath);
+
+	WAGetIniDir(NULL, &szColPath);
 #ifdef UNICODE
-	lstrcat(szColPath, TEXT("Playlist.fpu"));
+	WAstrcatA(&szColPath, "Playlist.fpu");
 #else
-	lstrcat(szColPath, TEXT("Playlist.fpf"));
+	WAstrcatA(&szColPath, "Playlist.fpf");
 #endif
 
-	hFile = CreateFile(szColPath, GENERIC_READ, 0, NULL,
-		OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	hFile = WAOpenFile(&szColPath);
 	if(hFile==INVALID_HANDLE_VALUE) return FALSE;
 
 	dwSize = GetFileSize(hFile, NULL) + sizeof(TCHAR);
@@ -502,7 +502,7 @@ static int WriteBuff(LPTSTR szBuff, int nBuffSize, int nBuffPos, LPCTSTR pData){
 }
 
 BOOL SavePlaylists(HWND hTab){
-	TCHAR szColPath[MAX_FITTLE_PATH];
+	WASTR szColPath;
 	LPTSTR szBuff;
 	int nTabCount;
 	int nBuffSize = 0;
@@ -513,16 +513,16 @@ BOOL SavePlaylists(HWND hTab){
 	HANDLE hFile;
 	DWORD dwAccBytes;
 
-	GetModuleParentDir(szColPath);
+	WAGetIniDir(NULL, &szColPath);
 #ifdef UNICODE
-	lstrcat(szColPath, TEXT("Playlist.fpu"));
+	WAstrcatA(&szColPath, "Playlist.fpu");
 #else
-	lstrcat(szColPath, TEXT("Playlist.fpf"));
+	WAstrcatA(&szColPath, "Playlist.fpf");
 #endif
 
 	nTabCount = TabCtrl_GetItemCount(hTab) - 1;
 	if(nTabCount<=0){
-		DeleteFile(szColPath);
+		WADeleteFile(&szColPath);
 		RemoveAllTabs(hTab, nTabCount);
 		return FALSE;
 	}
@@ -575,8 +575,7 @@ BOOL SavePlaylists(HWND hTab){
 	RemoveAllTabs(hTab, nTabCount);
 
 	// ファイルの書き込み
-	hFile = CreateFile(szColPath, GENERIC_WRITE,
-		0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	hFile = WACreateFile(&szColPath);
 	if(hFile==INVALID_HANDLE_VALUE){
 		HFree(szBuff);
 		return FALSE;

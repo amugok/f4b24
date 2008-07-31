@@ -44,4 +44,7 @@ extern BOOL WAEnumFiles(HMODULE hParent, LPCSTR lpszSubDir, LPCSTR lpszMask, BOO
 extern HMODULE WALoadLibrary(LPCWASTR lpPath) ;
 extern BOOL WAEnumPlugins(HMODULE hParent, LPCSTR lpszSubDir, LPCSTR lpszMask, BOOL (CALLBACK * lpfnPluginProc)(HMODULE hPlugin, LPVOID user), LPVOID user);
 
+extern HANDLE WAOpenFile(LPCWASTR pPath);
+extern HANDLE WACreateFile(LPCWASTR pPath);
+extern void WADeleteFile(LPCWASTR pPath);
 #endif

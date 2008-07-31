@@ -118,13 +118,7 @@ static void CALLBACK ArchiveEnumProc(LPTSTR pszFileName, DWORD dwSize, FILETIME 
 	TCHAR szTime[50] = TEXT("-"), szSize[50] = TEXT("-");
 	TCHAR szFullPath[MAX_FITTLE_PATH];
 	if(CheckFileType(pszFileName)){
-		SYSTEMTIME st;
-		size_t l;
-		FileTimeToSystemTime(&ft, &st);
-		GetDateFormat(LOCALE_USER_DEFAULT, 0, &st, NULL, szTime, 50);
-		l = lstrlen(szTime);
-		if (l < 50) szTime[l++] = TEXT(' ');
-		GetTimeFormat(LOCALE_USER_DEFAULT, 0, &st, NULL, szTime + l, 50 - l);
+		FormatLocalDateTime(szTime, &ft);
 		wsprintf(szFullPath, TEXT("%s/%s"), pWork->pszFilePath, pszFileName);
 		wsprintf(szSize, TEXT("%d KB"), dwSize/1024);
 		pWork->pTale = AddList(pWork->pTale, szFullPath, szSize, szTime);

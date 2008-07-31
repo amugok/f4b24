@@ -21,6 +21,8 @@ LPTSTR GetFileName(LPTSTR);
 int GetParentDir(LPCTSTR, LPTSTR);
 BOOL IsPlayList(LPTSTR);
 BOOL IsPlayListFast(LPTSTR);
+void FormatDateTime(LPTSTR pszBuf, LPFILETIME pft);
+void FormatLocalDateTime(LPTSTR, LPFILETIME);
 BOOL GetTimeAndSize(LPCTSTR, LPTSTR, LPTSTR);
 void SetOLECursor(int);
 void GetModuleParentDir(LPTSTR);

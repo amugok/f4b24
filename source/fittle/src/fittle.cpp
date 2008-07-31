@@ -947,7 +947,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			TIMECHECK("メニュー状態復元2")
 
 			// プレイモードを設定する
-			ControlPlayMode(GetMenu(hWnd), (int)WAGetIniInt("Main", "Mode", PM_LIST));
+			ControlPlayMode(GetMenu(hWnd), WAGetIniInt("Main", "Mode", PM_LIST));
 			m_nRepeatFlag = WAGetIniInt("Main", "Repeat", TRUE);
 			if(m_nRepeatFlag){
 				m_nRepeatFlag = FALSE;

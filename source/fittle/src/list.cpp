@@ -163,9 +163,7 @@ BOOL SearchFolder(struct FILEINFO **pRoot, LPTSTR pszSearchPath, BOOL bSubFlag){
 	TCHAR szFullPath[MAX_FITTLE_PATH];
 	TCHAR szSize[50], szTime[50];
 	struct FILEINFO **pTale = pRoot;
-	SYSTEMTIME sysTime;
-	FILETIME locTime;
-	
+
 	PathAddBackslash(pszSearchPath);
 	wsprintf(szSearchDirW, TEXT("%s*.*"), pszSearchPath);
 	hFind = FindFirstFile(szSearchDirW, &wfd);
@@ -176,10 +174,7 @@ BOOL SearchFolder(struct FILEINFO **pRoot, LPTSTR pszSearchPath, BOOL bSubFlag){
 					if(CheckFileType(wfd.cFileName)){
 						wsprintf(szFullPath, TEXT("%s%s"), pszSearchPath, wfd.cFileName); 
 						wsprintf(szSize, TEXT("%d KB"), wfd.nFileSizeLow/1024);
-						FileTimeToLocalFileTime(&(wfd.ftLastWriteTime), &locTime);
-						FileTimeToSystemTime(&locTime, &sysTime);
-						wsprintf(szTime, TEXT("%02d/%02d/%02d %02d:%02d:%02d"),
-							sysTime.wYear, sysTime.wMonth, sysTime.wDay, sysTime.wHour, sysTime.wMinute, sysTime.wSecond);
+						FormatDateTime(szTime, &(wfd.ftLastWriteTime));
 						pTale = AddList(pTale, szFullPath, szSize, szTime);
 					}if(g_cfg.nZipSearch && bSubFlag && IsArchiveFast(wfd.cFileName)){	// ZIPも検索
 						wsprintf(szFullPath, TEXT("%s%s"), pszSearchPath, wfd.cFileName);
@@ -207,6 +202,8 @@ int ReadM3UFile(struct FILEINFO **pSub, LPTSTR pszFilePath){
 	DWORD dwAccBytes;
 	BOOL fUTF8 = FALSE;
 	int i=0, j=0;
+
+	WASTR szPath;
 	CHAR szTempPath[MAX_FITTLE_PATH];
 
 	TCHAR szCombine[MAX_FITTLE_PATH];
@@ -228,9 +225,9 @@ int ReadM3UFile(struct FILEINFO **pSub, LPTSTR pszFilePath){
 		dTime = GetTickCount();
 #endif
 
-	if((hFile = CreateFile(pszFilePath, GENERIC_READ, 0, NULL,
-		OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL))==INVALID_HANDLE_VALUE) return -1;
-	//GetParentDir(pszFilePath, szParPath);
+	WAstrcpyT(&szPath, pszFilePath);
+	hFile = WAOpenFile(&szPath);
+	if(hFile == INVALID_HANDLE_VALUE) return -1;
 
 	lstrcpyn(szParPath, pszFilePath, MAX_FITTLE_PATH);
 	*(PathFindFileName(szParPath)-1) = '\0';
@@ -322,6 +319,8 @@ BOOL WriteM3UFile(struct FILEINFO *pRoot, LPTSTR szFile, int nMode){
 	FILEINFO *pTmp;
 	HANDLE hFile;
 	DWORD dwAccBytes;
+
+	WASTR szPath;
 	TCHAR szLine[MAX_FITTLE_PATH];
 #ifdef UNICODE
 #else
@@ -329,8 +328,9 @@ BOOL WriteM3UFile(struct FILEINFO *pRoot, LPTSTR szFile, int nMode){
 #endif
 	CHAR szAnsiTemp[MAX_FITTLE_PATH * 3];
 
-		// ファイルの書き込み
-	hFile = CreateFile(szFile, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	// ファイルの書き込み
+	WAstrcpyT(&szPath, szFile);
+	hFile = WACreateFile(&szPath);
 	if (hFile == INVALID_HANDLE_VALUE)
 		return FALSE;
 

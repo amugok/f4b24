@@ -398,3 +398,23 @@ BOOL WAEnumPlugins(HMODULE hParent, LPCSTR lpszSubDir, LPCSTR lpszMask, BOOL (CA
 	ENUMPLUGINWORK work = { lpfnPluginProc, user };
 	return WAEnumFiles(hParent, lpszSubDir, lpszMask, WAEnumPluginsProc, &work);
 }
+
+HANDLE WAOpenFile(LPCWASTR pPath){
+	return (m_WAIsUnicode) ? \
+		CreateFileW(pPath->W, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL) : \
+		CreateFileA(pPath->A, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+}
+
+HANDLE WACreateFile(LPCWASTR pPath){
+	return (m_WAIsUnicode) ? \
+		CreateFileW(pPath->W, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL) : \
+		CreateFileA(pPath->A, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+}
+
+void WADeleteFile(LPCWASTR pPath){
+	if (m_WAIsUnicode)
+		DeleteFileW(pPath->W);
+	else
+		DeleteFileA(pPath->A);
+}
+
