@@ -256,8 +256,9 @@ BOOL CheckHaveChild(LPTSTR szTargetPath){
 }
 
 // パスを元にツリーを作る　長すぎ…
-HTREEITEM MakeTreeFromPath(HWND hTV, HWND hCB, LPTSTR szSetPath){
+HTREEITEM MakeTreeFromPath(HWND hTV, HWND hCB, LPCTSTR pszFolderPath){
 	int nDriveIndex;
+	TCHAR szSetPath[MAX_FITTLE_PATH];
 	TCHAR szDriveName[MAX_FITTLE_PATH];
 	TCHAR szCompPath[MAX_FITTLE_PATH];
 	TCHAR szLabel[MAX_FITTLE_PATH];
@@ -271,6 +272,8 @@ HTREEITEM MakeTreeFromPath(HWND hTV, HWND hCB, LPTSTR szSetPath){
 	DWORD dTime;
 	dTime = GetTickCount();
 #endif
+
+	lstrcpy(szSetPath, pszFolderPath);
 
 	// \を削除
 	PathRemoveBackslash(szSetPath);

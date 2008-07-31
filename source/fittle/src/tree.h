@@ -15,7 +15,7 @@ int SetDrivesToCombo(HWND);
 int InitTreeIconIndex(HWND, HWND, BOOL);
 HTREEITEM MakeDriveNode(HWND, HWND);
 HTREEITEM MakeTwoTree(HWND, HTREEITEM);
-HTREEITEM MakeTreeFromPath(HWND, HWND, LPTSTR);
+HTREEITEM MakeTreeFromPath(HWND, HWND, LPCTSTR);
 int GetPathFromNode(HWND, HTREEITEM, LPTSTR);
 int MyScroll(HWND);
 void OnBeginDragTree(HWND);

@@ -608,6 +608,15 @@ static void UniFix(HWND hWnd){
 }
 #endif
 
+static void SetFolder(LPCTSTR lpszFolderPath){
+	if(g_cfg.nTreeState==TREE_SHOW){
+		MakeTreeFromPath(m_hTree, m_hCombo, lpszFolderPath);
+	}else{
+		lstrcpyn(m_szTreePath, lpszFolderPath, MAX_FITTLE_PATH);
+		SendMessage(GetParent(m_hStatus), WM_COMMAND, IDM_FILEREVIEW, 0);
+	}
+}
+
 
 // ウィンドウプロシージャ
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
@@ -1007,22 +1016,12 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					case FOLDERS: // フォルダ
 					case LISTS:   // リスト
 					case ARCHIVES:// アーカイブ
-						if(g_cfg.nTreeState==TREE_SHOW){
-							MakeTreeFromPath(m_hTree, m_hCombo, szCmdParPath);
-						}else{
-							lstrcpyn(m_szTreePath, szCmdParPath, MAX_FITTLE_PATH);
-							SendMessage(hWnd, WM_COMMAND, IDM_FILEREVIEW, 0);
-						}
+						SetFolder(szCmdParPath);
 						bCmd = TRUE;
 						break;
 
 					case FILES: // ファイル
-						if(g_cfg.nTreeState==TREE_SHOW){
-							MakeTreeFromPath(m_hTree, m_hCombo, szCmdParPath);
-						}else{
-							lstrcpyn(m_szTreePath, szCmdParPath, MAX_FITTLE_PATH);
-							SendMessage(hWnd, WM_COMMAND, IDM_FILEREVIEW, 0);
-						}
+						SetFolder(szCmdParPath);
 						GetLongPathName(XARGV[i], szCmdParPath, MAX_FITTLE_PATH); // 98以降
 						nFileIndex = GetIndexFromPath(GetListTab(m_hTab, 0)->pRoot, szCmdParPath);
 						ListView_SingleSelectP(GetListTab(m_hTab, 0)->hList, nFileIndex);
@@ -1057,14 +1056,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					WAstrcpyt(szLastPath, &g_cfg.szStartPath, MAX_FITTLE_PATH);
 				}
 				if(FILE_EXIST(szLastPath)){
-					if(g_cfg.nTreeState==TREE_SHOW){
-						MakeTreeFromPath(m_hTree, m_hCombo, szLastPath);
-						TIMECHECK("ツリー展開")
-					}else{
-						lstrcpyn(m_szTreePath, szLastPath, MAX_FITTLE_PATH);
-						SendMessage(hWnd, WM_COMMAND, IDM_FILEREVIEW, 0);
-						TIMECHECK("フォルダ展開")
-					}
+					SetFolder(szLastPath);
+					TIMECHECK("フォルダ展開")
 				}else{
 					TreeView_Select(m_hTree, MakeDriveNode(m_hCombo, m_hTree), TVGN_CARET);
 				}
@@ -1272,7 +1265,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 							return TRUE;
 
 						case FILES:
-							MakeTreeFromPath(m_hTree, m_hCombo, (LPTSTR)szParPath);
+							MakeTreeFromPath(m_hTree, m_hCombo, szParPath);
 							GetLongPathName(pRecieved, szParPath, MAX_FITTLE_PATH); // 98以降
 							nFileIndex = GetIndexFromPath(GetListTab(m_hTab, 0)->pRoot, szParPath);
 							ListView_SingleSelect(GetCurListTab(m_hTab)->hList, nFileIndex);
@@ -2400,13 +2393,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)m_szTreePath);
 				break;
 			case WM_F4B24_IPC_SET_CURPATH:
-				if(g_cfg.nTreeState == TREE_SHOW){
+				{
 					TCHAR szWorkPath[MAX_FITTLE_PATH];
 					SendMessage((HWND)lp, WM_GETTEXT, (WPARAM)MAX_FITTLE_PATH, (LPARAM)szWorkPath);
-					MakeTreeFromPath(m_hTree, m_hCombo, szWorkPath);
-				}else{
-					SendMessage((HWND)lp, WM_GETTEXT, (WPARAM)MAX_FITTLE_PATH, (LPARAM)m_szTreePath);
-					SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_FILEREVIEW, 0), 0);
+					SetFolder(szWorkPath);
 				}
 				break;
 

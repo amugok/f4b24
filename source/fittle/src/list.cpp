@@ -376,25 +376,18 @@ static LPTSTR SafePathFindExtensionPlusOne(LPTSTR lpszPath){
 }
 
 int CompareNode(struct FILEINFO *pLeft, struct FILEINFO *pRight, int nSortType){
+	if (nSortType < 0) return -CompareNode(pLeft, pRight, -nSortType);
 	switch(nSortType){
 		case 0:		// フルパス
 			return lstrcmpi(pLeft->szFilePath, pRight->szFilePath);
 		case 1:		// ファイル名昇順
 			return lstrcmpi(GetFileName(pLeft->szFilePath), GetFileName(pRight->szFilePath));
-		case -1:	// ファイル名降順
-			return -1*lstrcmpi(GetFileName(pLeft->szFilePath), GetFileName(pRight->szFilePath));
 		case 2:		// サイズ昇順
 			return StrToInt(pLeft->szSize) - StrToInt(pRight->szSize);
-		case -2:	// サイズ降順
-			return StrToInt(pRight->szSize) - StrToInt(pLeft->szSize);
 		case 3:		// 種類昇順
 			return lstrcmpi(IsURLPath(pLeft->szFilePath)?TEXT("URL"):SafePathFindExtensionPlusOne(pLeft->szFilePath), StrStr(pRight->szFilePath, TEXT("://"))?TEXT("URL"):SafePathFindExtensionPlusOne(pRight->szFilePath));
-		case -3:	// 種類昇順
-			return -1*lstrcmpi(IsURLPath(pLeft->szFilePath)?TEXT("URL"):SafePathFindExtensionPlusOne(pLeft->szFilePath), StrStr(pRight->szFilePath, TEXT("://"))?TEXT("URL"):SafePathFindExtensionPlusOne(pRight->szFilePath));
 		case 4:		// 更新日時昇順
 			return lstrcmp(pLeft->szTime, pRight->szTime);
-		case -4:	// 更新日時降順
-			return -1*lstrcmp(pLeft->szTime, pRight->szTime);
 		default:
 			return 0;
 	}
