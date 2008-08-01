@@ -15,10 +15,6 @@
 #define ID_LIST 105
 #define STACK_SIZE 10
 
-// 選択されているタブからListTabハンドルを取得
-#define GetCurListTab(hTab) \
-	GetListTab(hTab, TabCtrl_GetCurSel(hTab))
-
 struct LISTTAB{
 	TCHAR	szTitle[MAX_FITTLE_PATH];	// タブのタイトル
 	HWND	hList;						// リストのハンドル

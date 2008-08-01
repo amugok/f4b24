@@ -70,10 +70,10 @@ BOOL CALLBACK FindDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 					ToPlayList(&(pNew->pRoot), pRoot, szSearch);
 					TraverseList(pNew);
 					if(lstrlen(szSearch)==0){
-						RenameListTab(hTab, TabCtrl_GetItemCount(hTab)-1, TEXT("Default"));
+						RenameListTab(hTab, TabGetListCount()-1, TEXT("Default"));
 					}
 
-					TabCtrl_SetCurFocus(hTab, TabCtrl_GetItemCount(hTab)-1);
+					TabSetListFocus(TabGetListCount()-1);
 					EndDialog(hDlg, -1);
 					return TRUE;
 			}

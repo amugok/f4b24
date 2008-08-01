@@ -52,7 +52,7 @@ struct LISTTAB *MakeNewTab(HWND hTab, LPTSTR szTabName, int nItem){
 	tci.pszText = szTabName;
 	tci.cchTextMax = MAX_FITTLE_PATH;
 	tci.lParam = (LPARAM)pNew;	// タブに構造体を関連付ける
-	if(nItem==-1) nItem = TabCtrl_GetItemCount(hTab);
+	if(nItem==-1) nItem = TabGetListCount();
 	TabCtrl_InsertItem(hTab, nItem, &tci);
 
 	// リストビュー
@@ -289,10 +289,10 @@ int RemoveListTab(HWND hTab, int nItem){
 	TabCtrl_DeleteItem(hTab, nItem);
 	// タブの行数が変わるとリストビューがずれるためそれを修正
 	GetClientRect(hTab, &rcTab);
-	if(!(g_cfg.nTabHide && TabCtrl_GetItemCount(hTab)==1)){
-		TabCtrl_AdjustRect(hTab, FALSE, &rcTab);
+	if(!(g_cfg.nTabHide && TabGetListCount()==1)){
+		TabAdjustRect(&rcTab);
 	}
-	MoveWindow(GetCurListTab(hTab)->hList,
+	MoveWindow(GetListTab(hTab, TabGetListSel())->hList,
 		rcTab.left,
 		rcTab.top,
 		rcTab.right - rcTab.left,
@@ -321,10 +321,10 @@ int MoveTab(HWND hTab, int nTarget, int nDir){
 	TabCtrl_SetItem(hTab, nTarget + nDir, &tciFrom);
 
 	// フォーカスの移動
-	if(TabCtrl_GetCurFocus(hTab)==nTarget){
-		TabCtrl_SetCurFocus(hTab, nTarget + nDir);
-	}else if(TabCtrl_GetCurFocus(hTab)==nTarget + nDir){
-		TabCtrl_SetCurFocus(hTab, nTarget);
+	if(TabGetListFocus()==nTarget){
+		TabSetListFocus(nTarget + nDir);
+	}else if(TabGetListFocus()==nTarget + nDir){
+		TabSetListFocus(nTarget);
 	}
 	//InvalidateRect(hTab, NULL, FALSE);
 	
@@ -534,7 +534,7 @@ BOOL SavePlaylists(HWND hTab){
 	WAstrcatA(&szColPath, "Playlist.fpf");
 #endif
 
-	nTabCount = TabCtrl_GetItemCount(hTab) - 1;
+	nTabCount = TabGetListCount() - 1;
 	if(nTabCount<=0){
 		WADeleteFile(&szColPath);
 		RemoveAllTabs(hTab, nTabCount);

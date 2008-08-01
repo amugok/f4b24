@@ -164,4 +164,11 @@ extern struct FILEINFO *g_pNextFile;
 LRESULT CALLBACK NewListProc(HWND, UINT, WPARAM, LPARAM); //リストビュー用のプロシージャ
 BOOL CheckFileType(LPTSTR);
 
+int TabGetListSel();
+int TabGetListFocus();
+void TabSetListFocus(int nIndex);
+int TabGetListCount();
+void TabAdjustRect(LPRECT pRect);
+
+
 #endif
