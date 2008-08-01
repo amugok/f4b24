@@ -148,8 +148,13 @@ LPTSTR MyPathAddBackslash(LPTSTR pszPath){
 	}
 }
 
-static void ListView_SingleSelectViewSub(HWND hLV, int nIndex, int flag){
+// ‘I‘ðó‘ÔƒNƒŠƒA
+void ListView_ClearSelect(HWND hLV){
 	ListView_SetItemState(hLV, -1, 0, (LVIS_SELECTED | LVIS_FOCUSED));
+}
+
+static void ListView_SingleSelectViewSub(HWND hLV, int nIndex, int flag){
+	ListView_ClearSelect(hLV);
 	if (nIndex >= 0){
 		ListView_SetItemState(hLV, nIndex, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED));
 		if (flag & 1) ListView_EnsureVisible(hLV, nIndex, TRUE);

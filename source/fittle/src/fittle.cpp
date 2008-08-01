@@ -1274,7 +1274,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						GetLongPathName(pRecieved, szTest, MAX_FITTLE_PATH);
 					SearchFiles(&pSub, szTest, TRUE);
 					pCurList = GetCurListTab(m_hTab);
-					ListView_SetItemState(pCurList->hList, -1, 0, LVIS_FOCUSED | LVIS_SELECTED);
+					ListView_ClearSelect(pCurList->hList);
 					InsertList(pCurList, -1, pSub);
 					ListView_EnsureVisible(pCurList->hList, ListView_GetItemCount(pCurList->hList)-1, TRUE);
 					return TRUE;
@@ -1715,7 +1715,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 						GetPathFromNode(m_hTree, m_hHitTree, szNowDir);
 						SearchFiles(&pSub, szNowDir, TRUE);
-						ListView_SetItemState(pCurList->hList, -1, 0, LVIS_FOCUSED | LVIS_SELECTED);
+						ListView_ClearSelect(pCurList->hList);
 						InsertList(pCurList, -1, pSub);
 						ListView_EnsureVisible(pCurList->hList, ListView_GetItemCount(pCurList->hList)-1, TRUE);
 						m_hHitTree = NULL;
@@ -4244,7 +4244,7 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 					TabCtrl_GetItemRect(hTC, i, &rcItem);
 					if(PtInRect(&rcItem, pt)){
 						pList = GetListTab(hTC, i);
-						ListView_SetItemState(pList->hList, -1, 0, LVIS_FOCUSED | LVIS_SELECTED);	// 選択状態クリア
+						ListView_ClearSelect(pList->hList);
 						InsertList(pList, -1, pSub);
 						ListView_EnsureVisible(pList->hList, ListView_GetItemCount(pList->hList)-1, TRUE);	// 一番下のアイテムを表示
 						TabCtrl_SetCurFocus(hTC, i);
@@ -4427,7 +4427,7 @@ LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
 				}
 				DragFinish(hDrop);
 
-				ListView_SetItemState(hLV, -1, 0, LVIS_FOCUSED | LVIS_SELECTED);	// 表示をクリア
+				ListView_ClearSelect(hLV);
 				InsertList(GetCurListTab(m_hTab), -1, pSub);
 				ListView_EnsureVisible(hLV, ListView_GetItemCount(hLV)-1, TRUE);
 				SetForegroundWindow(m_hMainWnd);
@@ -4520,7 +4520,7 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 					nHitTab = TabCtrl_HitTest(m_hTab, &info);
 					if(nHitTab!=-1){
 						DrawTabFocus(nHitTab, FALSE);
-						ListView_SetItemState(GetListTab(m_hTab, nHitTab)->hList, -1, 0, LVIS_FOCUSED | LVIS_SELECTED);
+						ListView_ClearSelect(GetListTab(m_hTab, nHitTab)->hList);
 						InsertList(GetListTab(m_hTab, nHitTab), -1, pSub);
 						ListView_EnsureVisible(GetListTab(m_hTab, nHitTab)->hList, ListView_GetItemCount(GetListTab(m_hTab, nHitTab)->hList)-1, TRUE);
 					}
