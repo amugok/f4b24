@@ -375,7 +375,7 @@ static BOOL CALLBACK ResolveIndirect(LPTSTR pszArchivePath, LPTSTR pszTrackPart,
 	// ˆês‚¸‚Âˆ—
 	while(ReadLine(hFile, szLine, MAX_FITTLE_PATH,charset) > 0){
 		LPTSTR p = GetWord(szLine, szToken, MAX_FITTLE_PATH);
-		if(!lstrcmp(szToken, TEXT("FILE"))){
+		if(!lstrcmp(szToken, TEXT("FILE")) && nCurrent < nIndex){
 			GetWord(p, szToken, MAX_FITTLE_PATH);
 			PathUnquoteSpaces(szToken);
 			if(PathIsRelative(szToken)){

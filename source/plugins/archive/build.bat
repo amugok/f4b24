@@ -57,7 +57,6 @@ set CFLAGS=%CFLAGSBASE% /MD
 set VER_STR=%VER_STR_BASE%A
 call %0 arj fap
 call %0 cab fap
-call %0 cue fap
 call %0 lha fap
 call %0 rar fap
 call %0 tar fap
@@ -65,13 +64,17 @@ call %0 zip fap
 set VER_STR=%VER_STR_BASE%U
 call %0 arju fap
 call %0 cabu fap
-call %0 cueu fap
 call %0 lhau fap
 call %0 raru fap
 
 set VER_STR=0807190U
 call %0 taru fap
 call %0 zipu fap
+
+set VER_STR=0808010A
+call %0 cue fap
+set VER_STR=0808010U
+call %0 cueu fap
 
 set CFLAGS=%CFLAGSBASE%
 
