@@ -310,9 +310,22 @@ static void SET_SUBCLASS(HWND hWnd, WNDPROC Proc){
 	SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)Proc));
 }
 
+static int TabGetListSel(){
+	return TabCtrl_GetCurSel(m_hTab);
+}
+static void TabSetListSel(int nIndex){
+	TabCtrl_SetCurFocus(m_hTab, nIndex);
+}
+static int TabGetListCount(){
+	return TabCtrl_GetItemCount(m_hTab);
+}
+static void TabGetItemRect(int nItem, LPRECT pRect){
+	TabCtrl_GetItemRect(m_hTab, nItem, pRect);
+}
+
 // 再生中のリストタブのポインタを取得
 static struct LISTTAB *GetPlayListTab(){
-	return GetListTab(m_hTab, (m_nPlayTab!=-1 ? m_nPlayTab : TabCtrl_GetCurSel(m_hTab)));
+	return GetListTab(m_hTab, (m_nPlayTab!=-1 ? m_nPlayTab : TabGetListSel()));
 }
 
 static struct LISTTAB *GetFolderTab(){
@@ -1013,7 +1026,7 @@ static void OnCreate(){
 			TreeView_Select(m_hTree, MakeDriveNode(m_hCombo, m_hTree), TVGN_CARET);
 		}
 		// タブの復元
-		TabCtrl_SetCurFocus(m_hTab, m_nPlayTab = WAGetIniInt("Main", "TabIndex", 0));
+		TabSetListSel(m_nPlayTab = WAGetIniInt("Main", "TabIndex", 0));
 
 		TIMECHECK("タブの復元")
 		pCurList = GetCurListTab(m_hTab);
@@ -1222,7 +1235,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				hdwp = BeginDeferWindowPos(1);
 
 				GetClientRect(m_hTab, &rcTab);
-				if(!(g_cfg.nTabHide && TabCtrl_GetItemCount(m_hTab)==1)){
+				if(!(g_cfg.nTabHide && TabGetListCount()==1)){
 					if(rcTab.left<rcTab.right){
 						TabCtrl_AdjustRect(m_hTab, FALSE, &rcTab);
 					}
@@ -1320,12 +1333,12 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 							MergeSort(&(pFolderTab->pRoot), pFolderTab->nSortState);
 						}
 						TraverseList(pFolderTab);
-						TabCtrl_SetCurFocus(m_hTab, 0);
+						TabSetListSel(0);
 					}
 					break;
 
 				case IDM_SAVE: //プレイリストに保存
-					s_nHitTab = TabCtrl_GetCurSel(m_hTab);
+					s_nHitTab = TabGetListSel();
 				case IDM_TAB_SAVE:
 					{
 						int nRet;
@@ -1358,7 +1371,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 							FilePause();	// ポーズ中なら再開
 						}else{ // それ以外なら選択ファイルを再生
 							if(nLBIndex!=-1){
-								m_nPlayTab = TabCtrl_GetCurSel(m_hTab);
+								m_nPlayTab = TabGetListSel();
 								PlayByUser(hWnd, GetPtrFromIndex(pCurList->pRoot, nLBIndex));
 							}
 						}
@@ -1485,7 +1498,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						}
 						TraverseList(pFolderTab);
 						SetCursor(LoadCursor(NULL, IDC_ARROW)); // 矢印カーソルに戻す
-						TabCtrl_SetCurFocus(m_hTab, 0);
+						TabSetListSel(0);
 						break;
 					}
 
@@ -1641,8 +1654,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						lstrcpy(szLabel, TEXT("Default"));
 						if(DialogBoxParam(m_hInst, TEXT("TAB_NAME_DIALOG"), hWnd, TabNameDlgProc, (LPARAM)szLabel)){
 							MakeNewTab(m_hTab, szLabel, -1);
-							SendToPlaylist(GetCurListTab(m_hTab), GetListTab(m_hTab, TabCtrl_GetItemCount(m_hTab)-1));
-							TabCtrl_SetCurFocus(m_hTab, TabCtrl_GetItemCount(m_hTab)-1);
+							SendToPlaylist(GetCurListTab(m_hTab), GetListTab(m_hTab, TabGetListCount()-1));
+							TabSetListSel(TabGetListCount()-1);
 						}
 					}
 					break;
@@ -1750,7 +1763,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						struct LISTTAB *pNew = MakeNewTab(m_hTab, szLabel, -1);
 						SearchFiles(&(pNew->pRoot), szNowDir, TRUE);
 						TraverseList(pNew);
-						TabCtrl_SetCurFocus(m_hTab, TabCtrl_GetItemCount(m_hTab)-1);
+						TabSetListSel(TabGetListCount()-1);
 						InvalidateRect(m_hTab, NULL, FALSE);
 					}
 					m_hHitTree = NULL;
@@ -1781,7 +1794,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					lstrcpy(szLabel, TEXT("Default"));
 					if(DialogBoxParam(m_hInst, TEXT("TAB_NAME_DIALOG"), hWnd, TabNameDlgProc, (LPARAM)szLabel)){
 						MakeNewTab(m_hTab, szLabel, -1);
-						TabCtrl_SetCurFocus(m_hTab, TabCtrl_GetItemCount(m_hTab)-1);
+						TabSetListSel(TabGetListCount()-1);
 					}
 					break;
 
@@ -1795,8 +1808,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 				case IDM_TAB_DEL:
 					// カレントタブを消すなら左をカレントにする
-					if(TabCtrl_GetCurSel(m_hTab)==s_nHitTab){
-						TabCtrl_SetCurFocus(m_hTab, s_nHitTab-1);
+					if(TabGetListSel()==s_nHitTab){
+						TabSetListSel(s_nHitTab-1);
 					}
 					// 再生タブを消すなら再生タブをクリア
 					if(s_nHitTab==m_nPlayTab){
@@ -1814,11 +1827,11 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case IDM_TAB_FOR_RIGHT:
-					TabCtrl_SetCurFocus(m_hTab, (TabCtrl_GetCurSel(m_hTab)+1==TabCtrl_GetItemCount(m_hTab)?0:TabCtrl_GetCurSel(m_hTab)+1));
+					TabSetListSel((TabGetListSel()+1==TabGetListCount()?0:TabGetListSel()+1));
 					break;
 
 				case IDM_TAB_FOR_LEFT:
-					TabCtrl_SetCurFocus(m_hTab, (TabCtrl_GetCurSel(m_hTab)?TabCtrl_GetCurSel(m_hTab)-1:TabCtrl_GetItemCount(m_hTab)-1));
+					TabSetListSel((TabGetListSel()?TabGetListSel()-1:TabGetListCount()-1));
 					break;
 
 				case IDM_TAB_SORT:
@@ -1929,8 +1942,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						TCHITTESTINFO tchti;
 
 						if(lp==-1){	// キーボード
-							s_nHitTab = TabCtrl_GetCurSel(m_hTab);
-							TabCtrl_GetItemRect(m_hTab, s_nHitTab, &rcItem);
+							s_nHitTab = TabGetListSel();
+							TabGetItemRect(s_nHitTab, &rcItem);
 							MapWindowPoints(m_hTab, HWND_DESKTOP, (LPPOINT)&rcItem, 2);
 							lp = MAKELPARAM(rcItem.left, rcItem.bottom);
 						}else{	// マウス
@@ -1947,7 +1960,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 							EnableMenuItem(hPopMenu, IDM_TAB_RENAME, MF_GRAYED | MF_DISABLED);
 						}
 						if(s_nHitTab<=1) EnableMenuItem(hPopMenu, IDM_TAB_LEFT, MF_GRAYED | MF_DISABLED);
-						if(s_nHitTab>=TabCtrl_GetItemCount(m_hTab)-1 || s_nHitTab<=0)
+						if(s_nHitTab>=TabGetListCount()-1 || s_nHitTab<=0)
 							EnableMenuItem(hPopMenu, IDM_TAB_RIGHT, MF_GRAYED | MF_DISABLED);
 						TrackPopupMenu(hPopMenu, TPM_LEFTALIGN | TPM_TOPALIGN, (short)LOWORD(lp), (short)HIWORD(lp), 0, hWnd, NULL);
 						DestroyMenu(hPopMenu);
@@ -2150,7 +2163,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 							{
 								struct LISTTAB *pCurList = GetCurListTab(m_hTab);
 								GetClientRect(m_hTab, &rcTab);
-								if(!(g_cfg.nTabHide && TabCtrl_GetItemCount(m_hTab)==1)){
+								if(!(g_cfg.nTabHide && TabGetListCount()==1)){
 									TabCtrl_AdjustRect(m_hTab, FALSE, &rcTab);
 								}
 								SendMessage(pCurList->hList, WM_SETFONT, (WPARAM)m_hFont, 0);
@@ -2300,7 +2313,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					if(lp<0){
 						return (LRESULT)GetCurListTab(m_hTab)->hList;
 					}else{
-						nCount = TabCtrl_GetItemCount(m_hTab);
+						nCount = TabGetListCount();
 						for(i=0;i<nCount;i++){
 							if(lp==i){
 								return (LRESULT)GetListTab(m_hTab, (int)lp)->hList;
@@ -2705,7 +2718,7 @@ static void SaveState(HWND hWnd){
 	WASetIniInt("Main", "ShowStatus", g_cfg.nShowStatus);
 	WASetIniInt("Main", "ResPos", g_cfg.nResPos);
 
-	WASetIniInt("Main", "TabIndex", (m_nPlayTab==-1?TabCtrl_GetCurSel(m_hTab):m_nPlayTab));	//TabのIndex
+	WASetIniInt("Main", "TabIndex", (m_nPlayTab==-1?TabGetListSel():m_nPlayTab));	//TabのIndex
 	WASetIniInt("Main", "MainMenu", (GetMenu(hWnd)?1:0));
 
 	WASetIniStr("Main", "LastPath", &lastpath); //ラストパス
@@ -3679,7 +3692,7 @@ static void DrawTabFocus(int nIdx, BOOL bFlag){
 
 	if((bFlag && !pList->bFocusRect)
 	|| (!bFlag && pList->bFocusRect)){
-		TabCtrl_GetItemRect(m_hTab, nIdx, &rcItem);
+		TabGetItemRect(nIdx, &rcItem);
 		rcItem.left += 1;
 		rcItem.top += 1;
 		rcItem.right -= 1;
@@ -3723,7 +3736,7 @@ static BOOL SetUIFont(void){
 		SendMessage(m_hTab, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), 0);
 	}
 	SendMessage(m_hTree, WM_SETFONT, (WPARAM)m_hFont, (LPARAM)FALSE);
-	for(int i=0;i<TabCtrl_GetItemCount(m_hTab);i++){
+	for(int i=0;i<TabGetListCount();i++){
 		SendMessage(GetListTab(m_hTab, i)->hList, WM_SETFONT, (WPARAM)m_hFont, (LPARAM)FALSE);
 	}
 	// コンボボックスのサイズ調整
@@ -3764,7 +3777,7 @@ static void SetStatusbarIcon(LPTSTR pszPath, BOOL bShow){
 
 static BOOL SetUIColor(void){
 	HWND hList;
-	for(int i=0;i<TabCtrl_GetItemCount(m_hTab);i++){
+	for(int i=0;i<TabGetListCount();i++){
 		hList = GetListTab(m_hTab, i)->hList;
 		SetListColor(hList);
 	}
@@ -3959,7 +3972,7 @@ static LRESULT CALLBACK NewSplitBarProc(HWND hSB, UINT msg, WPARAM wp, LPARAM lp
 
 static int GetListIndex(HWND hwndList){
 	int i;
-	for(i=0;i<TabCtrl_GetItemCount(m_hTab);i++){
+	for(i=0;i<TabGetListCount();i++){
 		if (hwndList == GetListTab(m_hTab, i)->hList)
 			return i;
 	}
@@ -4053,7 +4066,7 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 					}
 					hPopMenu = GetSubMenu(LoadMenu(m_hInst, TEXT("LISTMENU")), 0);
 
-					for(i=0;i<TabCtrl_GetItemCount(hTC);i++){
+					for(i=0;i<TabGetListCount();i++){
 						wsprintf(szMenu, TEXT("&%d: %s"), i, GetListTab(hTC, i)->szTitle);
 						AppendMenu(GetSubMenu(hPopMenu, GetMenuPosFromString(hPopMenu, TEXT("プレイリストに送る(&S)"))), MF_STRING, IDM_SENDPL_FIRST+i, szMenu); 
 					}
@@ -4145,7 +4158,7 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 							if (lplvcd->nmcd.dwDrawStage == CDDS_PREPAINT)
 								return CDRF_NOTIFYITEMDRAW;
 							if (lplvcd->nmcd.dwDrawStage == CDDS_ITEMPREPAINT) {
-								if(m_nPlayTab==TabCtrl_GetCurSel(hTC)
+								if(m_nPlayTab==TabGetListSel()
 									&& GetCurListTab(hTC)->nPlaying==(signed int)lplvcd->nmcd.dwItemSpec
 									&& OPGetStatus() != OUTPUT_PLUGIN_STATUS_STOP){
 										switch(g_cfg.nPlayView){
@@ -4223,14 +4236,14 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 
 		case WM_MOUSEWHEEL:
 			{
-				int ic = TabCtrl_GetItemCount(hTC);
-				int cs = TabCtrl_GetCurSel(hTC);
-				TabCtrl_SetCurFocus(hTC, ((short)HIWORD(wp)<0) ? (ic == cs+1 ? 0 : cs+1) : (cs==0 ? ic-1 : cs-1));
+				int ic = TabGetListCount();
+				int cs = TabGetListSel();
+				TabSetListSel(((short)HIWORD(wp)<0) ? (ic == cs+1 ? 0 : cs+1) : (cs==0 ? ic-1 : cs-1));
 			}
 			break;
 
 		case WM_LBUTTONDBLCLK:
-			m_nPlayTab = TabCtrl_GetCurSel(hTC);
+			m_nPlayTab = TabGetListSel();
 			SendFittleCommand(IDM_NEXT);
 			break;
 
@@ -4256,7 +4269,7 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 				DragFinish(hDrop);
 
 				// 既存のタブに追加
-				nItem = TabCtrl_GetItemCount(hTC);
+				nItem = TabGetListCount();
 				for(i=0;i<nItem;i++){
 					TabCtrl_GetItemRect(hTC, i, &rcItem);
 					if(PtInRect(&rcItem, pt)){
@@ -4264,7 +4277,7 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 						ListView_ClearSelect(pList->hList);
 						InsertList(pList, -1, pSub);
 						ListView_EnsureVisible(pList->hList, ListView_GetItemCount(pList->hList)-1, TRUE);	// 一番下のアイテムを表示
-						TabCtrl_SetCurFocus(hTC, i);
+						TabSetListSel(i);
 						break;
 					}
 				}
@@ -4285,7 +4298,7 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 					pList = GetListTab(hTC, nItem);
 					InsertList(pList, -1, pSub);
 					ListView_SingleSelectView(pList->hList, 0);
-					TabCtrl_SetCurFocus(hTC, nItem);
+					TabSetListSel(nItem);
 				}
 			}
 			break;
@@ -4321,8 +4334,8 @@ LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
 				}
 				// タブフォーカスの描画
 				ScreenToClient(m_hTab, &pt);
-				for(i=0;i<TabCtrl_GetItemCount(m_hTab);i++){
-					TabCtrl_GetItemRect(m_hTab, i, &rcItem);
+				for(i=0;i<TabGetListCount();i++){
+					TabGetItemRect(i, &rcItem);
 					if(PtInRect(&rcItem, pt)){
 						DrawTabFocus(i, TRUE);
 					}else{
@@ -4358,8 +4371,8 @@ LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
 					//タブへドラッグ
 					GetCursorPos(&pt);
 					ScreenToClient(m_hTab, &pt);
-					for(i=0;i<TabCtrl_GetItemCount(m_hTab);i++){
-						TabCtrl_GetItemRect(m_hTab, i, &rcItem);
+					for(i=0;i<TabGetListCount();i++){
+						TabGetItemRect(i, &rcItem);
 						if(PtInRect(&rcItem, pt)){
 							DrawTabFocus(i, FALSE);
 							SendToPlaylist(GetCurListTab(m_hTab), GetListTab(m_hTab, i));
@@ -4560,7 +4573,7 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 		case WM_RBUTTONUP:
 			if(GetCapture()==hTV){
 				ReleaseCapture();
-				for(i=0;i<TabCtrl_GetItemCount(m_hTab);i++){
+				for(i=0;i<TabGetListCount();i++){
 					DrawTabFocus(i, FALSE);
 				}
 			}
@@ -4593,8 +4606,8 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 				
 				// タブのフォーカスを描画
 				ScreenToClient(m_hTab, &pt);
-				for(i=0;i<TabCtrl_GetItemCount(m_hTab);i++){
-					TabCtrl_GetItemRect(m_hTab, i, &rcItem);
+				for(i=0;i<TabGetListCount();i++){
+					TabGetItemRect(i, &rcItem);
 					if(PtInRect(&rcItem, pt)){
 						DrawTabFocus(i, TRUE);
 					}else{
@@ -4679,12 +4692,12 @@ static void ApplyConfig(HWND hWnd){
 			SetTaskTray(m_hMainWnd);
 	}
 
-	nCurTab = TabCtrl_GetCurSel(m_hTab);
+	nCurTab = TabGetListSel();
 
 	lstrcpyn(szNowDir, m_szTreePath, MAX_FITTLE_PATH);
 	MakeTreeFromPath(m_hTree, m_hCombo, szNowDir); 
 
-	TabCtrl_SetCurFocus(m_hTab, nCurTab);
+	TabSetListSel(nCurTab);
 
 	RegHotKey(hWnd);
 	InvalidateRect(hWnd, NULL, TRUE);
