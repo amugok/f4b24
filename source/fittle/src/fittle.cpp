@@ -905,7 +905,7 @@ static void OnCreate(){
 	TIMECHECK("コントロールのサブクラス化")
 
 	// TREE_INIT
-	InitTreeIconIndex(m_hCombo, m_hTree, (BOOL)g_cfg.nTreeIcon);
+	InitTreeIconIndex(m_hCombo, m_hTree, g_cfg.nTreeIcon != 0);
 
 	TIMECHECK("ツリーアイコンの初期化")
 
@@ -2885,7 +2885,7 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 
 	g_cInfo[bFlag].sGain = 1;
 	g_cInfo[bFlag].sAmp = fBypassVol;
-	g_cInfo[bFlag].hChan = BASS_StreamCreateFile((BOOL)g_cInfo[bFlag].pBuff,
+	g_cInfo[bFlag].hChan = BASS_StreamCreateFile(g_cInfo[bFlag].pBuff != 0,
 												(g_cInfo[bFlag].pBuff?(void *)g_cInfo[bFlag].pBuff:(void *)szFilePath),
 												0, (DWORD)g_cInfo[bFlag].qDuration,
 #ifdef UNICODE
@@ -2893,7 +2893,7 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 #endif
 												BASS_STREAM_DECODE | m_bFloat*BASS_SAMPLE_FLOAT);
 	if(!g_cInfo[bFlag].hChan){
-	g_cInfo[bFlag].hChan = BASS_MusicLoad((BOOL)g_cInfo[bFlag].pBuff,
+	g_cInfo[bFlag].hChan = BASS_MusicLoad(g_cInfo[bFlag].pBuff != 0,
 												(g_cInfo[bFlag].pBuff?(void *)g_cInfo[bFlag].pBuff:(void *)szFilePath),
 												0, (DWORD)g_cInfo[bFlag].qDuration,
 #ifdef UNICODE
@@ -3801,7 +3801,7 @@ static BOOL SetUIColor(void){
 	}
 	TreeView_SetBkColor(m_hTree, g_cfg.nBkColor);
 	TreeView_SetTextColor(m_hTree, g_cfg.nTextColor);
-	InitTreeIconIndex(m_hCombo, m_hTree, (BOOL)g_cfg.nTreeIcon);
+	InitTreeIconIndex(m_hCombo, m_hTree, g_cfg.nTreeIcon != 0);
 	InvalidateRect(GetSelListTab()->hList, NULL, TRUE);
 	return TRUE;
 }
@@ -4001,16 +4001,17 @@ static LPCTSTR GetColumnText(HWND hwndList, int nRow, int nColumn, LPTSTR pWork,
 	int i = GetListIndex(hwndList);
 	if (i >= 0){
 		struct FILEINFO *pTmp = GetListTab(m_hTab, i)->pRoot;
+		struct FILEINFO *pItem = GetPtrFromIndex(pTmp, nRow);
 		switch(nColumn){
 			case 0:
-				return GetFileName(GetPtrFromIndex(pTmp, nRow)->szFilePath);
+				return GetFileName(pItem->szFilePath);
 				break;
 			case 1:
-				return GetPtrFromIndex(pTmp, nRow)->szSize;
+				return pItem->szSize;
 				break;
 			case 2:
 				LPTSTR pszPath;
-				pszPath = GetPtrFromIndex(pTmp, nRow)->szFilePath;
+				pszPath = pItem->szFilePath;
 				if(IsURLPath(pszPath)){
 					return TEXT("URL");
 				}else if(IsArchivePath(pszPath) && GetArchiveItemType(pszPath, pWork, nWorkMax)){
@@ -4021,7 +4022,7 @@ static LPCTSTR GetColumnText(HWND hwndList, int nRow, int nColumn, LPTSTR pWork,
 				}
 				break;
 			case 3:
-				return GetPtrFromIndex(pTmp, nRow)->szTime;
+				return pItem->szTime;
 				break;
 		}
 	}
@@ -4671,7 +4672,7 @@ static void ApplyConfig(HWND hWnd){
 	}
 
 	if(g_cfg.nTreeIcon) RefreshComboIcon(m_hCombo);
-	InitTreeIconIndex(m_hCombo, m_hTree, (BOOL)g_cfg.nTreeIcon);
+	InitTreeIconIndex(m_hCombo, m_hTree, g_cfg.nTreeIcon != 0);
 
 	SetUIColor();
 	SetUIFont();

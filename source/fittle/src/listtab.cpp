@@ -25,7 +25,7 @@ static void AddColumn(HWND hList, int c, LPTSTR l, int w){
 	lvcol.cx = WAGetIniInt("Column", szKey, w);
 	lvcol.iSubItem = 0;
 	lvcol.pszText = l;
-	ListView_InsertColumn(hList, 0, &lvcol);
+	ListView_InsertColumn(hList, c, &lvcol);
 }
 
 // V‚µ‚¢ƒ^ƒu‚à‚ë‚à‚ë‚ğì¬

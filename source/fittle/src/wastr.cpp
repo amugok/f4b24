@@ -426,7 +426,7 @@ void WADeleteFile(LPCWASTR pPath){
 }
 
 void WAShellExecute(HWND hWnd, LPCWASTR pFile, LPCWASTR pPara){
-	if (WAIsUnicode())
+	if (m_WAIsUnicode)
 		ShellExecuteW(hWnd, NULL, pFile->W, pPara ? pPara->W : NULL, NULL, SW_SHOWNORMAL);
 	else
 		ShellExecuteA(hWnd, NULL, pFile->A, pPara ? pPara->A : NULL, NULL, SW_SHOWNORMAL);
