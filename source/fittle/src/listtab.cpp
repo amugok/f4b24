@@ -229,12 +229,25 @@ int ChangeOrder(struct LISTTAB *pListTab, int nAfter){
 int DeleteFiles(struct LISTTAB *pListTab){
 	int nIndex;
 	int nBefore = -1;
+	int nStack;
+	FILEINFO *pTmp;
 
 	nIndex = ListView_GetNextItem(pListTab->hList, -1, LVNI_SELECTED);
 	while(nIndex!=-1){
 		nBefore = nIndex;
 		ListView_DeleteItem(pListTab->hList, nIndex);
-		DeleteAList(GetPtrFromIndex(pListTab->pRoot, nIndex), &(pListTab->pRoot));
+		pTmp = GetPtrFromIndex(pListTab->pRoot, nIndex);
+		for (nStack = 0; nStack <= pListTab->nStkPtr; nStack++){
+			if (pListTab->pPrevStk[nStack] == pTmp) {
+				int i;
+				for (i = 1; nStack + i <= pListTab->nStkPtr; i++)
+				{
+					pListTab->pPrevStk[nStack + i - 1] = pListTab->pPrevStk[nStack + i];
+				}
+				pListTab->nStkPtr--;
+			}
+		}
+		DeleteAList(pTmp, &(pListTab->pRoot));
 		if(nIndex<=pListTab->nPlaying) pListTab->nPlaying--;
 		if(nIndex==ListView_GetItemCount(pListTab->hList)) nIndex--;
 		nIndex = ListView_GetNextItem(pListTab->hList, -1, LVNI_SELECTED);

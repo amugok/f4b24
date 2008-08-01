@@ -172,12 +172,8 @@ void ListView_SingleSelectViewP(HWND hLV, int nIndex) {
 	ListView_SingleSelectViewSub(hLV, nIndex, 3);
 }
 
-
-
-
-
 #define ALTYPE 0
-#if ALTYPE == 1
+#if (ALTYPE == 1)
 /* リークチェック */
 void *HAlloc(DWORD dwSize){
 	return malloc(dwSize);
@@ -191,7 +187,7 @@ void *HRealloc(LPVOID pPtr, DWORD dwSize){
 void HFree(LPVOID pPtr){
 	free(pPtr);
 }
-#elif ALTYPE == 2
+#elif (ALTYPE == 2)
 /* 開放ポインタアクセスチェック */
 typedef struct {
 	DWORD dwSize;
@@ -218,7 +214,7 @@ LPVOID HRealloc(LPVOID pPtr, DWORD dwSize){
 void HFree(LPVOID pPtr){
 	DWORD dwOldProtect;
 	HW *o = ((HW *)pPtr) - 1;
-	VirtualProtect(o, o->dwSize, PAGE_GUARD, &dwOldProtect);
+	VirtualProtect(o, o->dwSize, PAGE_NOACCESS, &dwOldProtect);
 }
 #else
 void *HAlloc(DWORD dwSize){
