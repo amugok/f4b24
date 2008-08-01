@@ -60,6 +60,9 @@ typedef long LONG_PTR;
 #define ID_LBTNCLKTIMER		204
 #define ID_RBTNCLKTIMER		205
 #define ID_MBTNCLKTIMER		206
+#define ID_XBTN1CLKTIMER	207	// プラグイン用に予約
+#define ID_XBTN2CLKTIMER	208	// プラグイン用に予約 
+
 #define WM_TRAY		(WM_APP + 1)	// タスクトレイのメッセージ
 #define SPLITTER_WIDTH	5		// スプリッタの幅
 #define HOTKEY_COUNT	8		// ホットキーの数
