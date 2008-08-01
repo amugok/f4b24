@@ -131,7 +131,7 @@ static int StopOutputStream(HWND);
 static struct FILEINFO *SelectNextFile(BOOL);
 static void FreeChannelInfo(BOOL bFlag);
 
-static void RemoveFiles(HWND hWnd);
+static void RemoveFiles();
 
 // メンバ変数
 static CRITICAL_SECTION m_cs;
@@ -1584,7 +1584,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case IDM_LIST_DELFILE:
-					RemoveFiles(hWnd);
+					RemoveFiles();
 					break;
 
 				case IDM_LIST_TOOL:
@@ -4717,7 +4717,7 @@ static LRESULT CALLBACK MyHookProc(int nCode, WPARAM wp, LPARAM lp){
 }
 
 // 選択したファイルを実際に削除する
-static void RemoveFiles(HWND hWnd){
+static void RemoveFiles(){
 	// 初期化
 	SHFILEOPSTRUCT fops;
 	TCHAR szMsg[MAX_FITTLE_PATH];
@@ -4761,19 +4761,19 @@ static void RemoveFiles(HWND hWnd){
 		// 複数ファイル選択
 		wsprintf(szMsg, TEXT("これらの %d 個の項目をごみ箱に移しますか？"), j);
 	}
-	if(j>0 && MessageBox(hWnd, szMsg, TEXT("ファイルの削除の確認"), MB_YESNO | MB_ICONQUESTION)==IDYES){
+	if(j>0 && MessageBox(m_hMainWnd, szMsg, TEXT("ファイルの削除の確認"), MB_YESNO | MB_ICONQUESTION)==IDYES){
 		// 実際に削除
-		fops.hwnd = hWnd;
+		fops.hwnd = m_hMainWnd;
 		fops.wFunc = FO_DELETE;
 		fops.pFrom = p;
 		fops.pTo = NULL;
 		fops.fFlags = FOF_FILESONLY | FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_MULTIDESTFILES;
-		if(bPlaying) SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_STOP, 0), 0);
+		if(bPlaying) SendMessage(m_hMainWnd, WM_COMMAND, MAKEWPARAM(IDM_STOP, 0), 0);
 		if(SHFileOperation(&fops)==0){
 			if(bPlaying) PopPrevious(GetCurListTab(m_hTab));	// 履歴からとりあえず最後だけ削除
 			DeleteFiles(GetCurListTab(m_hTab));
 		}
-		if(bPlaying) SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDM_NEXT, 0), 0);
+		if(bPlaying) SendMessage(m_hMainWnd, WM_COMMAND, MAKEWPARAM(IDM_NEXT, 0), 0);
 	}
 	HFree(p);
 }
