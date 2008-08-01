@@ -1049,6 +1049,14 @@ static void OnCreate(){
 	TIMECHECK("ウインドウ作成終了")
 }
 
+static QWORD GetTrackPos(){
+	return BASS_ChannelGetPosition(g_cInfo[g_bNow].hChan, BASS_POS_BYTE) - g_cInfo[g_bNow].qStart;
+}
+
+static BOOL SetTrackPos(QWORD qPos) {
+	return BASS_ChannelSetPosition(g_cInfo[g_bNow].hChan, qPos + g_cInfo[g_bNow].qStart, BASS_POS_BYTE);
+}
+
 // ウィンドウプロシージャ
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 	static int s_nHitTab = -1;				// タブのヒットアイテム
@@ -1094,7 +1102,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 		case WM_DESTROY:
 			if(OPGetStatus() != OUTPUT_PLUGIN_STATUS_STOP){
-				g_cfg.nResPos = (int)(BASS_ChannelGetPosition(g_cInfo[g_bNow].hChan, BASS_POS_BYTE) - g_cInfo[g_bNow].qStart);
+				g_cfg.nResPos = (int)GetTrackPos();
 			}else{
 				g_cfg.nResPos = 0;
 			}
@@ -2035,7 +2043,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			switch (wp){
 				case ID_SEEKTIMER:
 					//再生時間をステータスバーに表示
-					qPos = BASS_ChannelGetPosition(g_cInfo[g_bNow].hChan, BASS_POS_BYTE) - g_cInfo[g_bNow].qStart;
+					qPos = GetTrackPos();
 					qLen = g_cInfo[g_bNow].qDuration;
 					nPos = (int)BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, qPos);
 					nLen = (int)BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, qLen);
@@ -2272,7 +2280,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					return (LRESULT)OPGetStatus();
 
 				case GET_POSITION:
-					return (LRESULT)BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, BASS_ChannelGetPosition(g_cInfo[g_bNow].hChan, BASS_POS_BYTE) - g_cInfo[g_bNow].qStart);
+					return (LRESULT)BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, GetTrackPos());
 
 				case GET_DURATION:
 					return (LRESULT)BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, g_cInfo[g_bNow].qDuration);
@@ -2364,7 +2372,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			case WM_F4B24_INTERNAL_RESTORE_POSITION:
 				if(g_cfg.nResPosFlag){
 					BASS_ChannelStop(g_cInfo[g_bNow].hChan);
-					BASS_ChannelSetPosition(g_cInfo[g_bNow].hChan, g_cfg.nResPos + g_cInfo[g_bNow].qStart, BASS_POS_BYTE);
+					SetTrackPos(g_cfg.nResPos);
 					BASS_ChannelPlay(g_cInfo[g_bNow].hChan, FALSE);
 				}
 				break;
@@ -3259,7 +3267,7 @@ static BOOL _BASS_ChannelSetPosition(DWORD handle, int nPos){
 
 	OPStop();
 
-	bRet = BASS_ChannelSetPosition(handle, qPos + g_cInfo[g_bNow].qStart, BASS_POS_BYTE);
+	bRet = SetTrackPos(qPos);
 
 	OPSetVolume(SendMessage(m_hVolume, TBM_GETPOS, 0, 0));
 
@@ -3279,7 +3287,7 @@ static void _BASS_ChannelSeekSecond(DWORD handle, float fSecond, int nSign){
 	QWORD qSeek;
 	QWORD qSet;
 
-	qPos = BASS_ChannelGetPosition(handle, BASS_POS_BYTE) - g_cInfo[g_bNow].qStart;
+	qPos = GetTrackPos();
 	qSeek = BASS_ChannelSeconds2Bytes(handle, fSecond);
 	if(nSign<0 && qPos<qSeek){
 		qSet = 0;
@@ -3289,7 +3297,7 @@ static void _BASS_ChannelSeekSecond(DWORD handle, float fSecond, int nSign){
 		qSet = qPos + nSign*qSeek;
 	}
 	OPStop();
-	BASS_ChannelSetPosition(handle, qSet + g_cInfo[g_bNow].qStart, BASS_POS_BYTE);
+	SetTrackPos(qSet);
 	OPPlay();
 
 	return;
