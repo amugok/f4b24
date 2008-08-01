@@ -985,9 +985,9 @@ static void OnCreate(){
 #ifdef UNICODE
 	/* サブクラス化による文字化け対策 */
 	UniFix(m_hMainWnd);
-#endif
 
 	TIMECHECK("サブクラス化による文字化け対策")
+#endif
 
 	WAGetModuleParentDir(NULL, &temppath);
 	WAstrcpyt(szLastPath, &temppath, MAX_FITTLE_PATH);
@@ -1056,6 +1056,15 @@ static QWORD GetTrackPos(){
 static BOOL SetTrackPos(QWORD qPos) {
 	return BASS_ChannelSetPosition(g_cInfo[g_bNow].hChan, qPos + g_cInfo[g_bNow].qStart, BASS_POS_BYTE);
 }
+
+static int GetVolumeBar() {
+	return SendMessage(m_hVolume, TBM_GETPOS, 0, 0);
+}
+
+static void SetVolumeBar(int nVol){
+	SendMessage(m_hVolume, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)nVol);
+}
+
 
 // ウィンドウプロシージャ
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
@@ -1430,11 +1439,11 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case IDM_VOLUP: //音量を上げる
-					SendMessage(m_hVolume, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)(SendMessage(m_hVolume, TBM_GETPOS, 0 ,0) + g_cfg.nVolAmount * 10));
+					SetVolumeBar(GetVolumeBar() + g_cfg.nVolAmount * 10);
 					break;
 
 				case IDM_VOLDOWN: //音量を下げる
-					SendMessage(m_hVolume, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)(SendMessage(m_hVolume, TBM_GETPOS, 0 ,0) - g_cfg.nVolAmount * 10));
+					SetVolumeBar(GetVolumeBar() - g_cfg.nVolAmount * 10);
 					break;
 
 				case IDM_PM_LIST: //リスト
@@ -2692,7 +2701,7 @@ static void SaveState(HWND hWnd){
 	WASetIniInt("Main", "TreeState", (g_cfg.nTreeState==TREE_SHOW));
 	WASetIniInt("Main", "Mode", m_nPlayMode); //プレイモード
 	WASetIniInt("Main", "Repeat", m_nRepeatFlag); //リピートモード
-	WASetIniInt("Main", "Volumes", (int)SendMessage(m_hVolume, TBM_GETPOS, 0, 0)); //ボリューム
+	WASetIniInt("Main", "Volumes", (int)GetVolumeBar()); //ボリューム
 	WASetIniInt("Main", "ShowStatus", g_cfg.nShowStatus);
 	WASetIniInt("Main", "ResPos", g_cfg.nResPos);
 
@@ -2940,7 +2949,7 @@ static BOOL PlayByUser(HWND hWnd, struct FILEINFO *pPlayFile){
 	if(SetChannelInfo(g_bNow, pPlayFile)){
 		// ストリーム作成
 		BASS_ChannelGetInfo(g_cInfo[g_bNow].hChan, &info);
-		OPStart(&info, SendMessage(m_hVolume, TBM_GETPOS, 0, 0), m_bFloat);
+		OPStart(&info, GetVolumeBar(), m_bFloat);
 
 		OnStatusChangePlugins();
 
@@ -3001,9 +3010,9 @@ static void OnChangeTrack(){
 	BASS_ChannelGetInfo(g_cInfo[g_bNow].hChan, &info);
 	if(m_nGaplessState==GS_NEWFREQ){
 		OPStop();
-		OPStart(&info, SendMessage(m_hVolume, TBM_GETPOS, 0, 0), m_bFloat);
+		OPStart(&info, GetVolumeBar(), m_bFloat);
 	}else{
-		OPSetVolume(SendMessage(m_hVolume, TBM_GETPOS, 0, 0));
+		OPSetVolume(GetVolumeBar());
 	}
 
 	// 切り替わったファイルのインデックスを取得
@@ -3269,7 +3278,7 @@ static BOOL _BASS_ChannelSetPosition(DWORD handle, int nPos){
 
 	bRet = SetTrackPos(qPos);
 
-	OPSetVolume(SendMessage(m_hVolume, TBM_GETPOS, 0, 0));
+	OPSetVolume(GetVolumeBar());
 
 	OPPlay();
 
@@ -3314,10 +3323,10 @@ static int FilePause(){
 		SendMessage(m_hToolBar,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(TRUE, 0));
 	}else if(dMode==OUTPUT_PLUGIN_STATUS_PAUSE){
 		OPPlay();
-		OPSetFadeIn(SendMessage(m_hVolume, TBM_GETPOS, 0, 0), 250);
+		OPSetFadeIn(GetVolumeBar(), 250);
 		SendMessage(m_hToolBar,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(FALSE, 0));
 	}else{
-		OPSetVolume(SendMessage(m_hVolume, TBM_GETPOS, 0, 0));
+		OPSetVolume(GetVolumeBar());
 		SendMessage(m_hToolBar,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(FALSE, 0));
 	}
 
@@ -3852,9 +3861,9 @@ static LRESULT CALLBACK NewSliderProc(HWND hSB, UINT msg, WPARAM wp, LPARAM lp){
 				}
 			}else if(hSB==m_hVolume){
 				if((short)HIWORD(wp)<0){
-					SendMessage(hSB, TBM_SETPOS, TRUE, (WPARAM)SendMessage(hSB, TBM_GETPOS, 0, 0) - SLIDER_DIVIDED/50);
+					SetVolumeBar(GetVolumeBar() - SLIDER_DIVIDED/50);
 				}else{
-					SendMessage(hSB, TBM_SETPOS, TRUE, (WPARAM)SendMessage(hSB, TBM_GETPOS, 0, 0) + SLIDER_DIVIDED/50);
+					SetVolumeBar(GetVolumeBar() + SLIDER_DIVIDED/50);
 				}
 			}else
 				break;
@@ -3867,7 +3876,7 @@ static LRESULT CALLBACK NewSliderProc(HWND hSB, UINT msg, WPARAM wp, LPARAM lp){
 			if(hSB==m_hSeek){
 				FilePause();	// ポーズにしてみる
 			}else if(hSB==m_hVolume){
-				SendMessage(hSB, TBM_SETPOS, TRUE, (WPARAM)0);	// ミュートにしてみる
+				SetVolumeBar(0);	// ミュートにしてみる
 			}
 			return 0; // フォーカスを得るのを防ぐ
 
@@ -4680,7 +4689,7 @@ static void ApplyConfig(HWND hWnd){
 	RegHotKey(hWnd);
 	InvalidateRect(hWnd, NULL, TRUE);
 
-	OPSetVolume(SendMessage(m_hVolume, TBM_GETPOS, 0, 0));
+	OPSetVolume(GetVolumeBar());
 }
 
 // 外部設定プログラムを起動する
