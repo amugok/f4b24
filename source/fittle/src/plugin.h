@@ -13,11 +13,11 @@
 /* 構造体宣言 */
 typedef struct{
 	int nPDKVer;
-	BOOL (*OnInit)();
-	void (*OnQuit)();
-	void (*OnTrackChange)();
-	void (*OnStatusChange)();
-	void (*OnConfig)();
+	BOOL (__cdecl *OnInit)();
+	void (__cdecl *OnQuit)();
+	void (__cdecl *OnTrackChange)();
+	void (__cdecl *OnStatusChange)();
+	void (__cdecl *OnConfig)();
 	HWND hParent;
 	HINSTANCE hDllInst;
 } FITTLE_PLUGIN_INFO;
@@ -104,4 +104,4 @@ typedef struct{
 */
 
 /* インターフェースの宣言 */
-typedef FITTLE_PLUGIN_INFO *(*GetPluginInfoFunc)();
+typedef FITTLE_PLUGIN_INFO *(__cdecl *GetPluginInfoFunc)();
