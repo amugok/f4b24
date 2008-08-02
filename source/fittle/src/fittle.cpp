@@ -114,7 +114,6 @@ static void SetStatusbarIcon(LPTSTR, BOOL);
 static LPTSTR MallocAndConcatPath(LISTTAB *);
 static void MyShellExecute(HWND, LPTSTR, LPTSTR, BOOL);
 static void InitFileTypes();
-static int SaveFileDialog(LPTSTR, LPTSTR);
 
 // 演奏制御関係
 static BOOL SetChannelInfo(BOOL, struct FILEINFO *);
@@ -238,34 +237,6 @@ static struct LISTTAB *GetSelListTab(){
 // フォルダタブのポインタを取得
 static struct LISTTAB *GetFolderListTab(){
 	return GetListTab(m_hTab, 0);
-}
-
-/* コマンドラインパラメータの展開 */
-static HMODULE ExpandArgs(int *pARGC, LPTSTR **pARGV){
-#ifdef UNICODE
-	*pARGC = 1;
-	*pARGV = CommandLineToArgvW(GetCommandLine(), pARGC);
-	return NULL;
-#elif defined(_MSC_VER)
-	*pARGC = __argc;
-	*pARGV = __argv;
-	return NULL;
-#else
-	/* Visual C++以外の場合MSVCRT.DLLに引数を解析させる */
-	typedef struct { int newmode; } GMASTARTUPINFO;
-	typedef void (__cdecl *LPFNGETMAINARGS) (int *pargc, char ***pargv, char ***penvp, int dowildcard, GMASTARTUPINFO * startinfo);
-	HMODULE h = LoadLibraryA("MSVCRT.DLL");
-	*pARGC = 1;
-	if (h){
-		LPFNGETMAINARGS pfngma = (LPFNGETMAINARGS)GetProcAddress(h, "__getmainargs");
-		char **xenvp;
-		GMASTARTUPINFO si = {0};
-		pfngma(pARGC, pARGV, &xenvp, 1, &si);
-		*pARGC = *pARGC;
-		*pARGV = *pARGV;
-	}
-	return h;
-#endif
 }
 
 static LRESULT SendFittleMessage(UINT uMsg, WPARAM wp, LPARAM lp){
@@ -1273,7 +1244,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						lstrcpyn(szNowDir, m_szTreePath, MAX_FITTLE_PATH);
 						GetFolderPart(szNowDir);
 						pHitList = GetListTab(m_hTab, s_nHitTab);
-						nRet = SaveFileDialog(szNowDir, pHitList->szTitle);
+						nRet = SaveM3UDialog(szNowDir, pHitList->szTitle);
 						if(nRet){
 							WriteM3UFile(pHitList->pRoot, szNowDir, nRet);
 						}
@@ -3480,36 +3451,6 @@ static LPTSTR MallocAndConcatPath(LISTTAB *pListTab){
 		}
 	}
 	return pszRet;
-}
-
-// ファイルを保存ダイアログを出す
-static int SaveFileDialog(LPTSTR szDir, LPTSTR szDefTitle){
-	TCHAR szFile[MAX_FITTLE_PATH];
-	TCHAR szFileTitle[MAX_FITTLE_PATH];
-	OPENFILENAME ofn;
-
-	lstrcpyn(szFile, szDefTitle, MAX_FITTLE_PATH);
-	lstrcpyn(szFileTitle, szDefTitle, MAX_FITTLE_PATH);
-	ZeroMemory(&ofn, sizeof(ofn));
-	ofn.lStructSize = sizeof(ofn);
-	ofn.lpstrFilter = 
-		TEXT("プレイリスト(絶対パス) (*.m3u)\0*.m3u\0")
-		TEXT("プレイリスト(相対パス) (*.m3u)\0*.m3u\0")
-		TEXT("UTF8プレイリスト(絶対パス) (*.m3u8)\0*.m3u8\0")
-		TEXT("UTF8プレイリスト(相対パス) (*.m3u8)\0*.m3u8\0")
-		TEXT("すべてのファイル(*.*)\0*.*\0\0");
-	ofn.lpstrFile = szFile;
-	ofn.lpstrFileTitle = szFileTitle;
-	ofn.lpstrInitialDir = szDir;
-	ofn.nFilterIndex = 1;
-	ofn.nMaxFile = MAX_FITTLE_PATH;
-	ofn.nMaxFileTitle = MAX_FITTLE_PATH;
-	ofn.Flags = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
-	ofn.lpstrDefExt = TEXT("m3u");
-	ofn.lpstrTitle = TEXT("名前を付けて保存する");
-	if(GetSaveFileName(&ofn)==0) return 0;
-	lstrcpyn(szDir, szFile, MAX_FITTLE_PATH);
-	return ofn.nFilterIndex;
 }
 
 // ドラッグイメージ作成、表示

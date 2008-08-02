@@ -34,6 +34,8 @@ LONG GetToolbarTrueWidth(HWND hToolbar);
 void UpdateWindowSize(HWND);
 int GetDropFiles(HDROP hDrop, struct FILEINFO **ppSub, LPPOINT ppt, LPTSTR szPath);
 void ShowSettingDialog(HWND, int);
+int SaveM3UDialog(LPTSTR, LPTSTR);
+HMODULE ExpandArgs(int *pARGC, LPTSTR **pARGV);
 
 void ListView_ClearSelect(HWND hLV);
 void ListView_ClearHilite(HWND hLV);

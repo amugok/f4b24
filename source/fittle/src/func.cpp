@@ -240,6 +240,65 @@ void ShowSettingDialog(HWND hWnd, int nPage){
 	ExecuteSettingDialog(hWnd, table[nPage]);
 }
 
+// M3Uファイルを保存ダイアログを出す
+int SaveM3UDialog(LPTSTR szDir, LPTSTR szDefTitle){
+	TCHAR szFile[MAX_FITTLE_PATH];
+	TCHAR szFileTitle[MAX_FITTLE_PATH];
+	OPENFILENAME ofn;
+
+	lstrcpyn(szFile, szDefTitle, MAX_FITTLE_PATH);
+	lstrcpyn(szFileTitle, szDefTitle, MAX_FITTLE_PATH);
+	ZeroMemory(&ofn, sizeof(ofn));
+	ofn.lStructSize = sizeof(ofn);
+	ofn.lpstrFilter = 
+		TEXT("プレイリスト(絶対パス) (*.m3u)\0*.m3u\0")
+		TEXT("プレイリスト(相対パス) (*.m3u)\0*.m3u\0")
+		TEXT("UTF8プレイリスト(絶対パス) (*.m3u8)\0*.m3u8\0")
+		TEXT("UTF8プレイリスト(相対パス) (*.m3u8)\0*.m3u8\0")
+		TEXT("すべてのファイル(*.*)\0*.*\0\0");
+	ofn.lpstrFile = szFile;
+	ofn.lpstrFileTitle = szFileTitle;
+	ofn.lpstrInitialDir = szDir;
+	ofn.nFilterIndex = 1;
+	ofn.nMaxFile = MAX_FITTLE_PATH;
+	ofn.nMaxFileTitle = MAX_FITTLE_PATH;
+	ofn.Flags = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
+	ofn.lpstrDefExt = TEXT("m3u");
+	ofn.lpstrTitle = TEXT("名前を付けて保存する");
+	if(GetSaveFileName(&ofn)==0) return 0;
+	lstrcpyn(szDir, szFile, MAX_FITTLE_PATH);
+	return ofn.nFilterIndex;
+}
+
+/* コマンドラインパラメータの展開 */
+HMODULE ExpandArgs(int *pARGC, LPTSTR **pARGV){
+#ifdef UNICODE
+	*pARGC = 1;
+	*pARGV = CommandLineToArgvW(GetCommandLine(), pARGC);
+	return NULL;
+#elif defined(_MSC_VER)
+	*pARGC = __argc;
+	*pARGV = __argv;
+	return NULL;
+#else
+	/* Visual C++以外の場合MSVCRT.DLLに引数を解析させる */
+	typedef struct { int newmode; } GMASTARTUPINFO;
+	typedef void (__cdecl *LPFNGETMAINARGS) (int *pargc, char ***pargv, char ***penvp, int dowildcard, GMASTARTUPINFO * startinfo);
+	HMODULE h = LoadLibraryA("MSVCRT.DLL");
+	*pARGC = 1;
+	if (h){
+		LPFNGETMAINARGS pfngma = (LPFNGETMAINARGS)GetProcAddress(h, "__getmainargs");
+		char **xenvp;
+		GMASTARTUPINFO si = {0};
+		pfngma(pARGC, pARGV, &xenvp, 1, &si);
+		*pARGC = *pARGC;
+		*pARGV = *pARGV;
+	}
+	return h;
+#endif
+}
+
+
 
 
 
