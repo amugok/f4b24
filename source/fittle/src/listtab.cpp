@@ -287,13 +287,18 @@ int RenameListTab(HWND hTab, int nItem, LPTSTR szLabel){
 	return 0;
 }
 
+static void TabFree(HWND hTab, int nItem){
+	struct LISTTAB *pList = GetListTab(hTab, nItem);
+	DeleteAllList(&(pList->pRoot));
+	DestroyWindow(pList->hList);
+	HFree(pList);
+	TabCtrl_DeleteItem(hTab, nItem);
+}
+
 // リストタブ削除
 int RemoveListTab(HWND hTab, int nItem){
 	RECT rcTab;
-	DeleteAllList(&(GetListTab(hTab, nItem)->pRoot));
-	DestroyWindow(GetListTab(hTab, nItem)->hList);
-	HFree(GetListTab(hTab, nItem));
-	TabCtrl_DeleteItem(hTab, nItem);
+	TabFree(hTab, nItem);
 	// タブの行数が変わるとリストビューがずれるためそれを修正
 	GetClientRect(hTab, &rcTab);
 	if(!(g_cfg.nTabHide && TabGetListCount()==1)){
@@ -504,12 +509,7 @@ BOOL LoadPlaylists(HWND hTab){
 // mkimg.dllのバグ回避のため全てのリストを破棄
 static void RemoveAllTabs(HWND hTab, int nTabCount){
 	for (int i=nTabCount;i>=0;i--){
-		//RemoveListTab
-		LISTTAB *pTab = GetListTab(hTab, i);
-		DeleteAllList(&(pTab->pRoot));
-		DestroyWindow(pTab->hList);
-		HFree(pTab);
-		TabCtrl_DeleteItem(hTab, i);
+		TabFree(hTab, i);
 	}
 }
 
