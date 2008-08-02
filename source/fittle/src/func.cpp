@@ -148,6 +148,43 @@ LPTSTR MyPathAddBackslash(LPTSTR pszPath){
 	}
 }
 
+// ウィンドウをサブクラス化、USERDATAに元のWNDPROCを保存
+void SubClassControl(HWND hWnd, WNDPROC Proc){
+	SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)Proc));
+}
+
+// 指定した文字列を持つメニュー項目を探す
+int GetMenuPosFromString(HMENU hMenu, LPTSTR lpszText){
+	int i;
+	TCHAR szBuf[64];
+	int c = GetMenuItemCount(hMenu);
+	for (i = 0; i < c; i++){
+		GetMenuString(hMenu, i, szBuf, 64, MF_BYPOSITION);
+		if (lstrcmp(lpszText, szBuf) == 0)
+			return i;
+	}
+	return 0;
+}
+
+// ツールバーの幅を取得（ドロップダウンがあってもうまく行きます）
+LONG GetToolbarTrueWidth(HWND hToolbar){
+	RECT rct;
+
+	SendMessage(hToolbar, TB_GETITEMRECT, SendMessage(hToolbar, TB_BUTTONCOUNT, 0, 0)-1, (LPARAM)&rct);
+	return rct.right;
+}
+
+void UpdateWindowSize(HWND hWnd){
+	RECT rcDisp;
+
+	GetClientRect(hWnd, &rcDisp);
+	SendMessage(hWnd, WM_SIZE, 0, MAKELPARAM(rcDisp.right, rcDisp.bottom));
+	return;
+}
+
+
+
+
 /*
 
 	--- リストコントロール ---

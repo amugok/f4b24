@@ -26,6 +26,10 @@ void FormatLocalDateTime(LPTSTR, LPFILETIME);
 BOOL GetTimeAndSize(LPCTSTR, LPTSTR, LPTSTR);
 void SetOLECursor(int);
 LPTSTR MyPathAddBackslash(LPTSTR);
+void SubClassControl(HWND hWnd, WNDPROC Proc);
+int GetMenuPosFromString(HMENU hMenu, LPTSTR lpszText);
+LONG GetToolbarTrueWidth(HWND hToolbar);
+void UpdateWindowSize(HWND);
 
 void ListView_ClearSelect(HWND hLV);
 void ListView_SingleSelect(HWND hLV, int nIndex);

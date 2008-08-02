@@ -10,8 +10,12 @@
 #include "func.h"
 #include "readtag.h"
 
+static LPCSTR ChannelGetTags(DWORD hChannel, DWORD dwTagType){
+	return BASS_ChannelGetTags(hChannel, dwTagType);
+}
+
 static BOOL Riff_ReadTag(DWORD handle, TAGINFO *pTagInfo){
-	LPBYTE p = (LPBYTE)BASS_ChannelGetTags(handle, BASS_TAG_RIFF_INFO);
+	LPBYTE p = (LPBYTE)ChannelGetTags(handle, BASS_TAG_RIFF_INFO);
 	while(p && *p){
 		Riff_ReadFrame(p, "INAM=", pTagInfo->szTitle, 256);
 		Riff_ReadFrame(p, "IART=", pTagInfo->szArtist, 256);
@@ -23,7 +27,7 @@ static BOOL Riff_ReadTag(DWORD handle, TAGINFO *pTagInfo){
 }
 
 static BOOL ID3V2_ReadTag(DWORD handle, TAGINFO *pTagInfo){
-	LPBYTE p = (LPBYTE)BASS_ChannelGetTags(handle, BASS_TAG_ID3V2);
+	LPBYTE p = (LPBYTE)ChannelGetTags(handle, BASS_TAG_ID3V2);
 	if(p && p[0] == 'I' && p[1] == 'D' && p[2] == '3'){
 		char szFrameID[5];
 		unsigned nFrameSize;
@@ -104,7 +108,7 @@ static BOOL ID3V2_ReadTag(DWORD handle, TAGINFO *pTagInfo){
 }
 
 static BOOL ID3V1_ReadTag(DWORD handle, TAGINFO *pTagInfo){
-	ID3TAG *pID3Tag = (ID3TAG *)BASS_ChannelGetTags(handle, BASS_TAG_ID3);
+	ID3TAG *pID3Tag = (ID3TAG *)ChannelGetTags(handle, BASS_TAG_ID3);
 	if (!pID3Tag) return FALSE;
 	ID3V1_ReadFrame(pID3Tag->Title, 30, pTagInfo->szTitle, 256);
 	ID3V1_ReadFrame(pID3Tag->Artist, 30, pTagInfo->szArtist, 256);
@@ -115,7 +119,7 @@ static BOOL ID3V1_ReadTag(DWORD handle, TAGINFO *pTagInfo){
 }
 
 static BOOL WMA_ReadTag(DWORD handle, TAGINFO *pTagInfo){
-	LPBYTE p = (LPBYTE)BASS_ChannelGetTags(handle, BASS_TAG_WMA);
+	LPBYTE p = (LPBYTE)ChannelGetTags(handle, BASS_TAG_WMA);
 	while(p && *p){
 		Vorbis_ReadFrame(p, "Title=", pTagInfo->szTitle, 256);
 		Vorbis_ReadFrame(p, "Author=", pTagInfo->szArtist, 256);
@@ -169,7 +173,7 @@ BOOL BASS_TAG_Read(DWORD handle, TAGINFO *pTagInfo){
 		case BASS_CTYPE_STREAM_WV_LH:
 		case BASS_CTYPE_STREAM_TAK:
 			/* bass_ape.dll‚ð“ü‚ê‚Ä‚à“Ç‚ñ‚Å‚­‚ê‚È‚¢ */
-			if (ReadTagSub((LPBYTE)BASS_ChannelGetTags(handle, BASS_TAG_APE), pTagInfo)) return TRUE;
+			if (ReadTagSub((LPBYTE)ChannelGetTags(handle, BASS_TAG_APE), pTagInfo)) return TRUE;
 			if (ID3V2_ReadTag(handle, pTagInfo)) return TRUE;
 			return ID3V1_ReadTag(handle, pTagInfo);
 
@@ -181,12 +185,12 @@ BOOL BASS_TAG_Read(DWORD handle, TAGINFO *pTagInfo){
 		case BASS_CTYPE_STREAM_FLAC:
 		case BASS_CTYPE_STREAM_FLAC_OGG:
 		case BASS_CTYPE_STREAM_SPX:
-			return ReadTagSub((LPBYTE)BASS_ChannelGetTags(handle, BASS_TAG_OGG), pTagInfo);
+			return ReadTagSub((LPBYTE)ChannelGetTags(handle, BASS_TAG_OGG), pTagInfo);
 
 		case BASS_CTYPE_STREAM_MP4: // iTunes metadata
 		case BASS_CTYPE_STREAM_ALAC:
 		case BASS_CTYPE_STREAM_AAC:
-			return ReadTagSub((LPBYTE)BASS_ChannelGetTags(handle, BASS_TAG_MP4), pTagInfo);
+			return ReadTagSub((LPBYTE)ChannelGetTags(handle, BASS_TAG_MP4), pTagInfo);
 
 //		case BASS_CTYPE_STREAM_AC3:
 //			return FALSE;
@@ -195,7 +199,7 @@ BOOL BASS_TAG_Read(DWORD handle, TAGINFO *pTagInfo){
 //			return FALSE;
 
 //		case BASS_CTYPE_STREAM:
-//			p = BASS_ChannelGetTags(handle, BASS_TAG_ICY);
+//			p = ChannelGetTags(handle, BASS_TAG_ICY);
 //			return FALSE;
 		
 		case BASS_CTYPE_MUSIC_MOD:
@@ -204,9 +208,9 @@ BOOL BASS_TAG_Read(DWORD handle, TAGINFO *pTagInfo){
 		case BASS_CTYPE_MUSIC_XM:
 		case BASS_CTYPE_MUSIC_IT:
 		case BASS_CTYPE_MUSIC_MO3:
-			p = BASS_ChannelGetTags(handle, BASS_TAG_MUSIC_NAME);
+			p = ChannelGetTags(handle, BASS_TAG_MUSIC_NAME);
 			if (p && *p) ID3_ReadFrameText(0, (LPBYTE)p, lstrlenA(p), pTagInfo->szTitle, 256);
-			//p = BASS_ChannelGetTags(handle, BASS_TAG_MUSIC_MESSAGE);
+			//p = ChannelGetTags(handle, BASS_TAG_MUSIC_MESSAGE);
 			//if (p && *p) ID3_ReadFrameText(0, (LPBYTE)p, lstrlenA(p), pTagInfo->szArtist, 256);
 			if(*pTagInfo->szTitle || *pTagInfo->szArtist) return TRUE;
 			return FALSE;

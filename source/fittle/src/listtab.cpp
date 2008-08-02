@@ -32,7 +32,6 @@ static void AddColumn(HWND hList, int c, LPTSTR l, int w){
 struct LISTTAB *MakeNewTab(HWND hTab, LPTSTR szTabName, int nItem){
 	struct LISTTAB *pNew = NULL;
 	HWND hList = NULL;
-	WNDPROC OldProc = NULL;
 	TCITEM tci;
 
 	pNew = (struct LISTTAB *)HAlloc(sizeof(struct LISTTAB));
@@ -81,10 +80,8 @@ struct LISTTAB *MakeNewTab(HWND hTab, LPTSTR szTabName, int nItem){
 
 	ListView_SetExtendedListViewStyle(hList, (g_cfg.nGridLine?LVS_EX_GRIDLINES:0) | LVS_EX_FULLROWSELECT | LVS_EX_INFOTIP | 0x00010000/*LVS_EX_DOUBLEBUFFER*/);
 
-	//サブクラス化。前のプロシージャはWindowに関連付ける。
-	OldProc = (WNDPROC)(LONG_PTR)SetWindowLongPtr(hList,
-		GWLP_WNDPROC, (LONG_PTR)NewListProc);
-	SetWindowLongPtr(hList, GWLP_USERDATA, (LONG_PTR)OldProc);
+	SubClassControl(hList, NewListProc);
+
 	// リストビューのドラッグ＆ドロップを許可
 	DragAcceptFiles(hList, TRUE);
 

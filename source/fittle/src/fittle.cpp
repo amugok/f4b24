@@ -109,7 +109,6 @@ static void OnDragList(HWND, POINT);
 static void OnEndDragList(HWND);
 static void DrawTabFocus(int, BOOL);
 static BOOL SetUIFont(void);
-static void UpdateWindowSize(HWND);
 static BOOL SetUIColor(void);
 static void SetStatusbarIcon(LPTSTR, BOOL);
 static void ShowSettingDialog(HWND, int);
@@ -117,8 +116,6 @@ static LPTSTR MallocAndConcatPath(LISTTAB *);
 static void MyShellExecute(HWND, LPTSTR, LPTSTR, BOOL);
 static void InitFileTypes();
 static int SaveFileDialog(LPTSTR, LPTSTR);
-static LONG GetToolbarTrueWidth(HWND);
-static int GetMenuPosFromString(HMENU hMenu, LPTSTR lpszText);
 
 // 演奏制御関係
 static BOOL SetChannelInfo(BOOL, struct FILEINFO *);
@@ -198,11 +195,6 @@ BOOL g_bNow = 0;				// アクティブなチャンネル0 or 1
 struct FILEINFO *g_pNextFile = NULL;	// 再生曲
 
 #include "oplugins.h"
-
-// ウィンドウをサブクラス化、プロシージャハンドルをウィンドウに関連付ける
-static void SET_SUBCLASS(HWND hWnd, WNDPROC Proc){
-	SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)Proc));
-}
 
 int TabGetListSel(){
 	return TabCtrl_GetCurSel(m_hTab);
@@ -796,13 +788,13 @@ static void OnCreate(HWND hWnd){
 	TIMECHECK("メニュー状態復元")
 
 	//コントロールのサブクラス化
-	SET_SUBCLASS(m_hSeek, NewSliderProc);
-	SET_SUBCLASS(m_hVolume, NewSliderProc);
-	SET_SUBCLASS(m_hTab, NewTabProc);
-	SET_SUBCLASS(m_hCombo, NewComboProc);
-	SET_SUBCLASS(GetWindow(m_hCombo, GW_CHILD), NewEditProc);
-	SET_SUBCLASS(m_hTree, NewTreeProc);
-	SET_SUBCLASS(m_hSplitter, NewSplitBarProc);
+	SubClassControl(m_hSeek, NewSliderProc);
+	SubClassControl(m_hVolume, NewSliderProc);
+	SubClassControl(m_hTab, NewTabProc);
+	SubClassControl(m_hCombo, NewComboProc);
+	SubClassControl(GetWindow(m_hCombo, GW_CHILD), NewEditProc);
+	SubClassControl(m_hTree, NewTreeProc);
+	SubClassControl(m_hSplitter, NewSplitBarProc);
 
 	TIMECHECK("コントロールのサブクラス化")
 
@@ -988,13 +980,15 @@ static void OnCreate(HWND hWnd){
 	TIMECHECK("ウインドウ作成終了")
 }
 
-//BASS_ChannelBytes2Seconds
+static float TrackPosToSec(QWORD qPos) {
+	return (float)BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, qPos);
+}
 
-static QWORD GetTrackPos(){
+static QWORD TrackGetPos(){
 	return BASS_ChannelGetPosition(g_cInfo[g_bNow].hChan, BASS_POS_BYTE) - g_cInfo[g_bNow].qStart;
 }
 
-static BOOL SetTrackPos(QWORD qPos) {
+static BOOL TrackSetPos(QWORD qPos) {
 	return BASS_ChannelSetPosition(g_cInfo[g_bNow].hChan, qPos + g_cInfo[g_bNow].qStart, BASS_POS_BYTE);
 }
 
@@ -1052,7 +1046,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 		case WM_DESTROY:
 			if(OPGetStatus() != OUTPUT_PLUGIN_STATUS_STOP){
-				g_cfg.nResPos = (int)GetTrackPos();
+				g_cfg.nResPos = (int)TrackGetPos();
 			}else{
 				g_cfg.nResPos = 0;
 			}
@@ -1987,10 +1981,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			switch (wp){
 				case ID_SEEKTIMER:
 					//再生時間をステータスバーに表示
-					qPos = GetTrackPos();
+					qPos = TrackGetPos();
 					qLen = g_cInfo[g_bNow].qDuration;
-					nPos = (int)BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, qPos);
-					nLen = (int)BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, qLen);
+					nPos = (int)TrackPosToSec(qPos);
+					nLen = (int)TrackPosToSec(qLen);
 					wsprintf(m_szTime, TEXT("\t%02d:%02d / %02d:%02d"), nPos/60, nPos%60, nLen/60, nLen%60);
 					PostMessage(m_hStatus, SB_SETTEXT, (WPARAM)2|0, (LPARAM)m_szTime);
 					//シーク中でなければ現在の再生位置をスライダバーに表示する
@@ -2224,10 +2218,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					return (LRESULT)OPGetStatus();
 
 				case GET_POSITION:
-					return (LRESULT)BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, GetTrackPos());
+					return (LRESULT)TrackPosToSec(TrackGetPos());
 
 				case GET_DURATION:
-					return (LRESULT)BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, g_cInfo[g_bNow].qDuration);
+					return (LRESULT)TrackPosToSec(g_cInfo[g_bNow].qDuration);
 
 				case GET_LISTVIEW:
 					int nCount;
@@ -2316,7 +2310,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			case WM_F4B24_INTERNAL_RESTORE_POSITION:
 				if(g_cfg.nResPosFlag){
 					BASS_ChannelStop(g_cInfo[g_bNow].hChan);
-					SetTrackPos(g_cfg.nResPos);
+					TrackSetPos(g_cfg.nResPos);
 					BASS_ChannelPlay(g_cInfo[g_bNow].hChan, FALSE);
 				}
 				break;
@@ -2981,7 +2975,7 @@ static void OnChangeTrack(){
 	wsprintf(szTitleCap, TEXT("%s - %s"), m_szTag, FITTLE_TITLE);
 	SetWindowText(m_hMainWnd, szTitleCap);
 
-	float time = (float)BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, BASS_ChannelGetLength(g_cInfo[g_bNow].hChan, BASS_POS_BYTE)); // playback duration
+	float time = TrackPosToSec(BASS_ChannelGetLength(g_cInfo[g_bNow].hChan, BASS_POS_BYTE)); // playback duration
 	DWORD dLen = (DWORD)BASS_StreamGetFilePosition(g_cInfo[g_bNow].hChan, BASS_FILEPOS_END); // file length
 	DWORD bitrate;
 	if(dLen>0 && time>0){
@@ -3190,7 +3184,7 @@ static BOOL _BASS_ChannelSetPosition(DWORD handle, int nPos){
 
 	OPStop();
 
-	bRet = SetTrackPos(qPos);
+	bRet = TrackSetPos(qPos);
 
 	OPSetVolume(GetVolumeBar());
 
@@ -3210,7 +3204,7 @@ static void _BASS_ChannelSeekSecond(DWORD handle, float fSecond, int nSign){
 	QWORD qSeek;
 	QWORD qSet;
 
-	qPos = GetTrackPos();
+	qPos = TrackGetPos();
 	qSeek = BASS_ChannelSeconds2Bytes(handle, fSecond);
 	if(nSign<0 && qPos<qSeek){
 		qSet = 0;
@@ -3220,7 +3214,7 @@ static void _BASS_ChannelSeekSecond(DWORD handle, float fSecond, int nSign){
 		qSet = qPos + nSign*qSeek;
 	}
 	OPStop();
-	SetTrackPos(qSet);
+	TrackSetPos(qSet);
 	OPPlay();
 
 	return;
@@ -3645,14 +3639,6 @@ static BOOL SetUIFont(void){
 	return TRUE;
 }
 
-static void UpdateWindowSize(HWND hWnd){
-	RECT rcDisp;
-
-	GetClientRect(hWnd, &rcDisp);
-	SendMessage(hWnd, WM_SIZE, 0, MAKELPARAM(rcDisp.right, rcDisp.bottom));
-	return;
-}
-
 static void SetStatusbarIcon(LPTSTR pszPath, BOOL bShow){
 	static HICON s_hIcon = NULL;
 	SHFILEINFO shfinfo = {0};
@@ -3737,7 +3723,7 @@ static LRESULT CALLBACK NewSliderProc(HWND hSB, UINT msg, WPARAM wp, LPARAM lp){
 				nPos = (int)SendMessage(hSB, TBM_GETPOS, 0 ,0);
 				if(hSB==m_hSeek){
 					//バーの位置から時間を取得
-					fLen = (float)BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, g_cInfo[g_bNow].qDuration);
+					fLen = TrackPosToSec(g_cInfo[g_bNow].qDuration);
 					wsprintf(szDrawBuff, TEXT("%02d:%02d"), (nPos * (int)fLen / SLIDER_DIVIDED)/60, (nPos * (int)fLen / SLIDER_DIVIDED)%60);
 				}else if(hSB==m_hVolume){
 					wsprintf(szDrawBuff, TEXT("%02d%%"), nPos/10);
@@ -3803,7 +3789,7 @@ static LRESULT CALLBACK NewSliderProc(HWND hSB, UINT msg, WPARAM wp, LPARAM lp){
 		default:
 			break;
 	}
-	return CallWindowProc((WNDPROC)(LONG64)GetWindowLongPtr(hSB, GWLP_USERDATA), hSB, msg, wp, lp);
+	return CallWindowProc((WNDPROC)(LONG_PTR)GetWindowLongPtr(hSB, GWLP_USERDATA), hSB, msg, wp, lp);
 }
 
 // 分割バーの新しいプロシージャ
@@ -4526,14 +4512,6 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 	return CallWindowProc((WNDPROC)(LONG_PTR)GetWindowLongPtr(hTV, GWLP_USERDATA), hTV, msg, wp, lp);
 }
 
-// ツールバーの幅を取得（ドロップダウンがあってもうまく行きます）
-static LONG GetToolbarTrueWidth(HWND hToolbar){
-	RECT rct;
-
-	SendMessage(hToolbar, TB_GETITEMRECT, SendMessage(hToolbar, TB_BUTTONCOUNT, 0, 0)-1, (LPARAM)&rct);
-	return rct.right;
-}
-
 // 設定ファイルを読み直し適用する(一部設定を除く)
 static void ApplyConfig(HWND hWnd){
 	TCHAR szNowDir[MAX_FITTLE_PATH];
@@ -4639,19 +4617,6 @@ static void SendSupportList(HWND hWnd){
 	}
 	if (p < MAX_FITTLE_PATH) szList[p] = 0;
 	SendMessage(hWnd, WM_SETTEXT, 0, (LPARAM)szList);
-}
-
-// 指定した文字列を持つメニュー項目を探す
-static int GetMenuPosFromString(HMENU hMenu, LPTSTR lpszText){
-	int i;
-	TCHAR szBuf[64];
-	int c = GetMenuItemCount(hMenu);
-	for (i = 0; i < c; i++){
-		GetMenuString(hMenu, i, szBuf, 64, MF_BYPOSITION);
-		if (lstrcmp(lpszText, szBuf) == 0)
-			return i;
-	}
-	return 0;
 }
 
 // マウスホイール操作情報をカーソル位置の窓に引き渡す
