@@ -489,20 +489,3 @@ LRESULT CALLBACK NewComboProc(HWND hCB, UINT msg, WPARAM wp, LPARAM lp){
 	}
 	return CallWindowProc((WNDPROC)(LONG_PTR)GetWindowLongPtr(hCB, GWLP_USERDATA), hCB, msg, wp, lp);
 }
-
-// エディットボックスのプロシージャ
-LRESULT CALLBACK NewEditProc(HWND hEB, UINT msg, WPARAM wp, LPARAM lp){
-	switch(msg){
-		case WM_CHAR:
-			if((int)wp=='\t'){
-				if(GetKeyState(VK_SHIFT) < 0){
-					SetFocus(GetWindow(GetDlgItem(GetParent(GetParent(hEB)), ID_TAB), GW_CHILD));
-				}else{
-					SetFocus(GetNextWindow(GetParent(hEB), GW_HWNDNEXT));
-				}
-				return 0;
-			}
-			break;
-	}
-	return CallWindowProc((WNDPROC)(LONG_PTR)GetWindowLongPtr(hEB, GWLP_USERDATA), hEB, msg, wp, lp);
-}

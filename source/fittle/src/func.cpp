@@ -16,6 +16,7 @@
 #endif
 
 #include "func.h"
+#include "list.h"
 #include "bass_tag.h"
 #include "archive.h"
 #include "f4b24.h"
@@ -191,6 +192,21 @@ void UpdateWindowSize(HWND hWnd){
 	GetClientRect(hWnd, &rcDisp);
 	SendMessage(hWnd, WM_SIZE, 0, MAKELPARAM(rcDisp.right, rcDisp.bottom));
 	return;
+}
+
+// ドロップされたファイルのリストを取得
+int GetDropFiles(HDROP hDrop, struct FILEINFO **ppSub, LPPOINT ppt, LPTSTR szPath){
+	int i;
+	int nFileCount;
+	*ppSub = NULL;
+	nFileCount = (int)DragQueryFile(hDrop, 0xFFFFFFFF, NULL, 0);
+	for(i = 0; i< nFileCount; i++){
+		DragQueryFile(hDrop, i, szPath, MAX_FITTLE_PATH);
+		SearchFiles(ppSub, szPath, TRUE);
+	}
+	if (ppt) DragQueryPoint(hDrop, ppt);
+	DragFinish(hDrop);
+	return nFileCount;
 }
 
 // 外部設定プログラムを起動する

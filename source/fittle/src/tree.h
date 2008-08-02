@@ -20,7 +20,6 @@ int GetPathFromNode(HWND, HTREEITEM, LPTSTR);
 int MyScroll(HWND);
 void OnBeginDragTree(HWND);
 LRESULT CALLBACK NewComboProc(HWND, UINT, WPARAM, LPARAM);
-LRESULT CALLBACK NewEditProc(HWND, UINT, WPARAM, LPARAM);
 void RefreshComboIcon(HWND);
 
 #endif

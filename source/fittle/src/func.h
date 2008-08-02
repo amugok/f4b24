@@ -31,6 +31,7 @@ void SubClassControl(HWND hWnd, WNDPROC Proc);
 int GetMenuPosFromString(HMENU hMenu, LPTSTR lpszText);
 LONG GetToolbarTrueWidth(HWND hToolbar);
 void UpdateWindowSize(HWND);
+int GetDropFiles(HDROP hDrop, struct FILEINFO **ppSub, LPPOINT ppt, LPTSTR szPath);
 void ShowSettingDialog(HWND, int);
 
 void ListView_ClearSelect(HWND hLV);

@@ -17,7 +17,7 @@
 #include "listtab.h"
 
 static int TraverseList2(HWND, struct FILEINFO *, LPTSTR);
-static LRESULT CALLBACK NewEditProc(HWND, UINT, WPARAM, LPARAM);
+static LRESULT CALLBACK NewFindEditProc(HWND, UINT, WPARAM, LPARAM);
 void ToPlayList(struct FILEINFO **, struct FILEINFO *, LPTSTR);
 
 static WNDPROC s_hOldEditProc = NULL;
@@ -34,7 +34,7 @@ BOOL CALLBACK FindDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			hList = GetDlgItem(hDlg, IDC_LIST1);
 			hEdit = GetDlgItem(hDlg, IDC_EDIT1);
 			pRoot = (struct FILEINFO *)lp;
-			s_hOldEditProc = (WNDPROC)(LONG_PTR)SetWindowLongPtr(hEdit, GWLP_WNDPROC, (LONG_PTR)NewEditProc);
+			s_hOldEditProc = (WNDPROC)(LONG_PTR)SetWindowLongPtr(hEdit, GWLP_WNDPROC, (LONG_PTR)NewFindEditProc);
 			TraverseList2(hList, pRoot, NULL);
 			return TRUE;
 
@@ -97,7 +97,7 @@ BOOL CALLBACK FindDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 	}
 }
 
-LRESULT CALLBACK NewEditProc(HWND hEB, UINT msg, WPARAM wp, LPARAM lp){
+LRESULT CALLBACK NewFindEditProc(HWND hEB, UINT msg, WPARAM wp, LPARAM lp){
 	switch(msg){
 		case WM_GETDLGCODE:
 			return DLGC_WANTARROWS | DLGC_WANTCHARS;

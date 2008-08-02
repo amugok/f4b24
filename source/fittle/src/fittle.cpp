@@ -82,6 +82,7 @@ static LRESULT CALLBACK NewSliderProc(HWND, UINT, WPARAM, LPARAM);
 static LRESULT CALLBACK NewTabProc(HWND, UINT, WPARAM, LPARAM);
 static LRESULT CALLBACK NewTreeProc(HWND, UINT, WPARAM, LPARAM);
 static LRESULT CALLBACK NewSplitBarProc(HWND, UINT, WPARAM, LPARAM);
+static LRESULT CALLBACK NewComboEditProc(HWND, UINT, WPARAM, LPARAM);
 static void CALLBACK EventSync(DWORD, DWORD, DWORD, void *);
 // 設定関係
 static void LoadState();
@@ -558,6 +559,7 @@ static void OnCreate(HWND hWnd){
 	int nFileIndex;
 	WASTR temppath;
 	TCHAR szLastPath[MAX_FITTLE_PATH];
+	HWND hComboEx;
 
 	TIMESTART
 
@@ -786,11 +788,12 @@ static void OnCreate(HWND hWnd){
 	TIMECHECK("メニュー状態復元")
 
 	//コントロールのサブクラス化
+	hComboEx = GetWindow(m_hCombo, GW_CHILD);
 	SubClassControl(m_hSeek, NewSliderProc);
 	SubClassControl(m_hVolume, NewSliderProc);
 	SubClassControl(m_hTab, NewTabProc);
-	SubClassControl(m_hCombo, NewComboProc);
-	SubClassControl(GetWindow(m_hCombo, GW_CHILD), NewEditProc);
+	SubClassControl(hComboEx, NewComboProc);
+	SubClassControl(GetWindow(hComboEx, GW_CHILD), NewComboEditProc);
 	SubClassControl(m_hTree, NewTreeProc);
 	SubClassControl(m_hSplitter, NewSplitBarProc);
 
@@ -3891,7 +3894,6 @@ static LPCTSTR GetColumnText(HWND hwndList, int nRow, int nColumn, LPTSTR pWork,
 // タブの新しいプロシージャ
 static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 	static int s_nDragTab = -1;
-	RECT rcItem = {0};
 
 	switch(msg)
 	{
@@ -3910,9 +3912,8 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 			break;
 
 		case WM_MOUSEMOVE:
-			int nHitTab;
 			if(GetCapture()==hTC){
-				nHitTab = TabHitTest(lp, TCHT_NOWHERE);
+				int nHitTab = TabHitTest(lp, TCHT_NOWHERE);
 				if(nHitTab>0 && nHitTab!=s_nDragTab){
 					MoveTab(hTC, s_nDragTab, nHitTab-s_nDragTab);
 					s_nDragTab = nHitTab;
@@ -3921,159 +3922,163 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 			break;
 
 		case WM_CONTEXTMENU:	// リスト右クリックメニュー
-			HMENU hPopMenu;
-			int nItem;
-			int i;
-			TCHAR szMenu[MAX_FITTLE_PATH+4];
+			{
+				TCHAR szMenu[MAX_FITTLE_PATH+4];
+				RECT rcItem;
+				HMENU hPopMenu;
+				int nItem;
+				int i;
 
-			switch(GetDlgCtrlID((HWND)wp)){
-				case ID_LIST:
-					if(lp==-1){	//キーボード
-						nItem = ListView_GetNextItem((HWND)wp, -1, LVNI_SELECTED);
-						if(nItem<0) return 0; 
-						ListView_GetItemRect((HWND)wp, nItem, &rcItem, LVIR_SELECTBOUNDS);
-						MapWindowPoints((HWND)wp, HWND_DESKTOP, (LPPOINT)&rcItem, 2);
-						lp = MAKELPARAM(rcItem.left, rcItem.bottom);
-					}
-					hPopMenu = GetSubMenu(LoadMenu(m_hInst, TEXT("LISTMENU")), 0);
+				switch(GetDlgCtrlID((HWND)wp)){
+					case ID_LIST:
+						if(lp==-1){	//キーボード
+							nItem = ListView_GetNextItem((HWND)wp, -1, LVNI_SELECTED);
+							if(nItem<0) return 0; 
+							ListView_GetItemRect((HWND)wp, nItem, &rcItem, LVIR_SELECTBOUNDS);
+							MapWindowPoints((HWND)wp, HWND_DESKTOP, (LPPOINT)&rcItem, 2);
+							lp = MAKELPARAM(rcItem.left, rcItem.bottom);
+						}
+						hPopMenu = GetSubMenu(LoadMenu(m_hInst, TEXT("LISTMENU")), 0);
 
-					for(i=0;i<TabGetListCount();i++){
-						wsprintf(szMenu, TEXT("&%d: %s"), i, GetListTab(hTC, i)->szTitle);
-						AppendMenu(GetSubMenu(hPopMenu, GetMenuPosFromString(hPopMenu, TEXT("プレイリストに送る(&S)"))), MF_STRING, IDM_SENDPL_FIRST+i, szMenu); 
-					}
+						for(i=0;i<TabGetListCount();i++){
+							wsprintf(szMenu, TEXT("&%d: %s"), i, GetListTab(hTC, i)->szTitle);
+							AppendMenu(GetSubMenu(hPopMenu, GetMenuPosFromString(hPopMenu, TEXT("プレイリストに送る(&S)"))), MF_STRING, IDM_SENDPL_FIRST+i, szMenu); 
+						}
 
-					/*if(ListView_GetSelectedCount((HWND)wp)!=1){
-						EnableMenuItem(hPopMenu, IDM_LIST_DELFILE, MF_GRAYED | MF_DISABLED);
-					}*/
-					TrackPopupMenu(hPopMenu, TPM_LEFTALIGN | TPM_TOPALIGN, (short)LOWORD(lp), (short)HIWORD(lp), 0, m_hMainWnd, NULL);
-					DestroyMenu(hPopMenu);
-					return 0;	// タブコントロールの分のWM_CONTEXTMENUが送られるのを防ぐ
+						/*if(ListView_GetSelectedCount((HWND)wp)!=1){
+							EnableMenuItem(hPopMenu, IDM_LIST_DELFILE, MF_GRAYED | MF_DISABLED);
+						}*/
+						TrackPopupMenu(hPopMenu, TPM_LEFTALIGN | TPM_TOPALIGN, (short)LOWORD(lp), (short)HIWORD(lp), 0, m_hMainWnd, NULL);
+						DestroyMenu(hPopMenu);
+						return 0;	// タブコントロールの分のWM_CONTEXTMENUが送られるのを防ぐ
+				}
 			}
 			break;
 
 		case WM_NOTIFY:
-			NMHDR *pnmhdr;
-
-			pnmhdr = (LPNMHDR)lp;
-			switch(pnmhdr->idFrom)
 			{
-				case ID_LIST:
-					LPNMLISTVIEW lplv;
-					lplv = (LPNMLISTVIEW)lp;
-					switch(pnmhdr->code)
-					{
+				LPNMLISTVIEW lplv;
+				NMHDR *pnmhdr = (LPNMHDR)lp;
 
-						// リストビューからの要求
+				switch(pnmhdr->idFrom)
+				{
+					case ID_LIST:
+						lplv = (LPNMLISTVIEW)lp;
+						switch(pnmhdr->code)
+						{
+
+							// リストビューからの要求
 #if 1
-						/* Windowsの挙動が異常 */
-						case LVN_GETDISPINFOA:
-						case LVN_GETDISPINFOW:
-							{
-								LVITEM *item = &((NMLVDISPINFO*)lp)->item;
-								// テキストをセット
-								if(item->mask & LVIF_TEXT){
-									TCHAR szBuf[32];
-									LPCTSTR lpszColText = GetColumnText(pnmhdr->hwndFrom, item->iItem, item->iSubItem, szBuf, 32);
-									if (lpszColText)
-										lstrcpyn(item->pszText, lpszColText, item->cchTextMax);
+							/* Windowsの挙動が異常 */
+							case LVN_GETDISPINFOA:
+							case LVN_GETDISPINFOW:
+								{
+									LVITEM *item = &((NMLVDISPINFO*)lp)->item;
+									// テキストをセット
+									if(item->mask & LVIF_TEXT){
+										TCHAR szBuf[32];
+										LPCTSTR lpszColText = GetColumnText(pnmhdr->hwndFrom, item->iItem, item->iSubItem, szBuf, 32);
+										if (lpszColText)
+											lstrcpyn(item->pszText, lpszColText, item->cchTextMax);
+									}
 								}
-							}
-							break;
+								break;
 #else
-						case LVN_GETDISPINFOA:
-							{
-								LVITEMA *item = &((NMLVDISPINFOA*)lp)->item;
-								// テキストをセット
-								if(item->mask & LVIF_TEXT){
-									TCHAR szBuf[32];
-									LPCTSTR lpszColText = GetColumnText(pnmhdr->hwndFrom, item->iItem, item->iSubItem, szBuf, 32);
-									if (lpszColText)
-										lstrcpyntA(item->pszText, lpszColText, item->cchTextMax);
+							case LVN_GETDISPINFOA:
+								{
+									LVITEMA *item = &((NMLVDISPINFOA*)lp)->item;
+									// テキストをセット
+									if(item->mask & LVIF_TEXT){
+										TCHAR szBuf[32];
+										LPCTSTR lpszColText = GetColumnText(pnmhdr->hwndFrom, item->iItem, item->iSubItem, szBuf, 32);
+										if (lpszColText)
+											lstrcpyntA(item->pszText, lpszColText, item->cchTextMax);
+									}
 								}
-							}
-							break;
-						case LVN_GETDISPINFOW:
-							{
-								LVITEMW *item = &((NMLVDISPINFOW*)lp)->item;
-								// テキストをセット
-								if(item->mask & LVIF_TEXT){
-									TCHAR szBuf[32];
-									LPCTSTR lpszColText = GetColumnText(pnmhdr->hwndFrom, item->iItem, item->iSubItem, szBuf, 32);
-									if (lpszColText)
-										lstrcpyntW(item->pszText, lpszColText, item->cchTextMax);
+								break;
+							case LVN_GETDISPINFOW:
+								{
+									LVITEMW *item = &((NMLVDISPINFOW*)lp)->item;
+									// テキストをセット
+									if(item->mask & LVIF_TEXT){
+										TCHAR szBuf[32];
+										LPCTSTR lpszColText = GetColumnText(pnmhdr->hwndFrom, item->iItem, item->iSubItem, szBuf, 32);
+										if (lpszColText)
+											lstrcpyntW(item->pszText, lpszColText, item->cchTextMax);
+									}
 								}
-							}
-							break;
+								break;
 #endif
-						case LVN_GETINFOTIPA:
-							if(g_cfg.nPathTip){
-								NMLVGETINFOTIPA *lvgit = (NMLVGETINFOTIPA *)lp;
-								LPTSTR pszFilePath = GetPtrFromIndex(GetSelListTab()->pRoot, lvgit->iItem)->szFilePath;
-								lvgit->dwFlags = 0;
-								lstrcpyntA(lvgit->pszText, pszFilePath, lvgit->cchTextMax);
-							}
-							break;
-						case LVN_GETINFOTIPW:
-							if(g_cfg.nPathTip){
-								NMLVGETINFOTIPW *lvgit = (NMLVGETINFOTIPW *)lp;
-								LPTSTR pszFilePath = GetPtrFromIndex(GetSelListTab()->pRoot, lvgit->iItem)->szFilePath;
-								lvgit->dwFlags = 0;
-								lstrcpyntW(lvgit->pszText, pszFilePath, lvgit->cchTextMax);
-							}
-							break;
-						case NM_CUSTOMDRAW:
-							NMLVCUSTOMDRAW *lplvcd;
-							LOGFONT lf;
-
-							lplvcd = (LPNMLVCUSTOMDRAW)lp;
-							if (lplvcd->nmcd.dwDrawStage == CDDS_PREPAINT)
-								return CDRF_NOTIFYITEMDRAW;
-							if (lplvcd->nmcd.dwDrawStage == CDDS_ITEMPREPAINT) {
-								if(m_nPlayTab==TabGetListSel()
-									&& GetSelListTab()->nPlaying==(signed int)lplvcd->nmcd.dwItemSpec
-									&& OPGetStatus() != OUTPUT_PLUGIN_STATUS_STOP){
-										switch(g_cfg.nPlayView){
-											case 1:
-												if(!m_hBoldFont){
-													GetObject(GetCurrentObject(lplvcd->nmcd.hdc, OBJ_FONT), sizeof(LOGFONT), &lf);
-													lf.lfWeight = FW_DEMIBOLD;
-													m_hBoldFont = CreateFontIndirect(&lf);
-												}
-												SelectObject(lplvcd->nmcd.hdc, m_hBoldFont);
-												break;
-											case 2:
-												lplvcd->clrText = g_cfg.nPlayTxtCol;
-												break;
-											case 3:
-												lplvcd->clrTextBk = g_cfg.nPlayBkCol;
-												break;
-										}
-										return CDRF_NEWFONT;
+							case LVN_GETINFOTIPA:
+								if(g_cfg.nPathTip){
+									NMLVGETINFOTIPA *lvgit = (NMLVGETINFOTIPA *)lp;
+									LPTSTR pszFilePath = GetPtrFromIndex(GetSelListTab()->pRoot, lvgit->iItem)->szFilePath;
+									lvgit->dwFlags = 0;
+									lstrcpyntA(lvgit->pszText, pszFilePath, lvgit->cchTextMax);
 								}
-							}
-							break;
+								break;
+							case LVN_GETINFOTIPW:
+								if(g_cfg.nPathTip){
+									NMLVGETINFOTIPW *lvgit = (NMLVGETINFOTIPW *)lp;
+									LPTSTR pszFilePath = GetPtrFromIndex(GetSelListTab()->pRoot, lvgit->iItem)->szFilePath;
+									lvgit->dwFlags = 0;
+									lstrcpyntW(lvgit->pszText, pszFilePath, lvgit->cchTextMax);
+								}
+								break;
+							case NM_CUSTOMDRAW:
+								NMLVCUSTOMDRAW *lplvcd;
+								LOGFONT lf;
 
-						case LVN_BEGINDRAG:	// アイテムドラッグ開始
-							OnBeginDragList(pnmhdr->hwndFrom, lplv->ptAction);
-							break;
+								lplvcd = (LPNMLVCUSTOMDRAW)lp;
+								if (lplvcd->nmcd.dwDrawStage == CDDS_PREPAINT)
+									return CDRF_NOTIFYITEMDRAW;
+								if (lplvcd->nmcd.dwDrawStage == CDDS_ITEMPREPAINT) {
+									if(m_nPlayTab==TabGetListSel()
+										&& GetSelListTab()->nPlaying==(signed int)lplvcd->nmcd.dwItemSpec
+										&& OPGetStatus() != OUTPUT_PLUGIN_STATUS_STOP){
+											switch(g_cfg.nPlayView){
+												case 1:
+													if(!m_hBoldFont){
+														GetObject(GetCurrentObject(lplvcd->nmcd.hdc, OBJ_FONT), sizeof(LOGFONT), &lf);
+														lf.lfWeight = FW_DEMIBOLD;
+														m_hBoldFont = CreateFontIndirect(&lf);
+													}
+													SelectObject(lplvcd->nmcd.hdc, m_hBoldFont);
+													break;
+												case 2:
+													lplvcd->clrText = g_cfg.nPlayTxtCol;
+													break;
+												case 3:
+													lplvcd->clrTextBk = g_cfg.nPlayBkCol;
+													break;
+											}
+											return CDRF_NEWFONT;
+									}
+								}
+								break;
 
-						case LVN_COLUMNCLICK:	// カラムクリック
-							int nSort;
+							case LVN_BEGINDRAG:	// アイテムドラッグ開始
+								OnBeginDragList(pnmhdr->hwndFrom, lplv->ptAction);
+								break;
 
-							if(lplv->iSubItem+1==abs(GetSelListTab()->nSortState)){
-								nSort = -1*GetSelListTab()->nSortState;
-							}else{
-								nSort = lplv->iSubItem+1;
-							}
-							SortListTab(GetSelListTab(), nSort);
-							break;
+							case LVN_COLUMNCLICK:	// カラムクリック
+								int nSort;
 
-						case NM_DBLCLK:
-							SendFittleCommand(IDM_PLAY);
-							break;
+								if(lplv->iSubItem+1==abs(GetSelListTab()->nSortState)){
+									nSort = -1*GetSelListTab()->nSortState;
+								}else{
+									nSort = lplv->iSubItem+1;
+								}
+								SortListTab(GetSelListTab(), nSort);
+								break;
 
-					}
-					break;
+							case NM_DBLCLK:
+								SendFittleCommand(IDM_PLAY);
+								break;
+
+						}
+						break;
+				}
 			}
 			break;
 
@@ -4120,26 +4125,18 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 
 		case WM_DROPFILES:
 			{
-				HDROP hDrop;
-				struct FILEINFO *pSub;
-				int nFileCount;
-				POINT pt;
-				TCHAR szPath[MAX_FITTLE_PATH];
 				TCHAR szLabel[MAX_FITTLE_PATH];
+				TCHAR szPath[MAX_FITTLE_PATH];
+				RECT rcItem = {0};
+				POINT pt;
+				struct FILEINFO *pSub;
+				int i;
 
 				// ドラッグされたファイルを追加
-				pSub = NULL;
-				hDrop = (HDROP)wp;
-				nFileCount = (int)DragQueryFile(hDrop, 0xFFFFFFFF, NULL, 0);
-				for(i=0;i<nFileCount;i++){
-					DragQueryFile(hDrop, i, szPath, MAX_FITTLE_PATH);
-					SearchFiles(&pSub, szPath, TRUE);
-				}
-				DragQueryPoint(hDrop, &pt);
-				DragFinish(hDrop);
+				int nFileCount = GetDropFiles((HDROP)wp, &pSub, &pt, szPath);
 
 				// 既存のタブに追加
-				nItem = TabGetListCount();
+				int nItem = TabGetListCount();
 				for(i=0;i<nItem;i++){
 					TabGetItemRect(i, &rcItem);
 					if(PtInRect(&rcItem, pt)){
@@ -4178,13 +4175,13 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 }
 
 // タブフォーカスの描画
-static void DrawTabsFocus(LPPOINT ppt){
+static void DrawTabsFocus(POINT pt){
 	int i;
 	RECT rcItem;
-	ScreenToClient(m_hTab, ppt);
+	ScreenToClient(m_hTab, &pt);
 	for(i=0;i<TabGetListCount();i++){
 		TabGetItemRect(i, &rcItem);
-		if(PtInRect(&rcItem, *ppt)){
+		if(PtInRect(&rcItem, pt)){
 			DrawTabFocus(i, TRUE);
 		}else{
 			DrawTabFocus(i, FALSE);
@@ -4210,7 +4207,7 @@ LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
 					SetOLECursor(1);
 				}
 				// タブフォーカスの描画
-				DrawTabsFocus(&pt);
+				DrawTabsFocus(pt);
 				// ドラッグイメージを描画
 				pt.x = (short)LOWORD(lp);
 				pt.y = (short)HIWORD(lp);
@@ -4320,16 +4317,9 @@ LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
 
 		case WM_DROPFILES:
 			{
-				int i;
 				struct FILEINFO *pSub = NULL;
 				TCHAR szPath[MAX_FITTLE_PATH];
-				HDROP hDrop = (HDROP)wp;
-
-				for(i=0;i<(int)DragQueryFile(hDrop, 0xFFFFFFFF, NULL, 0);i++){
-					DragQueryFile(hDrop, i, szPath, MAX_FITTLE_PATH);
-					SearchFiles(&pSub, szPath, TRUE);
-				}
-				DragFinish(hDrop);
+				GetDropFiles((HDROP)wp, &pSub, 0, szPath);
 
 				AppendToList(GetSelListTab(), pSub);
 				SetForegroundWindow(m_hMainWnd);
@@ -4465,7 +4455,7 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 					SetOLECursor(1);
 				}
 				
-				DrawTabsFocus(&pt);
+				DrawTabsFocus(pt);
 			}
 			break;
 
@@ -4665,4 +4655,22 @@ static void RemoveFiles(){
 	}
 	HFree(p);
 }
+
+
+static LRESULT CALLBACK NewComboEditProc(HWND hEB, UINT msg, WPARAM wp, LPARAM lp){
+	switch(msg){
+		case WM_CHAR:
+			if((int)wp=='\t'){
+				if(GetKeyState(VK_SHIFT) < 0){
+					SetFocus(GetWindow(m_hTab, GW_CHILD));
+				}else{
+					SetFocus(m_hTree);
+				}
+				return 0;
+			}
+			break;
+	}
+	return CallWindowProc((WNDPROC)(LONG_PTR)GetWindowLongPtr(hEB, GWLP_USERDATA), hEB, msg, wp, lp);
+}
+
 
