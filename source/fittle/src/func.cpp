@@ -164,6 +164,10 @@ void SubClassControl(HWND hWnd, WNDPROC Proc){
 	SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)Proc));
 }
 
+LRESULT SubClassCallNext(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
+	return CallWindowProc((WNDPROC)(LONG_PTR)GetWindowLongPtr(hWnd, GWLP_USERDATA), hWnd, msg, wp, lp);
+}
+
 // w’è‚µ‚½•¶š—ñ‚ğ‚Âƒƒjƒ…[€–Ú‚ğ’T‚·
 int GetMenuPosFromString(HMENU hMenu, LPTSTR lpszText){
 	int i;

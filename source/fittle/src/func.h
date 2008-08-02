@@ -28,6 +28,7 @@ void SetOLECursor(int);
 LPTSTR MyPathAddBackslash(LPTSTR);
 void GetFolderPart(LPTSTR);
 void SubClassControl(HWND hWnd, WNDPROC Proc);
+LRESULT SubClassCallNext(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp);
 int GetMenuPosFromString(HMENU hMenu, LPTSTR lpszText);
 LONG GetToolbarTrueWidth(HWND hToolbar);
 void UpdateWindowSize(HWND);

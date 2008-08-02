@@ -487,5 +487,5 @@ LRESULT CALLBACK NewComboProc(HWND hCB, UINT msg, WPARAM wp, LPARAM lp){
 			hBrush = (HBRUSH)CreateSolidBrush((COLORREF)crlBk);
 			return (LRESULT)hBrush;
 	}
-	return CallWindowProc((WNDPROC)(LONG_PTR)GetWindowLongPtr(hCB, GWLP_USERDATA), hCB, msg, wp, lp);
+	return SubClassCallNext(hCB, msg, wp, lp);
 }

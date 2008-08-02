@@ -111,7 +111,7 @@ LRESULT CALLBACK NewFindEditProc(HWND hEB, UINT msg, WPARAM wp, LPARAM lp){
 			break;
 
 	}
-	return CallWindowProc((WNDPROC)(LONG_PTR)GetWindowLongPtr(hEB, GWLP_USERDATA), hEB, msg, wp, lp);
+	return SubClassCallNext(hEB, msg, wp, lp);
 }
 
 int TraverseList2(HWND hLB, struct FILEINFO *ptr, LPTSTR szPart){

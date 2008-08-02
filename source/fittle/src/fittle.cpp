@@ -3772,7 +3772,7 @@ static LRESULT CALLBACK NewSliderProc(HWND hSB, UINT msg, WPARAM wp, LPARAM lp){
 		default:
 			break;
 	}
-	return CallWindowProc((WNDPROC)(LONG_PTR)GetWindowLongPtr(hSB, GWLP_USERDATA), hSB, msg, wp, lp);
+	return SubClassCallNext(hSB, msg, wp, lp);
 }
 
 // 分割バーの新しいプロシージャ
@@ -3837,7 +3837,7 @@ static LRESULT CALLBACK NewSplitBarProc(HWND hSB, UINT msg, WPARAM wp, LPARAM lp
 			SendFittleCommand(IDM_TOGGLETREE);
 			break;
 	}
-	return CallWindowProc((WNDPROC)(LONG_PTR)GetWindowLongPtr(hSB, GWLP_USERDATA), hSB, msg, wp, lp);
+	return SubClassCallNext(hSB, msg, wp, lp);
 }
 
 static int GetListIndex(HWND hwndList){
@@ -4161,7 +4161,7 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 		default:
 			break;
 	}
-	return CallWindowProc((WNDPROC)(LONG_PTR)GetWindowLongPtr(hTC, GWLP_USERDATA), hTC, msg, wp, lp);
+	return SubClassCallNext(hTC, msg, wp, lp);
 }
 
 // タブフォーカスの描画
@@ -4319,7 +4319,7 @@ LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
 		default:
 			break;
 	}
-	return CallWindowProc((WNDPROC)(LONG_PTR)GetWindowLongPtr(hLV, GWLP_USERDATA), hLV, msg, wp, lp);
+	return SubClassCallNext(hLV, msg, wp, lp);
 }
 
 // ツリービューのプロシージャ
@@ -4334,7 +4334,7 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 
 		case WM_CHAR:
 			switch(wp){
-				case TEXT('\t'):
+				case '\t':
 					if(GetKeyState(VK_SHIFT) < 0){
 						SetFocus(GetNextWindow(hTV, GW_HWNDPREV));
 					}else{
@@ -4467,7 +4467,7 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 			break;
 
 	}
-	return CallWindowProc((WNDPROC)(LONG_PTR)GetWindowLongPtr(hTV, GWLP_USERDATA), hTV, msg, wp, lp);
+	return SubClassCallNext(hTV, msg, wp, lp);
 }
 
 // 設定ファイルを読み直し適用する(一部設定を除く)
@@ -4660,7 +4660,7 @@ static LRESULT CALLBACK NewComboEditProc(HWND hEB, UINT msg, WPARAM wp, LPARAM l
 			}
 			break;
 	}
-	return CallWindowProc((WNDPROC)(LONG_PTR)GetWindowLongPtr(hEB, GWLP_USERDATA), hEB, msg, wp, lp);
+	return SubClassCallNext(hEB, msg, wp, lp);
 }
 
 
