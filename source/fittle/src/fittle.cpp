@@ -387,6 +387,10 @@ static LRESULT SendFittleMessage(UINT uMsg, WPARAM wp, LPARAM lp){
 	return SendMessage(m_hMainWnd, uMsg, wp, lp);
 }
 
+static LRESULT SendF4b24Message(WPARAM wp, LPARAM lp){
+	return SendFittleMessage(WM_F4B24_IPC, wp, lp);
+}
+
 static LRESULT SendFittleCommand(int nCmd){
 	return SendFittleMessage(WM_COMMAND, MAKEWPARAM(nCmd, 0), 0);
 }
@@ -663,7 +667,7 @@ static void SetFolder(LPCTSTR lpszFolderPath){
 	}
 }
 
-static void OnCreate(){
+static void OnCreate(HWND hWnd){
 	int nDevice;
 	MENUITEMINFO mii;
 	int i;
@@ -673,13 +677,13 @@ static void OnCreate(){
 
 	TIMESTART
 
-	nDevice = InitOutputPlugin(m_hMainWnd);
+	nDevice = InitOutputPlugin(hWnd);
 
 	TIMECHECK("出力プラグイン初期化")
 
 	// BASS初期化
-	if(!BASS_Init(nDevice, OPGetRate(), 0, m_hMainWnd, NULL)){
-		MessageBox(m_hMainWnd, TEXT("BASSの初期化に失敗しました。"), TEXT("Fittle"), MB_OK);
+	if(!BASS_Init(nDevice, OPGetRate(), 0, hWnd, NULL)){
+		MessageBox(hWnd, TEXT("BASSの初期化に失敗しました。"), TEXT("Fittle"), MB_OK);
 		BASS_Free();
 		ExitProcess(1);
 	}
@@ -700,7 +704,7 @@ static void OnCreate(){
 	TIMECHECK("優先度設定")
 
 	// 書庫プラグイン初期化
-	InitArchive(m_hMainWnd);
+	InitArchive(hWnd);
 	TIMECHECK("書庫プラグイン初期化")
 
 	// 検索拡張子の決定
@@ -718,7 +722,7 @@ static void OnCreate(){
 	TIMECHECK("RNG初期化")
 
 	// メニューハンドルを保存
-	m_hMainMenu = GetMenu(m_hMainWnd);
+	m_hMainMenu = GetMenu(hWnd);
 
 	TIMECHECK("メニューハンドルを保存")
 
@@ -733,7 +737,7 @@ static void OnCreate(){
 	TIMECHECK("InitCommonControlsEx")
 
 	// ステータスバー作成
-	m_hStatus = CreateStatusWindow(WS_CHILD | /*WS_VISIBLE |*/ SBARS_SIZEGRIP | CCS_BOTTOM | SBT_TOOLTIPS, TEXT(""), m_hMainWnd, ID_STATUS);
+	m_hStatus = CreateStatusWindow(WS_CHILD | /*WS_VISIBLE |*/ SBARS_SIZEGRIP | CCS_BOTTOM | SBT_TOOLTIPS, TEXT(""), hWnd, ID_STATUS);
 	if(g_cfg.nShowStatus){
 		g_cfg.nShowStatus = 0;
 		PostFittleCommand(IDM_SHOWSTATUS);
@@ -747,7 +751,7 @@ static void OnCreate(){
 		NULL,
 		WS_CHILD | WS_VISIBLE | CBS_DROPDOWN,	// CBS_DROPDOWNLIST
 		0, 0, 0, 200,
-		m_hMainWnd,
+		hWnd,
 		(HMENU)ID_COMBO,
 		m_hInst,
 		NULL);
@@ -760,7 +764,7 @@ static void OnCreate(){
 		NULL,
 		WS_CHILD | WS_VISIBLE | TVS_HASLINES | TVS_HASBUTTONS | TVS_SHOWSELALWAYS | (g_cfg.nSingleExpand?TVS_SINGLEEXPAND:0),
 		0, 0, 0, 0,
-		m_hMainWnd,
+		hWnd,
 		(HMENU)ID_TREE,
 		m_hInst,
 		NULL);
@@ -776,7 +780,7 @@ static void OnCreate(){
 		NULL, 
 		WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | (g_cfg.nTabMulti?TCS_MULTILINE:0) | (g_cfg.nTabBottom?TCS_BOTTOM:0),
 		0, 0, 20, 20, 
-		m_hMainWnd,
+		hWnd,
 		(HMENU)ID_TAB,
 		m_hInst,
 		NULL);
@@ -799,7 +803,7 @@ static void OnCreate(){
 		NULL,
 		SS_NOTIFY | WS_CHILD | WS_VISIBLE,
 		0, 0, 0, 0,
-		m_hMainWnd,
+		hWnd,
 		NULL,
 		m_hInst,
 		NULL
@@ -814,7 +818,7 @@ static void OnCreate(){
 		NULL,
 		WS_CHILD | WS_VISIBLE | WS_BORDER | /*WS_CLIPSIBLINGS | */WS_CLIPCHILDREN | RBS_VARHEIGHT | RBS_AUTOSIZE | RBS_BANDBORDERS | RBS_DBLCLKTOGGLE,
 		0, 0, 0, 0,
-		m_hMainWnd, (HMENU)ID_REBAR, m_hInst, NULL);
+		hWnd, (HMENU)ID_REBAR, m_hInst, NULL);
 
 	ZeroMemory(&rbi, sizeof(REBARINFO));
 	rbi.cbSize = sizeof(REBARINFO);
@@ -826,7 +830,7 @@ static void OnCreate(){
 
 	//ツールチップの作成
 	m_hTitleTip = CreateToolTip(NULL);
-	m_hSliderTip = CreateToolTip(m_hMainWnd);
+	m_hSliderTip = CreateToolTip(hWnd);
 
 	TIMECHECK("ツールチップ作成")
 
@@ -878,7 +882,7 @@ static void OnCreate(){
 
 		// 非表示時の処理
 		if(!(rbbi.fStyle & RBBS_HIDDEN)){
-			CheckMenuItem(GetMenu(m_hMainWnd), IDM_SHOWMAIN+i, MF_BYCOMMAND | MF_CHECKED);
+			CheckMenuItem(GetMenu(hWnd), IDM_SHOWMAIN+i, MF_BYCOMMAND | MF_CHECKED);
 		}else{
 			if(rbbi.wID==0)	ShowWindow(m_hToolBar, SW_HIDE);	// ツールバーが表示されてしまうバグ対策
 		}
@@ -888,11 +892,11 @@ static void OnCreate(){
 
 	// メニューチェック
 	if(rbbi.fStyle & RBBS_NOGRIPPER){
-		CheckMenuItem(GetMenu(m_hMainWnd), IDM_FIXBAR, MF_BYCOMMAND | MF_CHECKED);
+		CheckMenuItem(GetMenu(hWnd), IDM_FIXBAR, MF_BYCOMMAND | MF_CHECKED);
 	}
 
 	if(g_cfg.nTreeState==TREE_SHOW){
-		CheckMenuItem(GetMenu(m_hMainWnd), IDM_TOGGLETREE, MF_BYCOMMAND | MF_CHECKED);
+		CheckMenuItem(GetMenu(hWnd), IDM_TOGGLETREE, MF_BYCOMMAND | MF_CHECKED);
 	}
 
 	TIMECHECK("メニュー状態復元")
@@ -919,38 +923,38 @@ static void OnCreate(){
 	mii.fMask = MIIM_TYPE;
 	mii.cbSize = sizeof(mii);
 	mii.fType = MFT_SEPARATOR;
-	InsertMenuItem(GetSystemMenu(m_hMainWnd, FALSE), 7, FALSE, &mii);
+	InsertMenuItem(GetSystemMenu(hWnd, FALSE), 7, FALSE, &mii);
 
 	mii.fMask = MIIM_TYPE | MIIM_ID;
 	mii.fType = MFT_STRING;
 	mii.dwTypeData = TEXT("メニューの表示(&V)\tCtrl+M");
 	mii.wID = IDM_TOGGLEMENU;
-	InsertMenuItem(GetSystemMenu(m_hMainWnd, FALSE), 8, FALSE, &mii);
+	InsertMenuItem(GetSystemMenu(hWnd, FALSE), 8, FALSE, &mii);
 
 	mii.fMask = MIIM_TYPE | MIIM_SUBMENU;
 	mii.fType = MFT_STRING;
 	mii.dwTypeData = TEXT("&Fittle");
 	mii.hSubMenu = m_hTrayMenu;
-	InsertMenuItem(GetSystemMenu(m_hMainWnd, FALSE), 9, FALSE, &mii);
+	InsertMenuItem(GetSystemMenu(hWnd, FALSE), 9, FALSE, &mii);
 
-	DrawMenuBar(m_hMainWnd);
+	DrawMenuBar(hWnd);
 
 	TIMECHECK("メニュー状態復元2")
 
 	// プレイモードを設定する
-	ControlPlayMode(GetMenu(m_hMainWnd), WAGetIniInt("Main", "Mode", PM_LIST));
+	ControlPlayMode(GetMenu(hWnd), WAGetIniInt("Main", "Mode", PM_LIST));
 	m_nRepeatFlag = WAGetIniInt("Main", "Repeat", TRUE);
 	if(m_nRepeatFlag){
 		m_nRepeatFlag = FALSE;
-		ToggleRepeatMode(GetMenu(m_hMainWnd));
+		ToggleRepeatMode(GetMenu(hWnd));
 	}
 
 	// ウィンドウタイトルの設定
-	SetWindowText(m_hMainWnd, FITTLE_TITLE);
+	SetWindowText(hWnd, FITTLE_TITLE);
 	lstrcpy(m_ni.szTip, FITTLE_TITLE);
 
 	// タスクトレイ
-	if(g_cfg.nTrayOpt==2) SetTaskTray(m_hMainWnd);
+	if(g_cfg.nTrayOpt==2) SetTaskTray(hWnd);
 
 	// ボリュームの設定
 	PostMessage(m_hVolume, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)WAGetIniInt("Main", "Volumes", SLIDER_DIVIDED));
@@ -958,12 +962,12 @@ static void OnCreate(){
 	TIMECHECK("その他状態の復元")
 
 	// グローバルホットキー
-	RegHotKey(m_hMainWnd);
+	RegHotKey(hWnd);
 
 	TIMECHECK("グローバルホットキー")
 
 	// ローカルフック
-	m_hHook = SetWindowsHookEx(WH_GETMESSAGE, (HOOKPROC)MyHookProc, m_hInst, GetWindowThreadProcessId(m_hMainWnd, NULL));
+	m_hHook = SetWindowsHookEx(WH_GETMESSAGE, (HOOKPROC)MyHookProc, m_hInst, GetWindowThreadProcessId(hWnd, NULL));
 
 	TIMECHECK("ローカルフック")
 
@@ -984,7 +988,7 @@ static void OnCreate(){
 	TIMECHECK("メニューの非表示")
 
 	// コンボボックスの初期化
-	SendFittleMessage(WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_UPDATE_DRIVELIST, (LPARAM)0);
+	SendF4b24Message((WPARAM)WM_F4B24_IPC_UPDATE_DRIVELIST, (LPARAM)0);
 	//SetDrivesToCombo(m_hCombo);
 
 	TIMECHECK("コンボボックスの初期化")
@@ -1019,13 +1023,13 @@ static void OnCreate(){
 	TIMECHECK("コマンドラインの処理")
 
 	// プラグインを呼び出す
-	InitPlugins(m_hMainWnd);
+	InitPlugins(hWnd);
 
 	TIMECHECK("プラグインの初期化")
 
 #ifdef UNICODE
 	/* サブクラス化による文字化け対策 */
-	UniFix(m_hMainWnd);
+	UniFix(hWnd);
 
 	TIMECHECK("サブクラス化による文字化け対策")
 #endif
@@ -1069,7 +1073,7 @@ static void OnCreate(){
 				ListView_SingleSelectViewP(pCurList->hList, nFileIndex);
 				PostFittleCommand(IDM_PLAY);
 				// ポジションも復元
-				PostMessage(m_hMainWnd, WM_F4B24_IPC, WM_F4B24_INTERNAL_RESTORE_POSITION, 0);
+				PostMessage(hWnd, WM_F4B24_IPC, WM_F4B24_INTERNAL_RESTORE_POSITION, 0);
 			}
 		}else if (g_cfg.nSelLastPlayed) {
 			WAstrcpyt(szLastPath, &g_cfg.szLastFile, MAX_FITTLE_PATH);
@@ -1135,7 +1139,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 		case WM_CREATE:
 
 			m_hMainWnd = hWnd;
-			OnCreate();
+			OnCreate(hWnd);
 
 			break;
 
@@ -1633,7 +1637,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case IDM_SETTING:
-					SendFittleMessage(WM_F4B24_IPC, WM_F4B24_IPC_SETTING, WM_F4B24_IPC_SETTING_LP_GENERAL);
+					SendF4b24Message(WM_F4B24_IPC_SETTING, WM_F4B24_IPC_SETTING_LP_GENERAL);
 					break;
 
 
@@ -1660,7 +1664,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case IDM_VER:	// バージョン情報
-					SendFittleMessage(WM_F4B24_IPC, WM_F4B24_IPC_SETTING, WM_F4B24_IPC_SETTING_LP_ABOUT);
+					SendF4b24Message(WM_F4B24_IPC_SETTING, WM_F4B24_IPC_SETTING_LP_ABOUT);
 					break;
 
 				case IDM_LIST_MOVETOP:	// 一番上に移動
@@ -1713,7 +1717,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 									HFree(pszFiles);
 								}
 							}else{
-								SendFittleMessage(WM_F4B24_IPC, WM_F4B24_IPC_SETTING, WM_F4B24_IPC_SETTING_LP_PATH);
+								SendF4b24Message(WM_F4B24_IPC_SETTING, WM_F4B24_IPC_SETTING_LP_PATH);
 							}
 						}
 					}
@@ -2497,7 +2501,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			{
 				case 0x8000://DBT_DEVICEARRIVAL:
 				case 0x8004://DBT_DEVICEREMOVECOMPLETE:
-					SendFittleMessage(WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_UPDATE_DRIVELIST, (LPARAM)0);
+					SendF4b24Message((WPARAM)WM_F4B24_IPC_UPDATE_DRIVELIST, (LPARAM)0);
 					//SetDrivesToCombo(m_hCombo);
 					break;
 			}
@@ -2537,7 +2541,7 @@ static void DoTrayClickAction(int nKind){
 			SendFittleCommand(IDM_END);
 			break;
 		case 8:
-			SendFittleMessage(WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_TRAYICONMENU, 0);
+			SendF4b24Message((WPARAM)WM_F4B24_IPC_TRAYICONMENU, 0);
 			break;
 		case 9:
 			SendFittleCommand(IDM_PLAYPAUSE);
@@ -2907,10 +2911,10 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 	}
 	if(g_cInfo[bFlag].hChan){
 		if(!IsArchivePath(pInfo->szFilePath) || !GetArchiveGain(pInfo->szFilePath, &g_cInfo[bFlag].sGain, g_cInfo[bFlag].hChan)){
-			DWORD dwGain = SendFittleMessage(WM_F4B24_IPC, WM_F4B24_HOOK_REPLAY_GAIN, (LPARAM)g_cInfo[bFlag].hChan);
+			DWORD dwGain = SendF4b24Message(WM_F4B24_HOOK_REPLAY_GAIN, (LPARAM)g_cInfo[bFlag].hChan);
 			g_cInfo[bFlag].sGain = dwGain ? *(float *)&dwGain : (float)1;
 		}
-		SendFittleMessage(WM_F4B24_IPC, WM_F4B24_HOOK_CREATE_DECODE_STREAM, (LPARAM)g_cInfo[bFlag].hChan);
+		SendF4b24Message(WM_F4B24_HOOK_CREATE_DECODE_STREAM, (LPARAM)g_cInfo[bFlag].hChan);
 		if(szStart[0]){
 			qStart = GetByteFromSecStr(g_cInfo[bFlag].hChan, szStart);
 			qEnd = GetByteFromSecStr(g_cInfo[bFlag].hChan, szEnd);
@@ -2941,9 +2945,9 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 		g_cInfo[bFlag].hChan = BASS_StreamCreateURL(szFilePath, 0, BASS_STREAM_BLOCK | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT * m_bFloat, NULL, 0);
 #endif
 		if(g_cInfo[bFlag].hChan){
-			DWORD dwGain = SendFittleMessage(WM_F4B24_IPC, WM_F4B24_HOOK_REPLAY_GAIN, (LPARAM)g_cInfo[bFlag].hChan);
+			DWORD dwGain = SendF4b24Message(WM_F4B24_HOOK_REPLAY_GAIN, (LPARAM)g_cInfo[bFlag].hChan);
 			g_cInfo[bFlag].sGain = dwGain ? *(float *)&dwGain : (float)1;
-			SendFittleMessage(WM_F4B24_IPC, WM_F4B24_HOOK_CREATE_DECODE_STREAM, (LPARAM)g_cInfo[bFlag].hChan);
+			SendF4b24Message(WM_F4B24_HOOK_CREATE_DECODE_STREAM, (LPARAM)g_cInfo[bFlag].hChan);
 			g_cInfo[bFlag].qDuration = BASS_ChannelGetLength(g_cInfo[bFlag].hChan, BASS_POS_BYTE);
 			if(g_cInfo[bFlag].qDuration==-1){
 				g_cInfo[bFlag].qDuration = 0;
@@ -2958,7 +2962,7 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 static void FreeChannelInfo(BOOL bFlag){
 	if (g_cInfo[bFlag].hChan){
 		BASS_ChannelStop(g_cInfo[bFlag].hChan);
-		SendFittleMessage(WM_F4B24_IPC, WM_F4B24_HOOK_FREE_DECODE_STREAM, (LPARAM)g_cInfo[bFlag].hChan);
+		SendF4b24Message(WM_F4B24_HOOK_FREE_DECODE_STREAM, (LPARAM)g_cInfo[bFlag].hChan);
 		if (!BASS_StreamFree(g_cInfo[bFlag].hChan)){
 			BASS_MusicFree(g_cInfo[bFlag].hChan);
 		}
