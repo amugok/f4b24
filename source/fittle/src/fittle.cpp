@@ -127,7 +127,7 @@ static void _BASS_ChannelSeekSecond(DWORD, float, int);
 static BOOL PlayByUser(HWND, struct FILEINFO *);
 static void OnChangeTrack();
 static int FilePause();
-static int StopOutputStream(HWND);
+static int StopOutputStream();
 static struct FILEINFO *SelectNextFile(BOOL);
 static void FreeChannelInfo(BOOL bFlag);
 
@@ -383,8 +383,12 @@ static HMODULE ExpandArgs(int *pARGC, LPTSTR **pARGV){
 #endif
 }
 
+static LRESULT SendFittleMessage(UINT uMsg, WPARAM wp, LPARAM lp){
+	return SendMessage(m_hMainWnd, uMsg, wp, lp);
+}
+
 static LRESULT SendFittleCommand(int nCmd){
-	return SendMessage(m_hMainWnd, WM_COMMAND, MAKEWPARAM(nCmd, 0), 0);
+	return SendFittleMessage(WM_COMMAND, MAKEWPARAM(nCmd, 0), 0);
 }
 
 static void PostFittleCommand(int nCmd){
@@ -411,7 +415,7 @@ static void SendCopyData(int iType, LPTSTR lpszString){
 	cds.dwData = iType;
 	cds.lpData = (LPVOID)lpWork;
 	cds.cbData = cbData;
-	SendMessage(m_hMainWnd, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
+	SendFittleMessage(WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
 	HFree(lpWork);
 #else
 	COPYDATASTRUCT cds;
@@ -419,7 +423,7 @@ static void SendCopyData(int iType, LPTSTR lpszString){
 	cds.lpData = (LPVOID)lpszString;
 	cds.cbData = (lstrlenA(lpszString) + 1) * sizeof(CHAR);
 	// 文字列送信
-	SendMessage(m_hMainWnd, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
+	SendFittleMessage(WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
 #endif
 }
 
@@ -469,7 +473,7 @@ static LRESULT CheckMultiInstance(BOOL *pbMulti){
 			}
 		}
 		// ミニパネルがあったら終わり
-		if(SendMessage(m_hMainWnd, WM_USER, 0, 0))	return 0;
+		if(SendFittleMessage(WM_USER, 0, 0))	return 0;
 
 		if(!IsWindowVisible(m_hMainWnd) || IsIconic(m_hMainWnd)){
 			SendFittleCommand(IDM_TRAY_WINVIEW);
@@ -600,7 +604,7 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 	// メッセージループ
 	while(GetMessage(&msg, NULL, 0, 0) > 0){
 		if(!TranslateAccelerator(hWnd, hAccel, &msg)){	// 通常よりアクセラレータキーの優先度を高くしてます
-			HWND m_hMiniPanel = (HWND)SendMessage(hWnd, WM_FITTLE, GET_MINIPANEL, 0);
+			HWND m_hMiniPanel = (HWND)SendFittleMessage(WM_FITTLE, GET_MINIPANEL, 0);
 			if(!m_hMiniPanel || !IsDialogMessage(m_hMiniPanel, &msg)){
 				TranslateMessage(&msg);
 				DispatchMessage(&msg);
@@ -980,7 +984,7 @@ static void OnCreate(){
 	TIMECHECK("メニューの非表示")
 
 	// コンボボックスの初期化
-	SendMessage(m_hMainWnd, WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_UPDATE_DRIVELIST, (LPARAM)0);
+	SendFittleMessage(WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_UPDATE_DRIVELIST, (LPARAM)0);
 	//SetDrivesToCombo(m_hCombo);
 
 	TIMECHECK("コンボボックスの初期化")
@@ -1121,7 +1125,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 	switch(msg)
 	{
 		case WM_USER:
-			return (LRESULT)(HWND)SendMessage(hWnd, WM_FITTLE, GET_MINIPANEL, 0);
+			return (LRESULT)(HWND)SendFittleMessage(WM_FITTLE, GET_MINIPANEL, 0);
 
 		case WM_USER+1:
 			OnChangeTrack();
@@ -1152,7 +1156,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			}else{
 				g_cfg.nResPos = 0;
 			}
-			StopOutputStream(hWnd);
+			StopOutputStream();
 			OPTerm();
 
 			// クリティカルセクションを削除
@@ -1383,7 +1387,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case IDM_END: //終了
-					SendMessage(hWnd, WM_CLOSE, 0, 0);
+					SendFittleMessage(WM_CLOSE, 0, 0);
 					break;
 
 				case IDM_PLAY: //再生
@@ -1419,7 +1423,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case IDM_STOP: //停止
-					StopOutputStream(hWnd);
+					StopOutputStream();
 					break;
 
 				case IDM_PREV: //前の曲
@@ -1629,7 +1633,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case IDM_SETTING:
-					SendMessage(hWnd, WM_F4B24_IPC, WM_F4B24_IPC_SETTING, WM_F4B24_IPC_SETTING_LP_GENERAL);
+					SendFittleMessage(WM_F4B24_IPC, WM_F4B24_IPC_SETTING, WM_F4B24_IPC_SETTING_LP_GENERAL);
 					break;
 
 
@@ -1656,7 +1660,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case IDM_VER:	// バージョン情報
-					SendMessage(hWnd, WM_F4B24_IPC, WM_F4B24_IPC_SETTING, WM_F4B24_IPC_SETTING_LP_ABOUT);
+					SendFittleMessage(WM_F4B24_IPC, WM_F4B24_IPC_SETTING, WM_F4B24_IPC_SETTING_LP_ABOUT);
 					break;
 
 				case IDM_LIST_MOVETOP:	// 一番上に移動
@@ -1709,7 +1713,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 									HFree(pszFiles);
 								}
 							}else{
-								SendMessage(hWnd, WM_F4B24_IPC, WM_F4B24_IPC_SETTING, WM_F4B24_IPC_SETTING_LP_PATH);
+								SendFittleMessage(WM_F4B24_IPC, WM_F4B24_IPC_SETTING, WM_F4B24_IPC_SETTING_LP_PATH);
 							}
 						}
 					}
@@ -2493,7 +2497,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			{
 				case 0x8000://DBT_DEVICEARRIVAL:
 				case 0x8004://DBT_DEVICEREMOVECOMPLETE:
-					SendMessage(hWnd, WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_UPDATE_DRIVELIST, (LPARAM)0);
+					SendFittleMessage(WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_UPDATE_DRIVELIST, (LPARAM)0);
 					//SetDrivesToCombo(m_hCombo);
 					break;
 			}
@@ -2533,7 +2537,7 @@ static void DoTrayClickAction(int nKind){
 			SendFittleCommand(IDM_END);
 			break;
 		case 8:
-			SendMessage(m_hMainWnd, WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_TRAYICONMENU, 0);
+			SendFittleMessage(WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_TRAYICONMENU, 0);
 			break;
 		case 9:
 			SendFittleCommand(IDM_PLAYPAUSE);
@@ -2903,10 +2907,10 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 	}
 	if(g_cInfo[bFlag].hChan){
 		if(!IsArchivePath(pInfo->szFilePath) || !GetArchiveGain(pInfo->szFilePath, &g_cInfo[bFlag].sGain, g_cInfo[bFlag].hChan)){
-			DWORD dwGain = SendMessage(m_hMainWnd, WM_F4B24_IPC, WM_F4B24_HOOK_REPLAY_GAIN, (LPARAM)g_cInfo[bFlag].hChan);
+			DWORD dwGain = SendFittleMessage(WM_F4B24_IPC, WM_F4B24_HOOK_REPLAY_GAIN, (LPARAM)g_cInfo[bFlag].hChan);
 			g_cInfo[bFlag].sGain = dwGain ? *(float *)&dwGain : (float)1;
 		}
-		SendMessage(m_hMainWnd, WM_F4B24_IPC, WM_F4B24_HOOK_CREATE_DECODE_STREAM, (LPARAM)g_cInfo[bFlag].hChan);
+		SendFittleMessage(WM_F4B24_IPC, WM_F4B24_HOOK_CREATE_DECODE_STREAM, (LPARAM)g_cInfo[bFlag].hChan);
 		if(szStart[0]){
 			qStart = GetByteFromSecStr(g_cInfo[bFlag].hChan, szStart);
 			qEnd = GetByteFromSecStr(g_cInfo[bFlag].hChan, szEnd);
@@ -2937,9 +2941,9 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 		g_cInfo[bFlag].hChan = BASS_StreamCreateURL(szFilePath, 0, BASS_STREAM_BLOCK | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT * m_bFloat, NULL, 0);
 #endif
 		if(g_cInfo[bFlag].hChan){
-			DWORD dwGain = SendMessage(m_hMainWnd, WM_F4B24_IPC, WM_F4B24_HOOK_REPLAY_GAIN, (LPARAM)g_cInfo[bFlag].hChan);
+			DWORD dwGain = SendFittleMessage(WM_F4B24_IPC, WM_F4B24_HOOK_REPLAY_GAIN, (LPARAM)g_cInfo[bFlag].hChan);
 			g_cInfo[bFlag].sGain = dwGain ? *(float *)&dwGain : (float)1;
-			SendMessage(m_hMainWnd, WM_F4B24_IPC, WM_F4B24_HOOK_CREATE_DECODE_STREAM, (LPARAM)g_cInfo[bFlag].hChan);
+			SendFittleMessage(WM_F4B24_IPC, WM_F4B24_HOOK_CREATE_DECODE_STREAM, (LPARAM)g_cInfo[bFlag].hChan);
 			g_cInfo[bFlag].qDuration = BASS_ChannelGetLength(g_cInfo[bFlag].hChan, BASS_POS_BYTE);
 			if(g_cInfo[bFlag].qDuration==-1){
 				g_cInfo[bFlag].qDuration = 0;
@@ -2954,7 +2958,7 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 static void FreeChannelInfo(BOOL bFlag){
 	if (g_cInfo[bFlag].hChan){
 		BASS_ChannelStop(g_cInfo[bFlag].hChan);
-		SendMessage(m_hMainWnd, WM_F4B24_IPC, WM_F4B24_HOOK_FREE_DECODE_STREAM, (LPARAM)g_cInfo[bFlag].hChan);
+		SendFittleMessage(WM_F4B24_IPC, WM_F4B24_HOOK_FREE_DECODE_STREAM, (LPARAM)g_cInfo[bFlag].hChan);
 		if (!BASS_StreamFree(g_cInfo[bFlag].hChan)){
 			BASS_MusicFree(g_cInfo[bFlag].hChan);
 		}
@@ -2976,7 +2980,7 @@ static BOOL PlayByUser(HWND hWnd, struct FILEINFO *pPlayFile){
 //	DWORD d;
 
 	// 再生曲を停止、開放
-	StopOutputStream(hWnd);
+	StopOutputStream();
 	if(SetChannelInfo(g_bNow, pPlayFile)){
 		// ストリーム作成
 		BASS_ChannelGetInfo(g_cInfo[g_bNow].hChan, &info);
@@ -3026,14 +3030,14 @@ static void OnChangeTrack(){
 		if(g_pNextFile){
 			SetChannelInfo(g_bNow, g_pNextFile);
 		}else{
-			StopOutputStream(m_hMainWnd);
+			StopOutputStream();
 			return;
 		}
 	}
 
 	// リピート終了
 	if(!g_pNextFile){
-		StopOutputStream(m_hMainWnd);
+		StopOutputStream();
 		return;
 	}
 
@@ -3055,7 +3059,7 @@ static void OnChangeTrack(){
 
 	// ファイルのオープンに失敗した
 	if(m_nGaplessState==GS_FAILED){
-		StopOutputStream(m_hMainWnd);
+		StopOutputStream();
 		SetWindowText(m_hMainWnd, TEXT("ファイルのオープンに失敗しました！"));
 		return;
 	}
@@ -3368,11 +3372,11 @@ static int FilePause(){
 }
 
 // アウトプットストリームを停止、表示を初期化
-static int StopOutputStream(HWND hWnd){
+static int StopOutputStream(){
 	OPSetFadeOut(250);
 
 	// ストリームを削除
-	KillTimer(hWnd, ID_SEEKTIMER);
+	KillTimer(m_hMainWnd, ID_SEEKTIMER);
 	OPStop();
 	OPEnd();
 
@@ -3386,12 +3390,12 @@ static int StopOutputStream(HWND hWnd){
 	SendMessage(m_hToolBar,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(FALSE, 0));
 	
 	//文字列表示関係
-	SetWindowText(hWnd, FITTLE_TITLE);
+	SetWindowText(m_hMainWnd, FITTLE_TITLE);
 	lstrcpy(m_ni.szTip, FITTLE_TITLE);
 	if(m_bTrayFlag)
 		Shell_NotifyIcon(NIM_MODIFY, &m_ni); //ToolTipの変更
 
-	SendMessage(hWnd, WM_TIMER, MAKEWPARAM(ID_TIPTIMER, 0), 0);
+	SendFittleMessage(WM_TIMER, MAKEWPARAM(ID_TIPTIMER, 0), 0);
 
 	lstrcpy(m_szTag, TEXT(""));
 	lstrcpy(m_szTime, TEXT("\t"));
@@ -3822,7 +3826,7 @@ static LRESULT CALLBACK NewSliderProc(HWND hSB, UINT msg, WPARAM wp, LPARAM lp){
 				ReleaseCapture();
 				SendMessage(m_hSliderTip, TTM_TRACKACTIVATE, (WPARAM)FALSE, (LPARAM)&tin);
 			}else if(msg!=WM_LBUTTONUP){
-				SendMessage(m_hMainWnd, WM_CONTEXTMENU, (WPARAM)m_hMainWnd, lp);
+				SendFittleMessage(WM_CONTEXTMENU, (WPARAM)m_hMainWnd, lp);
 			}
 			return 0;
 
@@ -4219,7 +4223,7 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 			break;
 
 		case WM_COMMAND:
-			SendMessage(m_hMainWnd, msg, wp, lp); //親ウィンドウにそのまま送信
+			SendFittleMessage(msg, wp, lp); //親ウィンドウにそのまま送信
 			break;
 
 		/* case WM_UNICHAR: */
