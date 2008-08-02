@@ -26,6 +26,7 @@ void FormatLocalDateTime(LPTSTR, LPFILETIME);
 BOOL GetTimeAndSize(LPCTSTR, LPTSTR, LPTSTR);
 void SetOLECursor(int);
 LPTSTR MyPathAddBackslash(LPTSTR);
+void GetFolderPart(LPTSTR);
 void SubClassControl(HWND hWnd, WNDPROC Proc);
 int GetMenuPosFromString(HMENU hMenu, LPTSTR lpszText);
 LONG GetToolbarTrueWidth(HWND hToolbar);

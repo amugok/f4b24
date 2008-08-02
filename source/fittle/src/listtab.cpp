@@ -257,12 +257,22 @@ int DeleteFiles(struct LISTTAB *pListTab){
 void SendToPlaylist(struct LISTTAB *ltFrom, struct LISTTAB *ltTo){
 	int nIndex = -1;
 	FILEINFO *pTmp;
+	HWND hListTo = ltTo->hList;
+	int nOldCount = ListView_GetItemCount(hListTo);
+	int nNewCount;
 
 	while((nIndex = ListView_GetNextItem(ltFrom->hList, nIndex, LVNI_SELECTED))!=-1){
 		pTmp = GetPtrFromIndex(ltFrom->pRoot, nIndex);
 		AddList(&(ltTo->pRoot), pTmp->szFilePath, pTmp->szSize, pTmp->szTime);
 	}
 	TraverseList(ltTo);
+
+	nNewCount = ListView_GetItemCount(hListTo);
+	ListView_ClearSelect(hListTo);
+	for (nIndex = nOldCount; nIndex < nNewCount; nIndex++){
+		ListView_SetItemState(hListTo, nIndex, LVNI_SELECTED, LVNI_SELECTED);
+	}
+	ListView_EnsureVisible(hListTo, nNewCount-1, TRUE);
 }
 
 // リストタブリネーム

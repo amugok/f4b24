@@ -1007,6 +1007,8 @@ static void AppendToList(LISTTAB *pList, FILEINFO *pSub){
 	ListView_EnsureVisible(hList, ListView_GetItemCount(hList)-1, TRUE);
 }
 
+
+
 // ウィンドウプロシージャ
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 	static int s_nHitTab = -1;				// タブのヒットアイテム
@@ -1268,11 +1270,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						int nRet;
 						struct LISTTAB *pHitList;
 						lstrcpyn(szNowDir, m_szTreePath, MAX_FITTLE_PATH);
-						if(IsPlayList(szNowDir) || IsArchive(szNowDir)){
-							*PathFindFileName(szNowDir) = TEXT('\0');
-						}else{
-							MyPathAddBackslash(szNowDir);
-						}
+						GetFolderPart(szNowDir);
 						pHitList = GetListTab(m_hTab, s_nHitTab);
 						nRet = SaveFileDialog(szNowDir, pHitList->szTitle);
 						if(nRet){
@@ -1698,14 +1696,9 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					}else{
 						GetPathFromNode(m_hTree, m_hHitTree, szNowDir);
 					}
-					// 前処理
-					if(IsPlayList(szNowDir) || IsArchive(szNowDir)){
-						*PathFindFileName(szNowDir) = TEXT('\0');
-					}else{
-						MyPathAddBackslash(szNowDir);
-					}
+					GetFolderPart(szNowDir);
+
 					// エクスプローラに投げる処理
-					
 					WAstrcpyt(szLastPath, &g_cfg.szFilerPath, MAX_FITTLE_PATH);
 					MyShellExecute(hWnd, (szLastPath[0]?szLastPath:TEXT("explorer.exe")), szNowDir, FALSE);
 					m_hHitTree = NULL;
@@ -4233,7 +4226,7 @@ LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
 			break;
 
 		case WM_LBUTTONUP:
-			int nBefore, nAfter, nCount;
+			int nBefore, nAfter;
 
 			if(GetCapture()==hLV){
 				OnEndDragList(hLV); //ドラッグ終了
@@ -4253,8 +4246,8 @@ LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
 						if(PtInRect(&rcItem, pt)){
 							DrawTabFocus(i, FALSE);
 							SendToPlaylist(GetSelListTab(), GetListTab(m_hTab, i));
-							nCount = ListView_GetItemCount(GetListTab(m_hTab ,i)->hList) - 1;
-							ListView_SingleSelectView(GetListTab(m_hTab ,i)->hList, nCount);
+							//nCount = ListView_GetItemCount(GetListTab(m_hTab ,i)->hList) - 1;
+							//ListView_SingleSelectView(GetListTab(m_hTab ,i)->hList, nCount);
 							break;
 						}
 					}

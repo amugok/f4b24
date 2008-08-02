@@ -148,6 +148,15 @@ LPTSTR MyPathAddBackslash(LPTSTR pszPath){
 	}
 }
 
+void GetFolderPart(LPTSTR pszPath){
+	if(IsPlayList(pszPath) || IsArchive(pszPath)){
+		*PathFindFileName(pszPath) = TEXT('\0');
+	}else{
+		MyPathAddBackslash(pszPath);
+	}
+}
+
+
 // ウィンドウをサブクラス化、USERDATAに元のWNDPROCを保存
 void SubClassControl(HWND hWnd, WNDPROC Proc){
 	SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)Proc));

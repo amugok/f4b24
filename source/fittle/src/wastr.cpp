@@ -106,13 +106,20 @@ void WAGetModuleParentDir(HMODULE h, LPWASTR pBuf){
 	}
 }
 
+static void WAAddBackslash(LPWASTR pBuf){
+	int l = WAstrlen(pBuf) - 1;
+	if (l >= 0 && (m_WAIsUnicode ? pBuf->W[l] != L'\\' : pBuf->A[l] != '\\'))
+		WAstrcatA(pBuf, "\\");
+}
+
 void WAGetIniDir(HMODULE h, LPWASTR pBuf){
 	WAGetModuleParentDir(NULL, pBuf);
-	WAstrcatA(pBuf, "f4b24.ini");
+	WAstrcatA(pBuf, "install.ini");
 	switch (WAGetIniInt("Install", "IniLoc", 0)) {
 	case 1:
 		if (m_WAIsUnicode ? SHGetSpecialFolderPathW(NULL, pBuf->W, CSIDL_APPDATA, FALSE) : SHGetSpecialFolderPathA(NULL, pBuf->A, CSIDL_APPDATA, FALSE)){
-			WAstrcatA(pBuf, "\\Fittle\\");
+			WAAddBackslash(pBuf);
+			WAstrcatA(pBuf, "Fittle\\");
 			return;
 		}
 		break;
