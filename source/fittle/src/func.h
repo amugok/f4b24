@@ -31,6 +31,7 @@ void SubClassControl(HWND hWnd, WNDPROC Proc);
 int GetMenuPosFromString(HMENU hMenu, LPTSTR lpszText);
 LONG GetToolbarTrueWidth(HWND hToolbar);
 void UpdateWindowSize(HWND);
+void ShowSettingDialog(HWND, int);
 
 void ListView_ClearSelect(HWND hLV);
 void ListView_SingleSelect(HWND hLV, int nIndex);
@@ -44,6 +45,7 @@ void lstrcpynWt(LPTSTR lpDst, LPCWSTR lpSrc, int nDstMax);
 void ClearTypelist();
 LPTSTR GetTypelist(int nIndex);
 void AddTypes(LPCSTR lpszTypes);
+void SendSupportList(HWND hWnd);
 
 LPVOID HAlloc(DWORD dwSize);
 LPVOID HZAlloc(DWORD dwSize);

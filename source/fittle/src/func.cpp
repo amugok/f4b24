@@ -18,6 +18,7 @@
 #include "func.h"
 #include "bass_tag.h"
 #include "archive.h"
+#include "f4b24.h"
 
 /* ファイル名のポインタを取得 */
 LPTSTR GetFileName(LPTSTR szIn){
@@ -183,6 +184,7 @@ LONG GetToolbarTrueWidth(HWND hToolbar){
 	return rct.right;
 }
 
+// 子ウインドウなどのサイズを調整させる
 void UpdateWindowSize(HWND hWnd){
 	RECT rcDisp;
 
@@ -190,6 +192,34 @@ void UpdateWindowSize(HWND hWnd){
 	SendMessage(hWnd, WM_SIZE, 0, MAKELPARAM(rcDisp.right, rcDisp.bottom));
 	return;
 }
+
+// 外部設定プログラムを起動する
+static void ExecuteSettingDialog(HWND hWnd, LPCSTR lpszConfigPath){
+
+	WASTR szCmd;
+	WASTR szPara;
+
+	WAGetModuleParentDir(NULL, &szCmd);
+	WAstrcatA(&szCmd, "fconfig.exe");
+	WAstrcpyA(&szPara, lpszConfigPath);
+
+	WAShellExecute(hWnd, &szCmd, &szPara);
+}
+
+// 設定画面を開く
+void ShowSettingDialog(HWND hWnd, int nPage){
+	static const LPCSTR table[] = {
+		"fittle/general",
+		"fittle/path",
+		"fittle/control",
+		"fittle/tasktray",
+		"fittle/hotkey",
+		"fittle/about"
+	};
+	if (nPage < 0 || nPage > WM_F4B24_IPC_SETTING_LP_MAX) nPage = 0;
+	ExecuteSettingDialog(hWnd, table[nPage]);
+}
+
 
 
 
@@ -361,6 +391,26 @@ void AddTypes(LPCSTR lpszTypes) {
 		}
 	}
 }
+
+// 対応拡張子リストを取得する
+void SendSupportList(HWND hWnd){
+	LPTSTR lpExt;
+	TCHAR szList[MAX_FITTLE_PATH];
+	int i;
+	int p=0;
+	for(i = 0; lpExt = GetTypelist(i), (lpExt[0] != TEXT('\0')); i++){
+		int l = lstrlen(lpExt);
+		if (l > 0 && p + (p != 0) + l + 1 < MAX_FITTLE_PATH)
+		{
+			if (p != 0) szList[p++] = TEXT(' ');
+			lstrcpy(szList + p, lpExt);
+			p += l;
+		}
+	}
+	if (p < MAX_FITTLE_PATH) szList[p] = 0;
+	SendMessage(hWnd, WM_SETTEXT, 0, (LPARAM)szList);
+}
+
 
 
 /*

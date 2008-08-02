@@ -88,7 +88,6 @@ static void LoadState();
 static void LoadConfig();
 static void SaveState(HWND);
 static void ApplyConfig(HWND hWnd);
-static void SendSupportList(HWND hWnd);
 // コントロール関係
 static void DoTrayClickAction(int);
 static void PopupTrayMenu();
@@ -111,7 +110,6 @@ static void DrawTabFocus(int, BOOL);
 static BOOL SetUIFont(void);
 static BOOL SetUIColor(void);
 static void SetStatusbarIcon(LPTSTR, BOOL);
-static void ShowSettingDialog(HWND, int);
 static LPTSTR MallocAndConcatPath(LISTTAB *);
 static void MyShellExecute(HWND, LPTSTR, LPTSTR, BOOL);
 static void InitFileTypes();
@@ -4179,19 +4177,28 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 	return CallWindowProc((WNDPROC)(LONG_PTR)GetWindowLongPtr(hTC, GWLP_USERDATA), hTC, msg, wp, lp);
 }
 
+// タブフォーカスの描画
+static void DrawTabsFocus(LPPOINT ppt){
+	int i;
+	RECT rcItem;
+	ScreenToClient(m_hTab, ppt);
+	for(i=0;i<TabGetListCount();i++){
+		TabGetItemRect(i, &rcItem);
+		if(PtInRect(&rcItem, *ppt)){
+			DrawTabFocus(i, TRUE);
+		}else{
+			DrawTabFocus(i, FALSE);
+		}
+	}
+}
+
 // リストビューの新しいプロシージャ
 LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
-	LVHITTESTINFO pinfo;
-	RECT rcItem;
-	POINT pt;
-	struct FILEINFO *pSub = NULL;
-	// struct FILEINFO *pPlaying = NULL;
-	int i;
-	HWND hWnd;
-
 	switch (msg) {
 		case WM_MOUSEMOVE:
 			if(GetCapture()==hLV){
+				POINT pt;
+				HWND hWnd;
 				// カーソルを変更
 				GetCursorPos(&pt);
 				hWnd = WindowFromPoint(pt);
@@ -4203,15 +4210,7 @@ LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
 					SetOLECursor(1);
 				}
 				// タブフォーカスの描画
-				ScreenToClient(m_hTab, &pt);
-				for(i=0;i<TabGetListCount();i++){
-					TabGetItemRect(i, &rcItem);
-					if(PtInRect(&rcItem, pt)){
-						DrawTabFocus(i, TRUE);
-					}else{
-						DrawTabFocus(i, FALSE);
-					}
-				}
+				DrawTabsFocus(&pt);
 				// ドラッグイメージを描画
 				pt.x = (short)LOWORD(lp);
 				pt.y = (short)HIWORD(lp);
@@ -4226,9 +4225,9 @@ LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
 			break;
 
 		case WM_LBUTTONUP:
-			int nBefore, nAfter;
-
 			if(GetCapture()==hLV){
+				int nBefore, nAfter;
+				LVHITTESTINFO pinfo;
 				OnEndDragList(hLV); //ドラッグ終了
 				//移動前アイテムと移動後アイテムのインデックスを取得
 				pinfo.pt.x = (short)LOWORD(lp);
@@ -4239,9 +4238,12 @@ LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
 					ChangeOrder(GetSelListTab(), nAfter);
 				}else{
 					//タブへドラッグ
+					int i;
+					POINT pt;
 					GetCursorPos(&pt);
 					ScreenToClient(m_hTab, &pt);
 					for(i=0;i<TabGetListCount();i++){
+						RECT rcItem;
 						TabGetItemRect(i, &rcItem);
 						if(PtInRect(&rcItem, pt)){
 							DrawTabFocus(i, FALSE);
@@ -4318,6 +4320,8 @@ LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
 
 		case WM_DROPFILES:
 			{
+				int i;
+				struct FILEINFO *pSub = NULL;
 				TCHAR szPath[MAX_FITTLE_PATH];
 				HDROP hDrop = (HDROP)wp;
 
@@ -4340,10 +4344,6 @@ LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
 
 // ツリービューのプロシージャ
 static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
-	int i;
-	HTREEITEM hti;
-	static int s_nPrevCur;
-
 	switch(msg){
 		case WM_LBUTTONDBLCLK:	// 子を持たないノードダブルクリックで再生
 			if(!TreeView_GetChild(hTV, TreeView_GetSelection(hTV))){
@@ -4378,9 +4378,8 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 
 		case WM_KEYDOWN:
 			if(wp==VK_RIGHT){	// 子ノードがない or 展開状態ならばListにフォーカスを移す
-				hti = TreeView_GetSelection(hTV);
-
 				TVITEM tvi;
+				HTREEITEM hti = TreeView_GetSelection(hTV);
 				tvi.mask = TVIF_STATE;
 				tvi.hItem = hti;
 				tvi.stateMask = TVIS_EXPANDED;
@@ -4395,19 +4394,15 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 			break;
 
 		case WM_LBUTTONUP:
-			POINT pt;
-			HWND hWnd;
-			struct FILEINFO *pSub;
-			pSub = NULL;
-			TCHAR szNowDir[MAX_FITTLE_PATH];
-			int nHitTab;
-			RECT rcTab;
-			RECT rcList;
-
 			if(GetCapture()==hTV){
+				POINT pt;
+				HWND hWnd;
 				GetCursorPos(&pt);
 				hWnd = WindowFromPoint(pt);
 				if(hWnd==m_hTab){
+					int nHitTab;
+					struct FILEINFO *pSub = NULL;
+					TCHAR szNowDir[MAX_FITTLE_PATH];
 					GetPathFromNode(m_hTree, m_hHitTree, szNowDir);
 					SearchFiles(&pSub, szNowDir, TRUE);
 					nHitTab = TabHitTest(POINTTOPOINTS(pt), 0x40 | TCHT_ONITEM);
@@ -4418,6 +4413,8 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 				}else if(hWnd==GetSelListTab()->hList){
 					SendFittleCommand(IDM_TREE_ADD);
 				}else if(hWnd==m_hMainWnd){
+					RECT rcTab;
+					RECT rcList;
 					// 新規タブ
 					GetWindowRect(GetSelListTab()->hList, &rcList);
 					GetWindowRect(m_hTab, &rcTab);
@@ -4433,6 +4430,7 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 
 		case WM_RBUTTONUP:
 			if(GetCapture()==hTV){
+				int i;
 				ReleaseCapture();
 				for(i=0;i<TabGetListCount();i++){
 					DrawTabFocus(i, FALSE);
@@ -4441,9 +4439,9 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 			break;
 
 		case WM_MOUSEMOVE:
-			RECT rcItem;
-
 			if(GetCapture()==m_hTree){
+				POINT pt;
+				HWND hWnd;
 				HWND hCurList = GetSelListTab()->hList;
 				GetCursorPos(&pt);
 				hWnd = WindowFromPoint(pt);
@@ -4451,6 +4449,8 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 				if(hWnd==m_hTab || hWnd==hCurList){
 					SetOLECursor(3);
 				}else if(hWnd == m_hMainWnd){
+					RECT rcTab;
+					RECT rcList;
 					// 新規タブ
 					GetWindowRect(hCurList, &rcList);
 					GetWindowRect(m_hTab, &rcTab);
@@ -4465,32 +4465,25 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 					SetOLECursor(1);
 				}
 				
-				// タブのフォーカスを描画
-				ScreenToClient(m_hTab, &pt);
-				for(i=0;i<TabGetListCount();i++){
-					TabGetItemRect(i, &rcItem);
-					if(PtInRect(&rcItem, pt)){
-						DrawTabFocus(i, TRUE);
-					}else{
-						DrawTabFocus(i, FALSE);
-					}
-				}
+				DrawTabsFocus(&pt);
 			}
 			break;
 
 		case WM_DROPFILES:
-			HDROP hDrop;
-			TCHAR szPath[MAX_FITTLE_PATH];
-			TCHAR szParDir[MAX_PATH];
+			{
+				HDROP hDrop;
+				TCHAR szPath[MAX_FITTLE_PATH];
+				TCHAR szParDir[MAX_PATH];
 
-			hDrop = (HDROP)wp;
-			DragQueryFile(hDrop, 0, szPath, MAX_FITTLE_PATH);
-			DragFinish(hDrop);
+				hDrop = (HDROP)wp;
+				DragQueryFile(hDrop, 0, szPath, MAX_FITTLE_PATH);
+				DragFinish(hDrop);
 
-			GetParentDir(szPath, szParDir);
-			MakeTreeFromPath(hTV, m_hCombo, szParDir);
+				GetParentDir(szPath, szParDir);
+				MakeTreeFromPath(hTV, m_hCombo, szParDir);
 
-			SetForegroundWindow(m_hMainWnd);
+				SetForegroundWindow(m_hMainWnd);
+			}
 			break;
 
 	}
@@ -4556,52 +4549,6 @@ static void ApplyConfig(HWND hWnd){
 	InvalidateRect(hWnd, NULL, TRUE);
 
 	OPSetVolume(GetVolumeBar());
-}
-
-// 外部設定プログラムを起動する
-static void ExecuteSettingDialog(HWND hWnd, LPCSTR lpszConfigPath){
-
-	WASTR szCmd;
-	WASTR szPara;
-
-	WAGetModuleParentDir(NULL, &szCmd);
-	WAstrcatA(&szCmd, "fconfig.exe");
-	WAstrcpyA(&szPara, lpszConfigPath);
-
-	WAShellExecute(hWnd, &szCmd, &szPara);
-}
-
-// 設定画面を開く
-static void ShowSettingDialog(HWND hWnd, int nPage){
-	static const LPCSTR table[] = {
-		"fittle/general",
-		"fittle/path",
-		"fittle/control",
-		"fittle/tasktray",
-		"fittle/hotkey",
-		"fittle/about"
-	};
-	if (nPage < 0 || nPage > WM_F4B24_IPC_SETTING_LP_MAX) nPage = 0;
-	ExecuteSettingDialog(hWnd, table[nPage]);
-}
-
-// 対応拡張子リストを取得する
-static void SendSupportList(HWND hWnd){
-	LPTSTR lpExt;
-	TCHAR szList[MAX_FITTLE_PATH];
-	int i;
-	int p=0;
-	for(i = 0; lpExt = GetTypelist(i), (lpExt[0] != TEXT('\0')); i++){
-		int l = lstrlen(lpExt);
-		if (l > 0 && p + (p != 0) + l + 1 < MAX_FITTLE_PATH)
-		{
-			if (p != 0) szList[p++] = TEXT(' ');
-			lstrcpy(szList + p, lpExt);
-			p += l;
-		}
-	}
-	if (p < MAX_FITTLE_PATH) szList[p] = 0;
-	SendMessage(hWnd, WM_SETTEXT, 0, (LPARAM)szList);
 }
 
 // マウスホイール操作情報をカーソル位置の窓に引き渡す
