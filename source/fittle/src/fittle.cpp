@@ -1000,6 +1000,12 @@ static void SetVolumeBar(int nVol){
 	SendMessage(m_hVolume, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)nVol);
 }
 
+static void AppendToList(LISTTAB *pList, FILEINFO *pSub){
+	HWND hList = pList->hList;
+	ListView_ClearSelect(hList);
+	InsertList(pList, -1, pSub);
+	ListView_EnsureVisible(hList, ListView_GetItemCount(hList)-1, TRUE);
+}
 
 // ウィンドウプロシージャ
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
@@ -1217,7 +1223,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 							}
 					}
 				}else{
-					struct LISTTAB *pCurList;
 					struct FILEINFO *pSub = NULL;
 					TCHAR szTest[MAX_FITTLE_PATH];
 					if (IsURLPath(pRecieved))
@@ -1225,10 +1230,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					else
 						GetLongPathName(pRecieved, szTest, MAX_FITTLE_PATH);
 					SearchFiles(&pSub, szTest, TRUE);
-					pCurList = GetSelListTab();
-					ListView_ClearSelect(pCurList->hList);
-					InsertList(pCurList, -1, pSub);
-					ListView_EnsureVisible(pCurList->hList, ListView_GetItemCount(pCurList->hList)-1, TRUE);
+					AppendToList(GetSelListTab(), pSub);
 					return TRUE;
 				}
 			}
@@ -1663,13 +1665,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				case IDM_TREE_ADD:
 					{
 						struct FILEINFO *pSub = NULL;
-						struct LISTTAB *pCurList = GetSelListTab();
 
 						GetPathFromNode(m_hTree, m_hHitTree, szNowDir);
 						SearchFiles(&pSub, szNowDir, TRUE);
-						ListView_ClearSelect(pCurList->hList);
-						InsertList(pCurList, -1, pSub);
-						ListView_EnsureVisible(pCurList->hList, ListView_GetItemCount(pCurList->hList)-1, TRUE);
+						AppendToList(GetSelListTab(), pSub);
 						m_hHitTree = NULL;
 					}
 					break;
@@ -4136,7 +4135,6 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 				POINT pt;
 				TCHAR szPath[MAX_FITTLE_PATH];
 				TCHAR szLabel[MAX_FITTLE_PATH];
-				struct LISTTAB *pList;
 
 				// ドラッグされたファイルを追加
 				pSub = NULL;
@@ -4154,12 +4152,9 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 				for(i=0;i<nItem;i++){
 					TabGetItemRect(i, &rcItem);
 					if(PtInRect(&rcItem, pt)){
-						pList = GetListTab(hTC, i);
-						ListView_ClearSelect(pList->hList);
-						InsertList(pList, -1, pSub);
-						ListView_EnsureVisible(pList->hList, ListView_GetItemCount(pList->hList)-1, TRUE);	// 一番下のアイテムを表示
+						AppendToList(GetListTab(hTC, i), pSub);
 						TabSetListFocus(i);
-						break;
+						return 0;
 					}
 				}
 
@@ -4175,6 +4170,7 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 					lstrcpy(szLabel, TEXT("Default"));
 				}
 				if(pt.x>rcItem.right && pt.y>=rcItem.top && pt.y<=rcItem.bottom){
+					struct LISTTAB *pList;
 					MakeNewTab(hTC, szLabel, -1);
 					pList = GetListTab(hTC, nItem);
 					InsertList(pList, -1, pSub);
@@ -4338,9 +4334,7 @@ LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
 				}
 				DragFinish(hDrop);
 
-				ListView_ClearSelect(hLV);
-				InsertList(GetSelListTab(), -1, pSub);
-				ListView_EnsureVisible(hLV, ListView_GetItemCount(hLV)-1, TRUE);
+				AppendToList(GetSelListTab(), pSub);
 				SetForegroundWindow(m_hMainWnd);
 			}
 			break;
@@ -4426,9 +4420,7 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 					nHitTab = TabHitTest(POINTTOPOINTS(pt), 0x40 | TCHT_ONITEM);
 					if(nHitTab!=-1){
 						DrawTabFocus(nHitTab, FALSE);
-						ListView_ClearSelect(GetListTab(m_hTab, nHitTab)->hList);
-						InsertList(GetListTab(m_hTab, nHitTab), -1, pSub);
-						ListView_EnsureVisible(GetListTab(m_hTab, nHitTab)->hList, ListView_GetItemCount(GetListTab(m_hTab, nHitTab)->hList)-1, TRUE);
+						AppendToList(GetListTab(m_hTab, nHitTab), pSub);
 					}
 				}else if(hWnd==GetSelListTab()->hList){
 					SendFittleCommand(IDM_TREE_ADD);
