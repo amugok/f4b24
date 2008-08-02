@@ -26,10 +26,19 @@ void FormatLocalDateTime(LPTSTR, LPFILETIME);
 BOOL GetTimeAndSize(LPCTSTR, LPTSTR, LPTSTR);
 void SetOLECursor(int);
 LPTSTR MyPathAddBackslash(LPTSTR);
+
 void ListView_ClearSelect(HWND hLV);
 void ListView_SingleSelect(HWND hLV, int nIndex);
 void ListView_SingleSelectView(HWND hLV, int nIndex);
 void ListView_SingleSelectViewP(HWND hLV, int nIndex);
+
+void lstrcpyntA(LPSTR lpDst, LPCTSTR lpSrc, int nDstMax);
+void lstrcpyntW(LPWSTR lpDst, LPCTSTR lpSrc, int nDstMax);
+void lstrcpynAt(LPTSTR lpDst, LPCSTR lpSrc, int nDstMax);
+void lstrcpynWt(LPTSTR lpDst, LPCWSTR lpSrc, int nDstMax);
+void ClearTypelist();
+LPTSTR GetTypelist(int nIndex);
+void AddTypes(LPCSTR lpszTypes);
 
 LPVOID HAlloc(DWORD dwSize);
 LPVOID HZAlloc(DWORD dwSize);

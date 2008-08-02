@@ -266,7 +266,7 @@ int ReadM3UFile(struct FILEINFO **pSub, LPTSTR pszFilePath){
 #ifdef UNICODE
 						pTale = AddList(pTale, szWideTemp, szSize, szTime);
 #else
-						WideCharToMultiByte(CP_ACP, 0, szWideTemp, -1, szAnsiTemp, MAX_FITTLE_PATH, NULL, NULL);
+						lstrcpynWt(szAnsiTemp, szWideTemp, MAX_FITTLE_PATH);
 						pTale = AddList(pTale, szAnsiTemp, szSize, szTime);
 #endif
 					}else{
@@ -276,16 +276,11 @@ int ReadM3UFile(struct FILEINFO **pSub, LPTSTR pszFilePath){
 #ifdef UNICODE
 							wsprintfW(szTstrTemp, L"%s\\%s", szParPath, szWideTemp);
 #else
-							WideCharToMultiByte(CP_ACP, 0, szWideTemp, -1, szAnsiTemp, MAX_FITTLE_PATH, NULL, NULL);
-							wsprintfA(szTstrTemp, "%s\\%s", szParPath, szAnsiTemp);
+							wsprintfA(szTstrTemp, "%s\\%S", szParPath, szWideTemp);
 #endif
 							PathCanonicalize(szCombine, szTstrTemp);
 						}else{
-#ifdef UNICODE
-							lstrcpyn(szCombine, szWideTemp, MAX_FITTLE_PATH);
-#else
-							WideCharToMultiByte(CP_ACP, 0, szWideTemp, -1, szCombine, MAX_FITTLE_PATH, NULL, NULL);
-#endif
+							lstrcpynWt(szCombine, szWideTemp, MAX_FITTLE_PATH);
 						}
 						if(!g_cfg.nExistCheck || (FILE_EXIST(szCombine) || IsArchivePath(szCombine)))
 						{
@@ -350,13 +345,13 @@ BOOL WriteM3UFile(struct FILEINFO *pRoot, LPTSTR szFile, int nMode){
 #ifdef UNICODE
 			WideCharToMultiByte(CP_UTF8, 0, szLine, -1, szAnsiTemp, MAX_FITTLE_PATH, NULL, NULL);
 #else
-			MultiByteToWideChar(CP_ACP, 0, szLine, -1, szWideTemp, MAX_FITTLE_PATH);
+			lstrcpyntW(szWideTemp, szLine, MAX_FITTLE_PATH);
 			WideCharToMultiByte(CP_UTF8, 0, szWideTemp, -1, szAnsiTemp, MAX_FITTLE_PATH, NULL, NULL);
 #endif
 			WriteFile(hFile, szAnsiTemp, lstrlenA(szAnsiTemp), &dwAccBytes, NULL);
 		}else{
 #ifdef UNICODE
-			WideCharToMultiByte(CP_ACP, 0, szLine, -1, szAnsiTemp, MAX_FITTLE_PATH, NULL, NULL);
+			lstrcpyntA(szAnsiTemp, szLine, MAX_FITTLE_PATH);
 			WriteFile(hFile, szAnsiTemp, lstrlenA(szAnsiTemp), &dwAccBytes, NULL);
 #else
 			WriteFile(hFile, szLine, lstrlenA(szLine), &dwAccBytes, NULL);

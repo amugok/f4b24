@@ -197,113 +197,7 @@ CHANNELINFO g_cInfo[2] = {0};		// チャンネル情報
 BOOL g_bNow = 0;				// アクティブなチャンネル0 or 1
 struct FILEINFO *g_pNextFile = NULL;	// 再生曲
 
-typedef struct StringList {
-	struct StringList *pNext;
-	TCHAR szString[1];
-} STRING_LIST, *LPSTRING_LIST;
-
-static LPSTRING_LIST lpTypelist = NULL;
-
 #include "oplugins.h"
-
-static void StringListFree(LPSTRING_LIST *pList){
-	LPSTRING_LIST pCur = *pList;
-	while (pCur){
-		LPSTRING_LIST pNext = pCur->pNext;
-		HFree(pCur);
-		pCur = pNext;
-	}
-	*pList = NULL;
-}
-
-static  LPSTRING_LIST StringListWalk(LPSTRING_LIST *pList, int nIndex){
-	LPSTRING_LIST pCur = *pList;
-	int i = 0;
-	while (pCur){
-		if (i++ == nIndex) return pCur;
-		pCur = pCur->pNext;
-	}
-	return NULL;
-}
-
-static  LPSTRING_LIST StringListFindI(LPSTRING_LIST *pList, LPCTSTR szValue){
-	LPSTRING_LIST pCur = *pList;
-	while (pCur){
-		if (lstrcmpi(pCur->szString, szValue) == 0) return pCur;
-		pCur = pCur->pNext;
-	}
-	return NULL;
-}
-
-static int StringListAdd(LPSTRING_LIST *pList, LPTSTR szValue){
-	int i = 0;
-	LPSTRING_LIST pCur = *pList;
-	LPSTRING_LIST pNew = (LPSTRING_LIST)HAlloc(sizeof(STRING_LIST) + sizeof(TCHAR) * lstrlen(szValue));
-	if (!pNew) return -1;
-	pNew->pNext = NULL;
-	lstrcpy(pNew->szString, szValue);
-	if (pCur){
-		i++;
-		/* 末尾に追加 */
-		while (pCur->pNext){
-			pCur = pCur->pNext;
-			i++;
-		}
-		pCur->pNext = pNew;
-	} else {
-		/* 先頭 */
-		*pList = pNew;
-	}
-	return i;
-}
-
-static void ClearTypelist(){
-	StringListFree(&lpTypelist);
-}
-
-static int AddTypelist(LPTSTR szExt){
-	if (!szExt || !*szExt) return TRUE;
-	if (StringListFindI(&lpTypelist, szExt)) return TRUE;
-	return StringListAdd(&lpTypelist, szExt);
-}
-
-static LPTSTR GetTypelist(int nIndex){
-	static TCHAR szNull[1] = {0};
-	LPSTRING_LIST lpbm = StringListWalk(&lpTypelist, nIndex);
-	return lpbm ? lpbm->szString : szNull;
-}
-
-static void lstrcpyntA(LPSTR lpDst, LPCTSTR lpSrc, int nDstMax){
-#if defined(UNICODE)
-	WideCharToMultiByte(CP_ACP, 0, lpSrc, -1, lpDst, nDstMax, NULL, NULL);
-#else
-	lstrcpyn(lpDst, lpSrc, nDstMax);
-#endif
-}
-
-static void lstrcpyntW(LPWSTR lpDst, LPCTSTR lpSrc, int nDstMax){
-#if defined(UNICODE)
-	lstrcpyn(lpDst, lpSrc, nDstMax);
-#else
-	MultiByteToWideChar(CP_ACP, 0, lpSrc, -1, lpDst, nDstMax); //S-JIS->Unicode
-#endif
-}
-
-static void lstrcpynAt(LPTSTR lpDst, LPCSTR lpSrc, int nDstMax){
-#if defined(UNICODE)
-	MultiByteToWideChar(CP_ACP, 0, lpSrc, -1, lpDst, nDstMax); //S-JIS->Unicode
-#else
-	lstrcpyn(lpDst, lpSrc, nDstMax);
-#endif
-}
-
-static void lstrcpynWt(LPTSTR lpDst, LPCWSTR lpSrc, int nDstMax){
-#if defined(UNICODE)
-	lstrcpyn(lpDst, lpSrc, nDstMax);
-#else
-	WideCharToMultiByte(CP_ACP, 0, lpSrc, -1, lpDst, nDstMax, NULL, NULL);
-#endif
-}
 
 // ウィンドウをサブクラス化、プロシージャハンドルをウィンドウに関連付ける
 static void SET_SUBCLASS(HWND hWnd, WNDPROC Proc){
@@ -407,7 +301,7 @@ static void SendCopyData(int iType, LPTSTR lpszString){
 	LPBYTE lpWork;
 	COPYDATASTRUCT cds;
 	DWORD la, lw, cbData;
-	WideCharToMultiByte(CP_ACP, 0, lpszString, -1, nameA, MAX_FITTLE_PATH, NULL, NULL);
+	lstrcpyntA(nameA, lpszString, MAX_FITTLE_PATH);
 	la = lstrlenA(nameA) + 1;
 	if (la & 1) la++; /* WORD align */
 	lw = lstrlenW(lpszString) + 1;
@@ -1094,6 +988,8 @@ static void OnCreate(HWND hWnd){
 	TIMECHECK("ウインドウ作成終了")
 }
 
+//BASS_ChannelBytes2Seconds
+
 static QWORD GetTrackPos(){
 	return BASS_ChannelGetPosition(g_cInfo[g_bNow].hChan, BASS_POS_BYTE) - g_cInfo[g_bNow].qStart;
 }
@@ -1290,7 +1186,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				WCHAR wszRecievedPath[MAX_FITTLE_PATH];
 				LPTSTR pRecieved;
 				size_t la = lstrlenA((LPSTR)pcds->lpData) + 1;
-				MultiByteToWideChar(CP_ACP, 0, (LPSTR)pcds->lpData, -1, wszRecievedPath, MAX_FITTLE_PATH);
+				lstrcpynAt(wszRecievedPath, (LPSTR)pcds->lpData, MAX_FITTLE_PATH);
 				pRecieved = wszRecievedPath;
 				if (la & 1) la++; /* WORD align */
 				if (la < pcds->cbData){
@@ -2795,27 +2691,6 @@ static void ToggleWindowView(HWND hWnd){
 	return;
 }
 
-static void AddType(LPTSTR lpszType){
-	LPTSTR e = StrStr(lpszType, TEXT("."));
-	AddTypelist(e ? e + 1 : lpszType);
-}
-static void AddTypes(LPCSTR lpszTypes) {
-	TCHAR szTemp[MAX_FITTLE_PATH] = {0};
-	LPTSTR q = szTemp;
-	lstrcpynAt(q, lpszTypes, MAX_FITTLE_PATH);
-	while(*q){
-		LPTSTR p = StrStr(q, TEXT(";"));
-		if(p){
-			*p = TEXT('\0');
-			AddType(q);
-			q = p + 1;
-		}else{
-			AddType(q);
-			break;
-		}
-	}
-}
-
 // BASS Addonをロードし 対応拡張子リストに追加
 static BOOL CALLBACK FileProc(LPWASTR lpPath, LPVOID user){
 	DWORD hPlugin = WAIsUnicode() ? BASS_PluginLoad((LPSTR)lpPath->W, BASS_UNICODE) : BASS_PluginLoad(lpPath->A, 0);
@@ -2937,7 +2812,7 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 	}else{
 #ifdef UNICODE
 		CHAR szAnsi[MAX_FITTLE_PATH];
-		WideCharToMultiByte(CP_ACP, 0, szFilePath, -1, szAnsi, MAX_FITTLE_PATH, NULL, NULL);
+		lstrcpyntA(szAnsi, szFilePath, MAX_FITTLE_PATH);
 		BASS_SetConfig(BASS_CONFIG_NET_TIMEOUT, 60000); // 5secは短いので60secにする
 		g_cInfo[bFlag].hChan = BASS_StreamCreateURL(szAnsi, 0, BASS_STREAM_BLOCK | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT * m_bFloat, NULL, 0);
 #else

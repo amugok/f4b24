@@ -148,6 +148,12 @@ LPTSTR MyPathAddBackslash(LPTSTR pszPath){
 	}
 }
 
+/*
+
+	--- リストコントロール ---
+
+*/
+
 // 選択状態クリア
 void ListView_ClearSelect(HWND hLV){
 	ListView_SetItemState(hLV, -1, 0, (LVIS_SELECTED | LVIS_FOCUSED));
@@ -176,6 +182,146 @@ void ListView_SingleSelectView(HWND hLV, int nIndex){
 void ListView_SingleSelectViewP(HWND hLV, int nIndex) {
 	ListView_SingleSelectViewSub(hLV, nIndex, 3);
 }
+
+/*
+
+	--- 文字列 ---
+
+*/
+void lstrcpyntA(LPSTR lpDst, LPCTSTR lpSrc, int nDstMax){
+#if defined(UNICODE)
+	WideCharToMultiByte(CP_ACP, 0, lpSrc, -1, lpDst, nDstMax, NULL, NULL);
+#else
+	lstrcpyn(lpDst, lpSrc, nDstMax);
+#endif
+}
+
+void lstrcpyntW(LPWSTR lpDst, LPCTSTR lpSrc, int nDstMax){
+#if defined(UNICODE)
+	lstrcpyn(lpDst, lpSrc, nDstMax);
+#else
+	MultiByteToWideChar(CP_ACP, 0, lpSrc, -1, lpDst, nDstMax); //S-JIS->Unicode
+#endif
+}
+
+void lstrcpynAt(LPTSTR lpDst, LPCSTR lpSrc, int nDstMax){
+#if defined(UNICODE)
+	MultiByteToWideChar(CP_ACP, 0, lpSrc, -1, lpDst, nDstMax); //S-JIS->Unicode
+#else
+	lstrcpyn(lpDst, lpSrc, nDstMax);
+#endif
+}
+
+void lstrcpynWt(LPTSTR lpDst, LPCWSTR lpSrc, int nDstMax){
+#if defined(UNICODE)
+	lstrcpyn(lpDst, lpSrc, nDstMax);
+#else
+	WideCharToMultiByte(CP_ACP, 0, lpSrc, -1, lpDst, nDstMax, NULL, NULL);
+#endif
+}
+
+typedef struct StringList {
+	struct StringList *pNext;
+	TCHAR szString[1];
+} STRING_LIST, *LPSTRING_LIST;
+
+static LPSTRING_LIST lpTypelist = NULL;
+
+static void StringListFree(LPSTRING_LIST *pList){
+	LPSTRING_LIST pCur = *pList;
+	while (pCur){
+		LPSTRING_LIST pNext = pCur->pNext;
+		HFree(pCur);
+		pCur = pNext;
+	}
+	*pList = NULL;
+}
+
+static  LPSTRING_LIST StringListWalk(LPSTRING_LIST *pList, int nIndex){
+	LPSTRING_LIST pCur = *pList;
+	int i = 0;
+	while (pCur){
+		if (i++ == nIndex) return pCur;
+		pCur = pCur->pNext;
+	}
+	return NULL;
+}
+
+static  LPSTRING_LIST StringListFindI(LPSTRING_LIST *pList, LPCTSTR szValue){
+	LPSTRING_LIST pCur = *pList;
+	while (pCur){
+		if (lstrcmpi(pCur->szString, szValue) == 0) return pCur;
+		pCur = pCur->pNext;
+	}
+	return NULL;
+}
+
+static int StringListAdd(LPSTRING_LIST *pList, LPTSTR szValue){
+	int i = 0;
+	LPSTRING_LIST pCur = *pList;
+	LPSTRING_LIST pNew = (LPSTRING_LIST)HAlloc(sizeof(STRING_LIST) + sizeof(TCHAR) * lstrlen(szValue));
+	if (!pNew) return -1;
+	pNew->pNext = NULL;
+	lstrcpy(pNew->szString, szValue);
+	if (pCur){
+		i++;
+		/* 末尾に追加 */
+		while (pCur->pNext){
+			pCur = pCur->pNext;
+			i++;
+		}
+		pCur->pNext = pNew;
+	} else {
+		/* 先頭 */
+		*pList = pNew;
+	}
+	return i;
+}
+
+void ClearTypelist(){
+	StringListFree(&lpTypelist);
+}
+
+static int AddTypelist(LPTSTR szExt){
+	if (!szExt || !*szExt) return TRUE;
+	if (StringListFindI(&lpTypelist, szExt)) return TRUE;
+	return StringListAdd(&lpTypelist, szExt);
+}
+
+LPTSTR GetTypelist(int nIndex){
+	static TCHAR szNull[1] = {0};
+	LPSTRING_LIST lpbm = StringListWalk(&lpTypelist, nIndex);
+	return lpbm ? lpbm->szString : szNull;
+}
+
+static void AddType(LPTSTR lpszType){
+	LPTSTR e = StrStr(lpszType, TEXT("."));
+	AddTypelist(e ? e + 1 : lpszType);
+}
+
+void AddTypes(LPCSTR lpszTypes) {
+	TCHAR szTemp[MAX_FITTLE_PATH] = {0};
+	LPTSTR q = szTemp;
+	lstrcpynAt(q, lpszTypes, MAX_FITTLE_PATH);
+	while(*q){
+		LPTSTR p = StrStr(q, TEXT(";"));
+		if(p){
+			*p = TEXT('\0');
+			AddType(q);
+			q = p + 1;
+		}else{
+			AddType(q);
+			break;
+		}
+	}
+}
+
+
+/*
+
+	--- メモリ管理 ---
+
+*/
 
 #define ALTYPE 0
 #if (ALTYPE == 1)
