@@ -1288,7 +1288,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				case IDM_PLAY: //再生
 					{
 						struct LISTTAB *pCurList = GetSelListTab();
-						int nLBIndex = ListView_GetNextItem(pCurList->hList, -1, LVNI_SELECTED);
+						int nLBIndex = ListView_GetNextSelect(pCurList->hList, -1);
 						if(OPGetStatus() == OUTPUT_PLUGIN_STATUS_PAUSE && nLBIndex==pCurList->nPlaying)
 						{
 							FilePause();	// ポーズ中なら再開
@@ -1598,7 +1598,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				case IDM_LIST_TOOL:
 					{
 						struct LISTTAB *pCurList = GetSelListTab();
-						int nLBIndex = ListView_GetNextItem(pCurList->hList, -1, LVNI_SELECTED);
+						int nLBIndex = ListView_GetNextSelect(pCurList->hList, -1);
 						if(nLBIndex!=-1){
 							if(WAstrlen(&g_cfg.szToolPath)!=0){
 								LPTSTR pszFiles = MallocAndConcatPath(pCurList);
@@ -1618,7 +1618,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					{
 						SHELLEXECUTEINFO sei;
 						struct LISTTAB *pCurList = GetSelListTab();
-						int nLBIndex = ListView_GetNextItem(pCurList->hList, -1, LVNI_SELECTED);
+						int nLBIndex = ListView_GetNextSelect(pCurList->hList, -1);
 						if(nLBIndex!=-1){
 							ZeroMemory(&sei, sizeof(SHELLEXECUTEINFO));
 							sei.cbSize = sizeof(SHELLEXECUTEINFO);
@@ -3474,7 +3474,7 @@ static LPTSTR MallocAndConcatPath(LISTTAB *pListTab){
 	LPTSTR pszNew;
 
 	int i = -1;
-	while( (i = ListView_GetNextItem(pListTab->hList, i, LVNI_SELECTED)) != -1 ){
+	while( (i = ListView_GetNextSelect(pListTab->hList, i)) != -1 ){
 		LPTSTR pszTarget = GetPtrFromIndex(pListTab->pRoot, i)->szFilePath;
 		if(!IsURLPath(pszTarget) && !IsArchivePath(pszTarget)){	// 削除できないファイルでなければ
 			s += (lstrlen(pszTarget) + 3) * sizeof(TCHAR);
@@ -3524,7 +3524,7 @@ static int SaveFileDialog(LPTSTR szDir, LPTSTR szDefTitle){
 
 // ドラッグイメージ作成、表示
 static void OnBeginDragList(HWND hLV, POINT pt){
-	m_hDrgImg = ListView_CreateDragImage(hLV, ListView_GetNextItem(hLV, -1, LVNI_SELECTED), &pt);
+	m_hDrgImg = ListView_CreateDragImage(hLV, ListView_GetNextSelect(hLV, -1), &pt);
 	ImageList_BeginDrag(m_hDrgImg, 0, 0, 0);
 	ImageList_DragEnter(hLV, pt.x, pt.y);
 	SetCapture(hLV);
@@ -3932,7 +3932,7 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 				switch(GetDlgCtrlID((HWND)wp)){
 					case ID_LIST:
 						if(lp==-1){	//キーボード
-							nItem = ListView_GetNextItem((HWND)wp, -1, LVNI_SELECTED);
+							nItem = ListView_GetNextSelect((HWND)wp, -1);
 							if(nItem<0) return 0; 
 							ListView_GetItemRect((HWND)wp, nItem, &rcItem, LVIR_SELECTBOUNDS);
 							MapWindowPoints((HWND)wp, HWND_DESKTOP, (LPPOINT)&rcItem, 2);
@@ -4229,7 +4229,7 @@ LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
 				//移動前アイテムと移動後アイテムのインデックスを取得
 				pinfo.pt.x = (short)LOWORD(lp);
 				pinfo.pt.y = (short)HIWORD(lp);
-				nBefore = ListView_GetNextItem(hLV, -1, LVNI_SELECTED);
+				nBefore = ListView_GetNextSelect(hLV, -1);
 				nAfter = ListView_HitTest(hLV, &pinfo);
 				if(nAfter!=-1 && nBefore!=nAfter){
 					ChangeOrder(GetSelListTab(), nAfter);
@@ -4277,7 +4277,7 @@ LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
 				case VK_DOWN:
 					int nToIndex;
 					if(GetKeyState(VK_CONTROL) < 0){
-						nToIndex = ListView_GetNextItem(hLV, -1, LVIS_SELECTED);
+						nToIndex = ListView_GetNextSelect(hLV, -1);
 						do{
 							nToIndex++;
 						}while(ListView_GetItemState(hLV, nToIndex, LVIS_SELECTED));
@@ -4288,7 +4288,7 @@ LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
 
 				case VK_UP:
 					if(GetKeyState(VK_CONTROL) < 0){
-						nToIndex = ListView_GetNextItem(hLV, -1, LVIS_SELECTED);
+						nToIndex = ListView_GetNextSelect(hLV, -1);
 						if(nToIndex>0){
 							ChangeOrder(GetSelListTab(), nToIndex-1);
 						}
@@ -4612,7 +4612,7 @@ static void RemoveFiles(){
 	if (!p) return;
 
 	// パスを連結など
-	i = ListView_GetNextItem(pCurList->hList, -1, LVNI_SELECTED);
+	i = ListView_GetNextSelect(pCurList->hList, -1);
 	while(i!=-1){
 		pszTarget = GetPtrFromIndex(pCurList->pRoot, i)->szFilePath;
 		if(i==pCurList->nPlaying) bPlaying = TRUE;	// 削除ファイルが演奏中
@@ -4630,7 +4630,7 @@ static void RemoveFiles(){
 			q += l + 1;
 			*(p+q) = TEXT('\0');
 		}
-		i = ListView_GetNextItem(pCurList->hList, i, LVNI_SELECTED);
+		i = ListView_GetNextSelect(pCurList->hList, i);
 	}
 	if(j==1){
 		// ファイル一個選択

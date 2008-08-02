@@ -38,6 +38,7 @@ void ListView_ClearSelect(HWND hLV);
 void ListView_SingleSelect(HWND hLV, int nIndex);
 void ListView_SingleSelectView(HWND hLV, int nIndex);
 void ListView_SingleSelectViewP(HWND hLV, int nIndex);
+int ListView_GetNextSelect(HWND hLV, int nIndex);
 
 void lstrcpyntA(LPSTR lpDst, LPCTSTR lpSrc, int nDstMax);
 void lstrcpyntW(LPWSTR lpDst, LPCTSTR lpSrc, int nDstMax);

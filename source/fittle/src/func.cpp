@@ -275,6 +275,10 @@ void ListView_SingleSelectViewP(HWND hLV, int nIndex) {
 	ListView_SingleSelectViewSub(hLV, nIndex, 3);
 }
 
+int ListView_GetNextSelect(HWND hLV, int nIndex){
+	return ListView_GetNextItem(hLV, nIndex, LVNI_SELECTED);
+}
+
 /*
 
 	--- •¶Žš—ñ ---

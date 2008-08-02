@@ -172,7 +172,7 @@ int ChangeOrder(struct LISTTAB *pListTab, int nAfter){
 	struct FILEINFO *pPlaying = NULL;
 
 	//先頭選択ファイルのインデックス取得
-	nSelect = ListView_GetNextItem(pListTab->hList, -1, LVNI_SELECTED);
+	nSelect = ListView_GetNextSelect(pListTab->hList, -1);
 	if(nSelect==-1)	return -1;	// 選択ファイルが無ければ抜ける
 
 	// 調整
@@ -186,7 +186,7 @@ int ChangeOrder(struct LISTTAB *pListTab, int nAfter){
 	// 描画ロック
 	LockWindowUpdate(GetParent(pListTab->hList));
 
-	while((nSelect = ListView_GetNextItem(pListTab->hList, -1, LVNI_SELECTED))!=-1){
+	while((nSelect = ListView_GetNextSelect(pListTab->hList, -1))!=-1){
 		// サブリストに追加
 		if(!pSubRoot){
 			pSubRoot = GetPtrFromIndex(pListTab->pRoot, nSelect);
@@ -229,7 +229,7 @@ int DeleteFiles(struct LISTTAB *pListTab){
 	int nStack;
 	FILEINFO *pTmp;
 
-	nIndex = ListView_GetNextItem(pListTab->hList, -1, LVNI_SELECTED);
+	nIndex = ListView_GetNextSelect(pListTab->hList, -1);
 	while(nIndex!=-1){
 		nBefore = nIndex;
 		ListView_DeleteItem(pListTab->hList, nIndex);
@@ -247,7 +247,7 @@ int DeleteFiles(struct LISTTAB *pListTab){
 		DeleteAList(pTmp, &(pListTab->pRoot));
 		if(nIndex<=pListTab->nPlaying) pListTab->nPlaying--;
 		if(nIndex==ListView_GetItemCount(pListTab->hList)) nIndex--;
-		nIndex = ListView_GetNextItem(pListTab->hList, -1, LVNI_SELECTED);
+		nIndex = ListView_GetNextSelect(pListTab->hList, -1);
 	}
 	ListView_SingleSelect(pListTab->hList, nBefore);
 	return nIndex;
@@ -261,7 +261,7 @@ void SendToPlaylist(struct LISTTAB *ltFrom, struct LISTTAB *ltTo){
 	int nOldCount = ListView_GetItemCount(hListTo);
 	int nNewCount;
 
-	while((nIndex = ListView_GetNextItem(ltFrom->hList, nIndex, LVNI_SELECTED))!=-1){
+	while((nIndex = ListView_GetNextSelect(ltFrom->hList, nIndex))!=-1){
 		pTmp = GetPtrFromIndex(ltFrom->pRoot, nIndex);
 		AddList(&(ltTo->pRoot), pTmp->szFilePath, pTmp->szSize, pTmp->szTime);
 	}
