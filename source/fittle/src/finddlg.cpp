@@ -20,7 +20,6 @@ static int TraverseList2(HWND, struct FILEINFO *, LPTSTR);
 static LRESULT CALLBACK NewFindEditProc(HWND, UINT, WPARAM, LPARAM);
 void ToPlayList(struct FILEINFO **, struct FILEINFO *, LPTSTR);
 
-static WNDPROC s_hOldEditProc = NULL;
 
 BOOL CALLBACK FindDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 	static HWND hList = NULL;
@@ -34,7 +33,7 @@ BOOL CALLBACK FindDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			hList = GetDlgItem(hDlg, IDC_LIST1);
 			hEdit = GetDlgItem(hDlg, IDC_EDIT1);
 			pRoot = (struct FILEINFO *)lp;
-			s_hOldEditProc = (WNDPROC)(LONG_PTR)SetWindowLongPtr(hEdit, GWLP_WNDPROC, (LONG_PTR)NewFindEditProc);
+			SubClassControl(hEdit, NewFindEditProc);
 			TraverseList2(hList, pRoot, NULL);
 			return TRUE;
 
@@ -112,7 +111,7 @@ LRESULT CALLBACK NewFindEditProc(HWND hEB, UINT msg, WPARAM wp, LPARAM lp){
 			break;
 
 	}
-	return CallWindowProc(s_hOldEditProc, hEB, msg, wp, lp);
+	return CallWindowProc((WNDPROC)(LONG_PTR)GetWindowLongPtr(hEB, GWLP_USERDATA), hEB, msg, wp, lp);
 }
 
 int TraverseList2(HWND hLB, struct FILEINFO *ptr, LPTSTR szPart){

@@ -1501,6 +1501,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				case IDM_TOGGLETREE:
 					switch(g_cfg.nTreeState){
 						case TREE_UNSHOWN:
+						case TREE_HIDE:
 							s_bReviewAllow = FALSE;
 							MakeTreeFromPath(m_hTree, m_hCombo, m_szTreePath);
 							s_bReviewAllow = TRUE;
@@ -1509,19 +1510,9 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 							break;
 
 						case TREE_SHOW:
-							//EnableWindow(m_hTree, FALSE);
 							CheckMenuItem(m_hMainMenu, IDM_TOGGLETREE, MF_BYCOMMAND | MF_UNCHECKED);
 							g_cfg.nTreeState = TREE_HIDE;
 							SetFocus(GetSelListTab()->hList);
-							break;
-
-						case TREE_HIDE:
-							//EnableWindow(m_hTree, TRUE);
-							s_bReviewAllow = FALSE;
-							MakeTreeFromPath(m_hTree, m_hCombo, m_szTreePath);
-							s_bReviewAllow = TRUE;
-							CheckMenuItem(m_hMainMenu, IDM_TOGGLETREE, MF_BYCOMMAND | MF_CHECKED);
-							g_cfg.nTreeState = TREE_SHOW;
 							break;
 					}
 					UpdateWindowSize(hWnd);
@@ -1822,12 +1813,11 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			break;
 
 		case WM_CONTEXTMENU:
-			HMENU hPopMenu;
-			RECT rcItem;
-
 			if((HWND)wp==hWnd){
 				return DefWindowProc(hWnd, msg, wp, lp);		
 			}else{
+				HMENU hPopMenu;
+				RECT rcItem;
 				switch(GetDlgCtrlID((HWND)wp))
 				{
 					case ID_TREE:
@@ -2763,7 +2753,7 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 #endif
 												BASS_STREAM_DECODE | m_bFloat*BASS_SAMPLE_FLOAT);
 	if(!g_cInfo[bFlag].hChan){
-	g_cInfo[bFlag].hChan = BASS_MusicLoad(g_cInfo[bFlag].pBuff != 0,
+		g_cInfo[bFlag].hChan = BASS_MusicLoad(g_cInfo[bFlag].pBuff != 0,
 												(g_cInfo[bFlag].pBuff?(void *)g_cInfo[bFlag].pBuff:(void *)szFilePath),
 												0, (DWORD)g_cInfo[bFlag].qDuration,
 #ifdef UNICODE
@@ -3540,7 +3530,7 @@ static void OnDragList(HWND hLV, POINT pt){
 	pinfo.pt.x = pt.x;
 	pinfo.pt.y = pt.y;
 	ImageList_DragShowNolock(FALSE);
-	ListView_SetItemState(hLV, -1, 0, LVIS_DROPHILITED);
+	ListView_ClearHilite(hLV);
 	nHitItem = ListView_HitTest(hLV, &pinfo);
 	if(nHitItem!=-1)	ListView_SetItemState(hLV, nHitItem, LVIS_DROPHILITED, LVIS_DROPHILITED);
 	UpdateWindow(hLV);
@@ -3564,7 +3554,7 @@ static void OnDragList(HWND hLV, POINT pt){
 static void OnEndDragList(HWND hLV){
 	KillTimer(m_hTab, ID_SCROLLTIMERUP);
 	KillTimer(m_hTab, ID_SCROLLTIMERDOWN);
-	ListView_SetItemState(hLV, -1, 0, LVIS_DROPHILITED);
+	ListView_ClearHilite(hLV);
 	ImageList_DragLeave(hLV);
 	ImageList_EndDrag();
 	ImageList_Destroy(m_hDrgImg);

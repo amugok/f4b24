@@ -251,6 +251,12 @@ void ListView_ClearSelect(HWND hLV){
 	ListView_SetItemState(hLV, -1, 0, (LVIS_SELECTED | LVIS_FOCUSED));
 }
 
+// ハイライト状態クリア
+void ListView_ClearHilite(HWND hLV){
+	ListView_SetItemState(hLV, -1, 0, LVIS_DROPHILITED);
+}
+
+
 static void ListView_SingleSelectViewSub(HWND hLV, int nIndex, int flag){
 	ListView_ClearSelect(hLV);
 	if (nIndex >= 0){

@@ -35,6 +35,7 @@ int GetDropFiles(HDROP hDrop, struct FILEINFO **ppSub, LPPOINT ppt, LPTSTR szPat
 void ShowSettingDialog(HWND, int);
 
 void ListView_ClearSelect(HWND hLV);
+void ListView_ClearHilite(HWND hLV);
 void ListView_SingleSelect(HWND hLV, int nIndex);
 void ListView_SingleSelectView(HWND hLV, int nIndex);
 void ListView_SingleSelectViewP(HWND hLV, int nIndex);
