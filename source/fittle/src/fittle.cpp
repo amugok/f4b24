@@ -957,11 +957,13 @@ static float TrackPosToSec(QWORD qPos) {
 }
 
 static QWORD TrackGetPos(){
-	return BASS_ChannelGetPosition(g_cInfo[g_bNow].hChan, BASS_POS_BYTE) - g_cInfo[g_bNow].qStart;
+	CHANNELINFO *pCh = &g_cInfo[g_bNow];
+	return BASS_ChannelGetPosition(pCh->hChan, BASS_POS_BYTE) - pCh->qStart;
 }
 
 static BOOL TrackSetPos(QWORD qPos) {
-	return BASS_ChannelSetPosition(g_cInfo[g_bNow].hChan, qPos + g_cInfo[g_bNow].qStart, BASS_POS_BYTE);
+	CHANNELINFO *pCh = &g_cInfo[g_bNow];
+	return BASS_ChannelSetPosition(pCh->hChan, qPos + pCh->qStart, BASS_POS_BYTE);
 }
 
 static int GetVolumeBar() {
@@ -1495,15 +1497,18 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 
 				case IDM_BM_PLAYING:
-					if(FILE_EXIST(g_cInfo[g_bNow].szFilePath)){
-						GetParentDir(g_cInfo[g_bNow].szFilePath, szNowDir);
-						MakeTreeFromPath(m_hTree, m_hCombo, szNowDir);
-					}else if(IsArchivePath(g_cInfo[g_bNow].szFilePath)){
-						LPTSTR p = StrStr(g_cInfo[g_bNow].szFilePath, TEXT("/"));
-						*p = TEXT('\0');
-						lstrcpyn(szNowDir, g_cInfo[g_bNow].szFilePath, MAX_FITTLE_PATH);
-						*p = TEXT('/');
-						MakeTreeFromPath(m_hTree, m_hCombo, szNowDir);
+					{
+						LPTSTR lpszPlayingPath = g_cInfo[g_bNow].szFilePath;
+						if(FILE_EXIST(lpszPlayingPath)){
+							GetParentDir(lpszPlayingPath, szNowDir);
+							MakeTreeFromPath(m_hTree, m_hCombo, szNowDir);
+						}else if(IsArchivePath(lpszPlayingPath)){
+							LPTSTR p = StrStr(lpszPlayingPath, TEXT("/"));
+							*p = TEXT('\0');
+							lstrcpyn(szNowDir, lpszPlayingPath, MAX_FITTLE_PATH);
+							*p = TEXT('/');
+							MakeTreeFromPath(m_hTree, m_hCombo, szNowDir);
+						}
 					}
 					break;
 
@@ -2263,9 +2268,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				break;
 			case WM_F4B24_INTERNAL_RESTORE_POSITION:
 				if(g_cfg.nResPosFlag){
-					BASS_ChannelStop(g_cInfo[g_bNow].hChan);
+					DWORD hChan = g_cInfo[g_bNow].hChan;
+					BASS_ChannelStop(hChan);
 					TrackSetPos(g_cfg.nResPos);
-					BASS_ChannelPlay(g_cInfo[g_bNow].hChan, FALSE);
+					BASS_ChannelPlay(hChan, FALSE);
 				}
 				break;
 
@@ -2670,12 +2676,17 @@ static int XATOI(LPCTSTR p){
 	return r;
 }
 
+static QWORD GetSoundLength(DWORD hChan) {
+	QWORD qLen = BASS_ChannelGetLength(hChan, BASS_POS_BYTE);
+	return qLen != -1 ? qLen : 0;
+}
+
 /* xx:xx:xxという表記とハンドルから時間をQWORDで取得 */
-static QWORD GetByteFromSecStr(DWORD hChan, LPTSTR pszSecStr){
+static QWORD GetByteFromSecStr(DWORD hChan, LPCTSTR pszSecStr){
 	int min, sec, frame;
 
 	if(*pszSecStr == TEXT('\0')){
-		return BASS_ChannelGetLength(hChan, BASS_POS_BYTE);
+		return GetSoundLength(hChan);
 	}
 
 	min = XATOI(pszSecStr);
@@ -2695,65 +2706,91 @@ static QWORD GetByteFromSecStr(DWORD hChan, LPTSTR pszSecStr){
 	return BASS_ChannelSeconds2Bytes(hChan, (float)((min * 60 + sec) * 75 + frame) / 75.0);
 }
 
-// ファイルをオープン、構造体を設定
-static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
+static void LoadGainInfo(CHANNELINFO *pCh){
+	DWORD dwGain = SendF4b24Message(WM_F4B24_HOOK_REPLAY_GAIN, (LPARAM)pCh->hChan);
+	pCh->sGain = dwGain ? *(float *)&dwGain : (float)1;
+}
+
+static void FreeSoundFile(CHANNELINFO *pCh, BOOL fOpenForPlay){
+	DWORD hChan = pCh->hChan;
+	if (hChan){
+		if (fOpenForPlay){
+			BASS_ChannelStop(hChan);
+			SendF4b24Message(WM_F4B24_HOOK_FREE_DECODE_STREAM, (LPARAM)hChan);
+		}
+		if (!BASS_StreamFree(hChan)){
+			BASS_MusicFree(hChan);
+		}
+		pCh->hChan = 0;
+	}
+
+	if(pCh->pBuff){
+		HeapFree(GetProcessHeap(), 0, (LPVOID)pCh->pBuff);
+		pCh->pBuff = NULL;
+	}
+	pCh->sGain = 1;
+}
+
+static BOOL OpenSoundFile(CHANNELINFO *pCh, LPTSTR lpszOpenSoundPath, BOOL fOpenForPlay){
 	TCHAR szFilePath[MAX_FITTLE_PATH];
 	QWORD qStart, qEnd;
 	TCHAR szStart[100], szEnd[100];
+
 	szStart[0] = 0;
 	szEnd[0] = 0;
 
-	lstrcpyn(g_cInfo[bFlag].szFilePath, pInfo->szFilePath, MAX_FITTLE_PATH);
-	g_cInfo[bFlag].pBuff = 0;
-	g_cInfo[bFlag].qStart = 0;
+	lstrcpyn(pCh->szFilePath, lpszOpenSoundPath, MAX_FITTLE_PATH);
+	pCh->pBuff = 0;
+	pCh->qStart = 0;
 
-	if(IsArchivePath(pInfo->szFilePath)){
-		AnalyzeArchivePath(&g_cInfo[bFlag], szFilePath, szStart, szEnd);
+	if(IsArchivePath(lpszOpenSoundPath)){
+		AnalyzeArchivePath(pCh, szFilePath, szStart, szEnd);
 	}else{
-		lstrcpyn(szFilePath, pInfo->szFilePath, MAX_FITTLE_PATH);
-		g_cInfo[bFlag].qDuration = 0;
+		lstrcpyn(szFilePath, lpszOpenSoundPath, MAX_FITTLE_PATH);
+		pCh->qDuration = 0;
 	}
 
-	g_cInfo[bFlag].sGain = 1;
-	g_cInfo[bFlag].sAmp = fBypassVol;
-	g_cInfo[bFlag].hChan = BASS_StreamCreateFile(g_cInfo[bFlag].pBuff != 0,
-												(g_cInfo[bFlag].pBuff?(void *)g_cInfo[bFlag].pBuff:(void *)szFilePath),
-												0, (DWORD)g_cInfo[bFlag].qDuration,
+	pCh->sGain = 1;
+	pCh->sAmp = fBypassVol;
+	pCh->hChan = BASS_StreamCreateFile(pCh->pBuff != 0,
+												(pCh->pBuff?(void *)pCh->pBuff:(void *)szFilePath),
+												0, (DWORD)pCh->qDuration,
 #ifdef UNICODE
-												(g_cInfo[bFlag].pBuff?0:BASS_UNICODE) |
+												(pCh->pBuff?0:BASS_UNICODE) |
 #endif
 												BASS_STREAM_DECODE | m_bFloat*BASS_SAMPLE_FLOAT);
-	if(!g_cInfo[bFlag].hChan){
-		g_cInfo[bFlag].hChan = BASS_MusicLoad(g_cInfo[bFlag].pBuff != 0,
-												(g_cInfo[bFlag].pBuff?(void *)g_cInfo[bFlag].pBuff:(void *)szFilePath),
-												0, (DWORD)g_cInfo[bFlag].qDuration,
+	if(!pCh->hChan){
+		pCh->hChan = BASS_MusicLoad(pCh->pBuff != 0,
+												(pCh->pBuff?(void *)pCh->pBuff:(void *)szFilePath),
+												0, (DWORD)pCh->qDuration,
 #ifdef UNICODE
-												(g_cInfo[bFlag].pBuff?0:BASS_UNICODE) |
+												(pCh->pBuff?0:BASS_UNICODE) |
 #endif
 												BASS_MUSIC_DECODE | m_bFloat*BASS_SAMPLE_FLOAT | BASS_MUSIC_PRESCAN, 0);
 	}
-	if(g_cInfo[bFlag].hChan){
-		if(!IsArchivePath(pInfo->szFilePath) || !GetArchiveGain(pInfo->szFilePath, &g_cInfo[bFlag].sGain, g_cInfo[bFlag].hChan)){
-			DWORD dwGain = SendF4b24Message(WM_F4B24_HOOK_REPLAY_GAIN, (LPARAM)g_cInfo[bFlag].hChan);
-			g_cInfo[bFlag].sGain = dwGain ? *(float *)&dwGain : (float)1;
-		}
-		SendF4b24Message(WM_F4B24_HOOK_CREATE_DECODE_STREAM, (LPARAM)g_cInfo[bFlag].hChan);
+	if(pCh->hChan){
 		if(szStart[0]){
-			qStart = GetByteFromSecStr(g_cInfo[bFlag].hChan, szStart);
-			qEnd = GetByteFromSecStr(g_cInfo[bFlag].hChan, szEnd);
-			BASS_ChannelSetPosition(g_cInfo[bFlag].hChan, qStart, BASS_POS_BYTE);
-			g_cInfo[bFlag].qStart = qStart;
-			g_cInfo[bFlag].qDuration = qEnd - qStart;
-			BASS_ChannelSetSync(g_cInfo[bFlag].hChan, BASS_SYNC_POS, qStart + (g_cInfo[bFlag].qDuration)*99/100, &EventSync, 0);
-			BASS_ChannelSetSync(g_cInfo[bFlag].hChan, BASS_SYNC_POS, qEnd, &EventSync, (void *)1);
+			qStart = GetByteFromSecStr(pCh->hChan, szStart);
+			qEnd = GetByteFromSecStr(pCh->hChan, szEnd);
+			pCh->qStart = qStart;
+			pCh->qDuration = qEnd - qStart;
 		}else{
-			g_cInfo[bFlag].qDuration = BASS_ChannelGetLength(g_cInfo[bFlag].hChan, BASS_POS_BYTE);
-			if(g_cInfo[bFlag].qDuration==-1){
-				g_cInfo[bFlag].qDuration = 0;
+			pCh->qDuration = GetSoundLength(pCh->hChan);
+		}
+		if (fOpenForPlay){
+			if(!IsArchivePath(lpszOpenSoundPath) || !GetArchiveGain(lpszOpenSoundPath, &pCh->sGain, pCh->hChan)){
+				LoadGainInfo(pCh);
 			}
-			// 曲を99%再生後、イベントが起こるように。
-			if(lstrcmpi(PathFindExtension(szFilePath), TEXT(".CDA"))){
-				BASS_ChannelSetSync(g_cInfo[bFlag].hChan, BASS_SYNC_POS, (g_cInfo[bFlag].qDuration)*99/100, &EventSync, 0);
+			SendF4b24Message(WM_F4B24_HOOK_CREATE_DECODE_STREAM, (LPARAM)pCh->hChan);
+			if(szStart[0]){
+				BASS_ChannelSetPosition(pCh->hChan, qStart, BASS_POS_BYTE);
+				BASS_ChannelSetSync(pCh->hChan, BASS_SYNC_POS, qStart + (pCh->qDuration)*99/100, &EventSync, 0);
+				BASS_ChannelSetSync(pCh->hChan, BASS_SYNC_POS, qEnd, &EventSync, (void *)1);
+			} else {
+				// 曲を99%再生後、イベントが起こるように。
+				if(lstrcmpi(PathFindExtension(szFilePath), TEXT(".CDA"))){
+					BASS_ChannelSetSync(pCh->hChan, BASS_SYNC_POS, (pCh->qDuration)*99/100, &EventSync, 0);
+				}
 			}
 		}
 		return TRUE;
@@ -2762,42 +2799,32 @@ static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 		CHAR szAnsi[MAX_FITTLE_PATH];
 		lstrcpyntA(szAnsi, szFilePath, MAX_FITTLE_PATH);
 		BASS_SetConfig(BASS_CONFIG_NET_TIMEOUT, 60000); // 5secは短いので60secにする
-		g_cInfo[bFlag].hChan = BASS_StreamCreateURL(szAnsi, 0, BASS_STREAM_BLOCK | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT * m_bFloat, NULL, 0);
+		pCh->hChan = BASS_StreamCreateURL(szAnsi, 0, BASS_STREAM_BLOCK | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT * m_bFloat, NULL, 0);
 #else
 		BASS_SetConfig(BASS_CONFIG_NET_TIMEOUT, 60000); // 5secは短いので60secにする
-		g_cInfo[bFlag].hChan = BASS_StreamCreateURL(szFilePath, 0, BASS_STREAM_BLOCK | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT * m_bFloat, NULL, 0);
+		pCh->hChan = BASS_StreamCreateURL(szFilePath, 0, BASS_STREAM_BLOCK | BASS_STREAM_DECODE | BASS_SAMPLE_FLOAT * m_bFloat, NULL, 0);
 #endif
-		if(g_cInfo[bFlag].hChan){
-			DWORD dwGain = SendF4b24Message(WM_F4B24_HOOK_REPLAY_GAIN, (LPARAM)g_cInfo[bFlag].hChan);
-			g_cInfo[bFlag].sGain = dwGain ? *(float *)&dwGain : (float)1;
-			SendF4b24Message(WM_F4B24_HOOK_CREATE_DECODE_STREAM, (LPARAM)g_cInfo[bFlag].hChan);
-			g_cInfo[bFlag].qDuration = BASS_ChannelGetLength(g_cInfo[bFlag].hChan, BASS_POS_BYTE);
-			if(g_cInfo[bFlag].qDuration==-1){
-				g_cInfo[bFlag].qDuration = 0;
+		if(pCh->hChan){
+			pCh->qDuration = GetSoundLength(pCh->hChan);
+			if (fOpenForPlay){
+				LoadGainInfo(pCh);
+				SendF4b24Message(WM_F4B24_HOOK_CREATE_DECODE_STREAM, (LPARAM)pCh->hChan);
+				BASS_ChannelSetSync(pCh->hChan, BASS_SYNC_END, 0, &EventSync, 0);
 			}
-			BASS_ChannelSetSync(g_cInfo[bFlag].hChan, BASS_SYNC_END, 0, &EventSync, 0);
 			return TRUE;
 		}
 		return FALSE;
 	}
 }
 
-static void FreeChannelInfo(BOOL bFlag){
-	if (g_cInfo[bFlag].hChan){
-		BASS_ChannelStop(g_cInfo[bFlag].hChan);
-		SendF4b24Message(WM_F4B24_HOOK_FREE_DECODE_STREAM, (LPARAM)g_cInfo[bFlag].hChan);
-		if (!BASS_StreamFree(g_cInfo[bFlag].hChan)){
-			BASS_MusicFree(g_cInfo[bFlag].hChan);
-		}
-		g_cInfo[bFlag].hChan = 0;
-	}
 
-	if(g_cInfo[bFlag].pBuff){
-		HeapFree(GetProcessHeap(), 0, (LPVOID)g_cInfo[bFlag].pBuff);
-		g_cInfo[bFlag].pBuff = NULL;
-	}
-	g_cInfo[bFlag].sGain = 1;
-	return;
+static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
+	// ファイルをオープン、構造体を設定
+	return OpenSoundFile(&g_cInfo[bFlag], pInfo->szFilePath, TRUE);
+}
+
+static void FreeChannelInfo(BOOL bFlag){
+	FreeSoundFile(&g_cInfo[bFlag], TRUE);
 }
 
 
@@ -2929,7 +2956,7 @@ static void OnChangeTrack(){
 	wsprintf(szTitleCap, TEXT("%s - %s"), m_szTag, FITTLE_TITLE);
 	SetWindowText(m_hMainWnd, szTitleCap);
 
-	float time = TrackPosToSec(BASS_ChannelGetLength(g_cInfo[g_bNow].hChan, BASS_POS_BYTE)); // playback duration
+	float time = TrackPosToSec(GetSoundLength(g_cInfo[g_bNow].hChan)); // playback duration
 	DWORD dLen = (DWORD)BASS_StreamGetFilePosition(g_cInfo[g_bNow].hChan, BASS_FILEPOS_END); // file length
 	DWORD bitrate;
 	if(dLen>0 && time>0){
