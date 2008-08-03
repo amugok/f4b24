@@ -113,6 +113,7 @@ struct CONFIG{
 	int nTagReverse;			// タイトル、アーティストを反転
 	int nShowHeader;			// ヘッダコントロールを表示する
 	int nSeekAmount;			// シーク量
+	int nRestartOnSeek;			// シーク時にポーズを解除する
 	int nVolAmount;				// 音量変化量(隠し設定?)
 	int nResume;				// 終了時に再生していた曲を起動時にも再生する
 	int nResPosFlag;			// 終了時の再生位置も記録復元する

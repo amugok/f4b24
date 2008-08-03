@@ -124,6 +124,8 @@ static void LoadConfig(){
 	m_cfg.nShowHeader = WAGetIniInt("Main", "ShowHeader", 1);
 	// シーク量
 	m_cfg.nSeekAmount = WAGetIniInt("Main", "SeekAmount", 5);
+	// シーク時にポーズを解除する
+	m_cfg.nRestartOnSeek = WAGetIniInt("Main", "RestartOnSeek", 1);
 	// 音量変化量(隠し設定)
 	m_cfg.nVolAmount = WAGetIniInt("Main", "VolAmount", 5);
 	// 終了時に再生していた曲を起動時にも再生する
@@ -193,6 +195,7 @@ static void SaveConfig(){
 	WASetIniInt("Main", "TagReverse", m_cfg.nTagReverse);
 	WASetIniInt("Main", "ShowHeader", m_cfg.nShowHeader);
 	WASetIniInt("Main", "SeekAmount", m_cfg.nSeekAmount);
+	WASetIniInt("Main", "RestartOnSeek", m_cfg.nRestartOnSeek);
 	WASetIniInt("Main", "VolAmount", m_cfg.nVolAmount);
 	WASetIniInt("Main", "Resume", m_cfg.nResume);
 	WASetIniInt("Main", "ResPosFlag", m_cfg.nResPosFlag);
@@ -238,6 +241,7 @@ static BOOL GeneralCheckChanged(HWND hDlg){
 	if (m_cfg.nCloseMin != (int)SendDlgItemMessage(hDlg, IDC_CHECK5, BM_GETCHECK, 0, 0)) return TRUE;
 	if (m_cfg.nZipSearch != (int)SendDlgItemMessage(hDlg, IDC_CHECK6, BM_GETCHECK, 0, 0)) return TRUE;
 	if (m_cfg.nSeekAmount != GetDlgItemInt(hDlg, IDC_COMBO1, NULL, FALSE)) return TRUE;
+	if (m_cfg.nRestartOnSeek != (int)SendDlgItemMessage(hDlg, IDC_CHECK13, BM_GETCHECK, 0, 0)) return TRUE;
 	return FALSE;
 }
 
@@ -272,6 +276,7 @@ static BOOL CALLBACK GeneralSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 				SendDlgItemMessageA(hDlg, IDC_COMBO1, CB_ADDSTRING, (WPARAM)0, (LPARAM)szBuff);
 			}
 			SendDlgItemMessage(hDlg, IDC_COMBO1, CB_SETCURSEL, (WPARAM)m_cfg.nSeekAmount-1, (LPARAM)0);
+			SendDlgItemMessage(hDlg, IDC_CHECK13, BM_SETCHECK, (WPARAM)m_cfg.nRestartOnSeek, 0);
 
 			return TRUE;
 
@@ -289,6 +294,8 @@ static BOOL CALLBACK GeneralSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 				m_cfg.nZipSearch = (int)SendDlgItemMessage(hDlg, IDC_CHECK6, BM_GETCHECK, 0, 0);
 
 				m_cfg.nSeekAmount = GetDlgItemInt(hDlg, IDC_COMBO1, NULL, FALSE);
+				m_cfg.nRestartOnSeek = (int)SendDlgItemMessage(hDlg, IDC_CHECK13, BM_GETCHECK, 0, 0);
+
 				SaveConfig();
 				ApplyFittle();
 				return TRUE;

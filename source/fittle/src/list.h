@@ -28,5 +28,7 @@ BOOL ReadArchive(struct FILEINFO **, LPTSTR);
 void MergeSort(struct FILEINFO **, int);
 int SearchFiles(struct FILEINFO **, LPTSTR, BOOL);
 int LinkCheck(struct FILEINFO **);
+void GetColumnText(struct FILEINFO *pTmp, int nRow, int nColumn, LPTSTR pWork, int nWorkMax);
+void AddColumns(HWND hList);
 
 #endif

@@ -2489,6 +2489,8 @@ static void LoadConfig(){
 	g_cfg.nShowHeader = WAGetIniInt("Main", "ShowHeader", 1);
 	// シーク量
 	g_cfg.nSeekAmount = WAGetIniInt("Main", "SeekAmount", 5);
+	// シーク時にポーズを解除する
+	g_cfg.nRestartOnSeek = WAGetIniInt("Main", "RestartOnSeek", 1);
 	// 音量変化量(隠し設定)
 	g_cfg.nVolAmount = WAGetIniInt("Main", "VolAmount", 5);
 	// 終了時に再生していた曲を起動時にも再生する
@@ -2875,6 +2877,7 @@ static void OnChangeTrack(){
 	TCHAR szTitleCap[524] = {0};
 	BASS_CHANNELINFO info;
 	struct LISTTAB *pPlayList = GetPlayListTab();
+	CHANNELINFO *pCh = &g_cInfo[g_bNow];
 
 	m_bCueEnd = FALSE;
 
@@ -2896,7 +2899,7 @@ static void OnChangeTrack(){
 	}
 
 	//周波数が変わるときは開きなおす
-	BASS_ChannelGetInfo(g_cInfo[g_bNow].hChan, &info);
+	BASS_ChannelGetInfo(pCh->hChan, &info);
 	if(m_nGaplessState==GS_NEWFREQ){
 		OPStop();
 		OPStart(&info, GetVolumeBar(), m_bFloat);
@@ -2934,15 +2937,15 @@ static void OnChangeTrack(){
 
 
 	// タグを
-	if(GetArchiveTagInfo(g_cInfo[g_bNow].szFilePath, &m_taginfo)
-	|| BASS_TAG_Read(g_cInfo[g_bNow].hChan, &m_taginfo)){
+	if(GetArchiveTagInfo(pCh->szFilePath, &m_taginfo)
+	|| BASS_TAG_Read(pCh->hChan, &m_taginfo)){
 		if(!g_cfg.nTagReverse){
 			wsprintf(m_szTag, TEXT("%s / %s"), m_taginfo.szTitle, m_taginfo.szArtist);
 		}else{
 			wsprintf(m_szTag, TEXT("%s / %s"), m_taginfo.szArtist, m_taginfo.szTitle);
 		}
 	}else{
-		lstrcpyn(m_szTag, GetFileName(g_cInfo[g_bNow].szFilePath), MAX_FITTLE_PATH);
+		lstrcpyn(m_szTag, GetFileName(pCh->szFilePath), MAX_FITTLE_PATH);
 		lstrcpyn(m_taginfo.szTitle, m_szTag, 256);
 	}
 #ifdef UNICODE
@@ -2956,8 +2959,8 @@ static void OnChangeTrack(){
 	wsprintf(szTitleCap, TEXT("%s - %s"), m_szTag, FITTLE_TITLE);
 	SetWindowText(m_hMainWnd, szTitleCap);
 
-	float time = TrackPosToSec(GetSoundLength(g_cInfo[g_bNow].hChan)); // playback duration
-	DWORD dLen = (DWORD)BASS_StreamGetFilePosition(g_cInfo[g_bNow].hChan, BASS_FILEPOS_END); // file length
+	float time = TrackPosToSec(GetSoundLength(pCh->hChan)); // playback duration
+	DWORD dLen = (DWORD)BASS_StreamGetFilePosition(pCh->hChan, BASS_FILEPOS_END); // file length
 	DWORD bitrate;
 	if(dLen>0 && time>0){
 		bitrate = (DWORD)(dLen/(125*time)+0.5); // bitrate (Kbps)
@@ -2968,7 +2971,7 @@ static void OnChangeTrack(){
 
 	//ステータスバーの処理
 	if(g_cfg.nTreeIcon){
-		SetStatusbarIcon(g_cInfo[g_bNow].szFilePath, TRUE);
+		SetStatusbarIcon(pCh->szFilePath, TRUE);
 	}
 	SendMessage(m_hStatus, SB_SETTEXT, (WPARAM)0|0, (LPARAM)szTitleCap);
 	SendMessage(m_hStatus, SB_SETTIPTEXT, (WPARAM)0, (LPARAM)szTitleCap);
@@ -2977,7 +2980,7 @@ static void OnChangeTrack(){
 	SendMessage(m_hStatus, SB_SETTEXT, (WPARAM)1|0, (LPARAM)szTitleCap);
 
 	//シークバー
-	if(g_cInfo[g_bNow].qDuration>0){
+	if(pCh->qDuration>0){
 		EnableWindow(m_hSeek, TRUE);
 	}else{
 		EnableWindow(m_hSeek, FALSE);
@@ -3151,32 +3154,43 @@ static HWND CreateTrackBar(int nId, DWORD dwStyle){
 }
 
 
+static BOOL SeekToPos(BOOL fFadeOut, QWORD qPos){
+	BOOL fRet;
+	int nOldStatus = OPGetStatus();
+	int nNewStatus;
+
+	if (fFadeOut) OPSetFadeOut(150);
+
+	OPStop();
+
+	fRet = TrackSetPos(qPos);
+
+	OPSetVolume(GetVolumeBar());
+
+	if(nOldStatus == OUTPUT_PLUGIN_STATUS_PLAY || g_cfg.nRestartOnSeek){
+		OPPlay();
+	}
+
+	nNewStatus = OPGetStatus();
+	if(nOldStatus != nNewStatus){
+		OnStatusChangePlugins();
+		if(nNewStatus == OUTPUT_PLUGIN_STATUS_PLAY){
+			/* PAUSE解除 */
+			SendMessage(m_hToolBar,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(FALSE, 0));
+		}
+	}
+
+	return fRet;
+}
+
 // 千分率でファイルをシーク
 static BOOL _BASS_ChannelSetPosition(DWORD handle, int nPos){
 	QWORD qPos;
-	BOOL bRet;
-
-	int nStatus = OPGetStatus();
 
 	qPos = g_cInfo[g_bNow].qDuration * nPos / 1000;
 	if (qPos >= g_cInfo[g_bNow].qDuration) qPos = g_cInfo[g_bNow].qDuration - 1;
 
-	OPSetFadeOut(150);
-
-	OPStop();
-
-	bRet = TrackSetPos(qPos);
-
-	OPSetVolume(GetVolumeBar());
-
-	OPPlay();
-
-	if(nStatus != OPGetStatus()){
-		OnStatusChangePlugins();
-	}
-
-	SendMessage(m_hToolBar,  TB_CHECKBUTTON, (WPARAM)IDM_PAUSE, (LPARAM)MAKELONG(FALSE, 0));
-	return bRet;
+	return SeekToPos(TRUE, qPos);
 }
 
 // 秒単位でファイルをシーク
@@ -3194,10 +3208,7 @@ static void _BASS_ChannelSeekSecond(DWORD handle, float fSecond, int nSign){
 	}else{
 		qSet = qPos + nSign*qSeek;
 	}
-	OPStop();
-	TrackSetPos(qSet);
-	OPPlay();
-
+	SeekToPos(FALSE, qSet);
 	return;
 }
 
@@ -3817,38 +3828,6 @@ static int GetListIndex(HWND hwndList){
 	return -1;
 }
 
-static LPCTSTR GetColumnText(HWND hwndList, int nRow, int nColumn, LPTSTR pWork, int nWorkMax){
-	int i = GetListIndex(hwndList);
-	if (i >= 0){
-		struct FILEINFO *pTmp = GetListTab(m_hTab, i)->pRoot;
-		struct FILEINFO *pItem = GetPtrFromIndex(pTmp, nRow);
-		switch(nColumn){
-			case 0:
-				return GetFileName(pItem->szFilePath);
-				break;
-			case 1:
-				return pItem->szSize;
-				break;
-			case 2:
-				LPTSTR pszPath;
-				pszPath = pItem->szFilePath;
-				if(IsURLPath(pszPath)){
-					return TEXT("URL");
-				}else if(IsArchivePath(pszPath) && GetArchiveItemType(pszPath, pWork, nWorkMax)){
-					return pWork;
-				}else{
-					LPTSTR p = PathFindExtension(pszPath);
-					if (p && *p) return p + 1;
-				}
-				break;
-			case 3:
-				return pItem->szTime;
-				break;
-		}
-	}
-	return NULL;
-}
-
 // タブの新しいプロシージャ
 static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 	static int s_nDragTab = -1;
@@ -3926,47 +3905,18 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 						{
 
 							// リストビューからの要求
-#if 1
-							/* Windowsの挙動が異常 */
+							/* Windowsの挙動が異常(A/Wが適切に呼ばれない) */
 							case LVN_GETDISPINFOA:
 							case LVN_GETDISPINFOW:
 								{
 									LVITEM *item = &((NMLVDISPINFO*)lp)->item;
 									// テキストをセット
 									if(item->mask & LVIF_TEXT){
-										TCHAR szBuf[32];
-										LPCTSTR lpszColText = GetColumnText(pnmhdr->hwndFrom, item->iItem, item->iSubItem, szBuf, 32);
-										if (lpszColText)
-											lstrcpyn(item->pszText, lpszColText, item->cchTextMax);
+										GetColumnText(GetListTab(m_hTab, GetListIndex(pnmhdr->hwndFrom))->pRoot, item->iItem, item->iSubItem, item->pszText, item->cchTextMax);
 									}
 								}
 								break;
-#else
-							case LVN_GETDISPINFOA:
-								{
-									LVITEMA *item = &((NMLVDISPINFOA*)lp)->item;
-									// テキストをセット
-									if(item->mask & LVIF_TEXT){
-										TCHAR szBuf[32];
-										LPCTSTR lpszColText = GetColumnText(pnmhdr->hwndFrom, item->iItem, item->iSubItem, szBuf, 32);
-										if (lpszColText)
-											lstrcpyntA(item->pszText, lpszColText, item->cchTextMax);
-									}
-								}
-								break;
-							case LVN_GETDISPINFOW:
-								{
-									LVITEMW *item = &((NMLVDISPINFOW*)lp)->item;
-									// テキストをセット
-									if(item->mask & LVIF_TEXT){
-										TCHAR szBuf[32];
-										LPCTSTR lpszColText = GetColumnText(pnmhdr->hwndFrom, item->iItem, item->iSubItem, szBuf, 32);
-										if (lpszColText)
-											lstrcpyntW(item->pszText, lpszColText, item->cchTextMax);
-									}
-								}
-								break;
-#endif
+
 							case LVN_GETINFOTIPA:
 								if(g_cfg.nPathTip){
 									NMLVGETINFOTIPA *lvgit = (NMLVGETINFOTIPA *)lp;

@@ -370,24 +370,6 @@ static LPTSTR SafePathFindExtensionPlusOne(LPTSTR lpszPath){
 	return (p && *p) ? p + 1 : safezero;
 }
 
-int CompareNode(struct FILEINFO *pLeft, struct FILEINFO *pRight, int nSortType){
-	if (nSortType < 0) return -CompareNode(pLeft, pRight, -nSortType);
-	switch(nSortType){
-		case 0:		// フルパス
-			return lstrcmpi(pLeft->szFilePath, pRight->szFilePath);
-		case 1:		// ファイル名昇順
-			return lstrcmpi(GetFileName(pLeft->szFilePath), GetFileName(pRight->szFilePath));
-		case 2:		// サイズ昇順
-			return StrToInt(pLeft->szSize) - StrToInt(pRight->szSize);
-		case 3:		// 種類昇順
-			return lstrcmpi(IsURLPath(pLeft->szFilePath)?TEXT("URL"):SafePathFindExtensionPlusOne(pLeft->szFilePath), StrStr(pRight->szFilePath, TEXT("://"))?TEXT("URL"):SafePathFindExtensionPlusOne(pRight->szFilePath));
-		case 4:		// 更新日時昇順
-			return lstrcmp(pLeft->szTime, pRight->szTime);
-		default:
-			return 0;
-	}
-}
-
 // 二つのリストをマージ。ppLeftがマージ後のルートになる
 void Merge(struct FILEINFO **ppLeft, struct FILEINFO **ppRight, int nSortType){
 	struct FILEINFO *pNewRoot;
@@ -512,4 +494,94 @@ int LinkCheck(struct FILEINFO **ppRoot){
 		}
 	}
 	return i;
+}
+
+static void AddListColumn(HWND hList, int c, LPTSTR l, int w, int fmt){
+	LVCOLUMN lvcol;
+	lvcol.mask = LVCF_TEXT | LVCF_FMT | LVCF_WIDTH | LVCF_SUBITEM;
+	lvcol.fmt = fmt;
+	lvcol.cx = w;
+	lvcol.iSubItem = 0;
+	lvcol.pszText = l;
+	ListView_InsertColumn(hList, c, &lvcol);
+}
+static void AddStandardColumn(HWND hList, int c, LPTSTR l, int w, int t){
+	char szKey[7] = "Width0";
+	szKey[5] = '0' + t;
+	AddListColumn(hList, c, l, WAGetIniInt("Column", szKey, w), t == 1 ? LVCFMT_RIGHT : LVCFMT_LEFT);
+}
+
+static LPCTSTR GetPathType(struct FILEINFO *pInfo){
+	return IsURLPath(pInfo->szFilePath) ? TEXT("URL") : SafePathFindExtensionPlusOne(pInfo->szFilePath);
+}
+
+static int CompareNode(struct FILEINFO *pLeft, struct FILEINFO *pRight, int nSortType){
+	if (nSortType == 0)
+		return lstrcmpi(pLeft->szFilePath, pRight->szFilePath);	// フルパス
+	else if (nSortType < 0)
+		return -CompareNode(pLeft, pRight, -nSortType);	// 逆順
+	switch(nSortType - 1){
+		case 0:		// ファイル名昇順
+			return lstrcmpi(GetFileName(pLeft->szFilePath), GetFileName(pRight->szFilePath));
+		case 1:		// サイズ昇順
+			return StrToInt(pLeft->szSize) - StrToInt(pRight->szSize);
+		case 2:		// 種類昇順
+			return lstrcmpi(GetPathType(pLeft), GetPathType(pRight));
+		case 3:		// 更新日時昇順
+			return lstrcmp(pLeft->szTime, pRight->szTime);
+	}
+	return 0;
+}
+
+void GetColumnText(struct FILEINFO *pTmp, int nRow, int nColumn, LPTSTR pWork, int nWorkMax){
+	LPCTSTR pText = 0;
+	struct FILEINFO *pItem = GetPtrFromIndex(pTmp, nRow);
+	switch(nColumn){
+		case 0:
+			pText = GetFileName(pItem->szFilePath);
+			break;
+		case 1:
+			pText = pItem->szSize;
+			break;
+		case 2:
+			LPTSTR pszPath;
+			pszPath = pItem->szFilePath;
+			if(IsURLPath(pszPath)){
+				pText = TEXT("URL");
+			}else if(IsArchivePath(pszPath) && GetArchiveItemType(pszPath, pWork, nWorkMax)){
+				return;
+			}else{
+				LPTSTR p = PathFindExtension(pszPath);
+				if (p && *p) pText = p + 1;
+			}
+			break;
+		case 3:
+			pText = pItem->szTime;
+			break;
+	}
+	if (pText) lstrcpyn(pWork, pText, nWorkMax);
+}
+
+static void AddColumn(HWND hList, int c){
+	switch(c) {
+	case 0:
+		AddStandardColumn(hList, c, TEXT("ファイル名"), 200, 0);
+		break;
+	case 1:
+		AddStandardColumn(hList, c, TEXT("サイズ"), 70, 1);
+		break;
+	case 2:
+		AddStandardColumn(hList, c, TEXT("種類"), 40, 2);
+		break;
+	case 3:
+		AddStandardColumn(hList, c, TEXT("更新日時"), 130, 3);
+		break;
+	}
+}
+
+void AddColumns(HWND hList){
+	AddColumn(hList, 0);
+	AddColumn(hList, 1);
+	AddColumn(hList, 2);
+	AddColumn(hList, 3);
 }
