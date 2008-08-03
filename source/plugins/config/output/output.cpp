@@ -107,6 +107,7 @@ static struct {
 	int nReplayGainMixer;		// 音量増幅方法
 	int nReplayGainPreAmp;		// PreAmp(%)
 	int nReplayGainPostAmp;		// PostAmp(%)
+	int nChannelShift;			// チャンネルシフト(BASSASIO)
 } m_cfg;				// 設定構造体
 
 static DWORD CALLBACK GetConfigPageCount(void);
@@ -181,6 +182,8 @@ static void LoadConfig(){
 	m_cfg.nReplayGainPreAmp = WAGetIniInt("ReplayGain", "PreAmp", 100);
 	// PostAmp(%)
 	m_cfg.nReplayGainPostAmp = WAGetIniInt("ReplayGain", "PostAmp", 100);
+	// チャンネルシフト(BASSASIO)
+	m_cfg.nChannelShift = WAGetIniInt("BASSASIO", "ChannelShift", 0);
 
 }
 
@@ -199,6 +202,7 @@ static void SaveConfig(){
 	WASetIniInt("ReplayGain", "Mixer", m_cfg.nReplayGainMixer);
 	WASetIniInt("ReplayGain", "PreAmp", m_cfg.nReplayGainPreAmp);
 	WASetIniInt("ReplayGain", "PostAmp", m_cfg.nReplayGainPostAmp);
+	WASetIniInt("BASSASIO", "ChannelShift", m_cfg.nChannelShift);
 
 	WAFlushIni();
 }
@@ -215,8 +219,9 @@ static BOOL OutputCheckChanged(HWND hDlg){
 	if (m_cfg.nFadeOut != (int)SendDlgItemMessage(hDlg, IDC_CHECK14, BM_GETCHECK, 0, 0)) return TRUE;
 	if (m_cfg.nReplayGainMode != SendDlgItemMessage(hDlg, IDC_COMBO2, CB_GETCURSEL, (WPARAM)0, (LPARAM)0)) return TRUE;
 	if (m_cfg.nReplayGainMixer != SendDlgItemMessage(hDlg, IDC_COMBO3, CB_GETCURSEL, (WPARAM)0, (LPARAM)0)) return TRUE;
-	if (m_cfg.nReplayGainPreAmp != SendDlgItemMessage(hDlg, IDC_SPIN2, UDM_GETPOS, (WPARAM)0, (LPARAM)0)) return TRUE;
 	if (m_cfg.nReplayGainPostAmp != SendDlgItemMessage(hDlg, IDC_SPIN1, UDM_GETPOS, (WPARAM)0, (LPARAM)0)) return TRUE;
+	if (m_cfg.nReplayGainPreAmp != SendDlgItemMessage(hDlg, IDC_SPIN2, UDM_GETPOS, (WPARAM)0, (LPARAM)0)) return TRUE;
+	if (m_cfg.nChannelShift != SendDlgItemMessage(hDlg, IDC_SPIN4, UDM_GETPOS, (WPARAM)0, (LPARAM)0)) return TRUE;
 	return FALSE;
 }
 
@@ -271,6 +276,8 @@ static BOOL CALLBACK OutputSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			SendDlgItemMessage(hDlg, IDC_SPIN1, UDM_SETPOS, (WPARAM)0, (LPARAM)MAKELONG(m_cfg.nReplayGainPostAmp, 0));
 			SendDlgItemMessage(hDlg, IDC_SPIN2, UDM_SETRANGE, (WPARAM)0, (LPARAM)MAKELONG(999, 1));
 			SendDlgItemMessage(hDlg, IDC_SPIN2, UDM_SETPOS, (WPARAM)0, (LPARAM)MAKELONG(m_cfg.nReplayGainPreAmp, 0));
+			SendDlgItemMessage(hDlg, IDC_SPIN4, UDM_SETRANGE, (WPARAM)0, (LPARAM)MAKELONG(999, 0));
+			SendDlgItemMessage(hDlg, IDC_SPIN4, UDM_SETPOS, (WPARAM)0, (LPARAM)MAKELONG(m_cfg.nChannelShift, 0));
 
 			UpdatePreAmp(hDlg);
 
@@ -324,6 +331,7 @@ static BOOL CALLBACK OutputSheetProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 				m_cfg.nReplayGainMixer = (int)SendDlgItemMessage(hDlg, IDC_COMBO3, CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
 				m_cfg.nReplayGainPostAmp = (int)SendDlgItemMessage(hDlg, IDC_SPIN1, UDM_GETPOS, (WPARAM)0, (LPARAM)0);
 				m_cfg.nReplayGainPreAmp = (int)SendDlgItemMessage(hDlg, IDC_SPIN2, UDM_GETPOS, (WPARAM)0, (LPARAM)0);
+				m_cfg.nChannelShift = (int)SendDlgItemMessage(hDlg, IDC_SPIN4, UDM_GETPOS, (WPARAM)0, (LPARAM)0);
 				SaveConfig();
 				ApplyFittle();
 				return TRUE;
