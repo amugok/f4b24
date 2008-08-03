@@ -1,7 +1,7 @@
 /* f4b24“à•”Šg’£IF */
 
 typedef struct {
-	volatile int nAccessRight;
+	volatile LONG nAccessRight;
 	int nVersion;
 	int nUnicode;
 
