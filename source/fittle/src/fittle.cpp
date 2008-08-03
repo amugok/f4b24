@@ -380,6 +380,7 @@ static HWND Initialze(HINSTANCE hCurInst, int nCmdShow){
 
 	LoadState();
 	LoadConfig();
+	LoadColumnsOrder();
 
 	// ウィンドウ作成
 	hWnd = CreateWindow(szClassName,
@@ -567,6 +568,10 @@ static void OnCreate(HWND hWnd){
 	// 検索拡張子の決定
 	InitFileTypes();
 	TIMECHECK("検索拡張子の決定")
+
+	// 一般プラグイン初期化
+	InitGeneralPlugins(hWnd);
+	TIMECHECK("一般プラグイン初期化")
 
 	// タスクトレイ再描画のメッセージを保存
 	s_uTaskbarRestart = RegisterWindowMessage(TEXT("TaskbarCreated"));
@@ -880,10 +885,10 @@ static void OnCreate(HWND hWnd){
 
 	TIMECHECK("コマンドラインの処理")
 
-	// プラグインを呼び出す
-	InitPlugins(hWnd);
+	// Fittleプラグイン初期化
+	InitFittlePlugins(hWnd);
 
-	TIMECHECK("プラグインの初期化")
+	TIMECHECK("Fittleプラグイン初期化")
 
 #ifdef UNICODE
 	/* サブクラス化による文字化け対策 */
@@ -2604,9 +2609,12 @@ static void SaveState(HWND hWnd){
 
 	WASetIniInt("MiniPanel", "End", g_cfg.nMiniPanelEnd);
 
-	for(i=0;i<4;i++){
-		wsprintfA(szSec, "Width%d", i);
-		WASetIniInt("Column", szSec, ListView_GetColumnWidth(GetSelListTab()->hList, i));
+	for(i=0;i<GetColumnNum();i++){
+		int t = GetColumnType(i);
+		if (t >= 0 && t < 4){
+			wsprintfA(szSec, "Width%d", t);
+			WASetIniInt("Column", szSec, ListView_GetColumnWidth(GetSelListTab()->hList, i));
+		}
 	}
 	WASetIniInt("Column", "Sort", GetSelListTab()->nSortState);
 

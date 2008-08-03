@@ -496,6 +496,22 @@ int LinkCheck(struct FILEINFO **ppRoot){
 	return i;
 }
 
+
+static const BYTE m_aDefaultColumns[] = { 0, 1, 2, 3 };
+static int m_nNumColumns = 0;
+static LPBYTE m_pColumnTable = NULL;
+
+
+
+int GetColumnNum(){
+	return m_pColumnTable ? m_nNumColumns : (sizeof(m_aDefaultColumns)/sizeof(m_aDefaultColumns[0]));
+}
+int GetColumnType(int nColumn) {
+	if (nColumn < GetColumnNum())
+		return m_pColumnTable ? m_pColumnTable[nColumn] : m_aDefaultColumns[nColumn];
+	return -1;
+}
+
 static void AddListColumn(HWND hList, int c, LPTSTR l, int w, int fmt){
 	LVCOLUMN lvcol;
 	lvcol.mask = LVCF_TEXT | LVCF_FMT | LVCF_WIDTH | LVCF_SUBITEM;
@@ -520,7 +536,7 @@ static int CompareNode(struct FILEINFO *pLeft, struct FILEINFO *pRight, int nSor
 		return lstrcmpi(pLeft->szFilePath, pRight->szFilePath);	// フルパス
 	else if (nSortType < 0)
 		return -CompareNode(pLeft, pRight, -nSortType);	// 逆順
-	switch(nSortType - 1){
+	switch(GetColumnType(nSortType - 1)){
 		case 0:		// ファイル名昇順
 			return lstrcmpi(GetFileName(pLeft->szFilePath), GetFileName(pRight->szFilePath));
 		case 1:		// サイズ昇順
@@ -536,7 +552,7 @@ static int CompareNode(struct FILEINFO *pLeft, struct FILEINFO *pRight, int nSor
 void GetColumnText(struct FILEINFO *pTmp, int nRow, int nColumn, LPTSTR pWork, int nWorkMax){
 	LPCTSTR pText = 0;
 	struct FILEINFO *pItem = GetPtrFromIndex(pTmp, nRow);
-	switch(nColumn){
+	switch(GetColumnType(nColumn)){
 		case 0:
 			pText = GetFileName(pItem->szFilePath);
 			break;
@@ -563,7 +579,7 @@ void GetColumnText(struct FILEINFO *pTmp, int nRow, int nColumn, LPTSTR pWork, i
 }
 
 static void AddColumn(HWND hList, int c){
-	switch(c) {
+	switch(GetColumnType(c)) {
 	case 0:
 		AddStandardColumn(hList, c, TEXT("ファイル名"), 200, 0);
 		break;
@@ -580,8 +596,11 @@ static void AddColumn(HWND hList, int c){
 }
 
 void AddColumns(HWND hList){
-	AddColumn(hList, 0);
-	AddColumn(hList, 1);
-	AddColumn(hList, 2);
-	AddColumn(hList, 3);
+	int nMax = GetColumnNum();
+	int c;
+	for (c = 0; c < nMax; c++)
+		AddColumn(hList, c);
+}
+
+void LoadColumnsOrder(){
 }

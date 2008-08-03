@@ -26,7 +26,7 @@ static HWND m_hWnd = NULL;
 
 static BOOL InitPlugin(GENERAL_PLUGIN_NODE *pNode){
 	if (pNode->nType == 1) {
-		return pNode->info.pGeneral->OnEvent(m_hWnd, GENERAL_PLUGIN_EVENT_INIT);
+		return pNode->info.pGeneral->OnEvent(m_hWnd, GENERAL_PLUGIN_EVENT_INIT0);
 	}
 	if (pNode->info.pFittle->nPDKVer!=PDK_VER) return FALSE;
 	pNode->info.pFittle->hParent = m_hWnd;
@@ -84,9 +84,13 @@ static void RaiseEventPlugins(GENERAL_PLUGIN_EVENT eCode){
 	}
 }
 
-void InitPlugins(HWND hWnd){
+void InitGeneralPlugins(HWND hWnd){
 	m_hWnd = hWnd;
 	WAEnumPlugins(NULL, "Plugins\\fgp\\", "*.fgp", RegisterGeneralPlugin, 0);
+}
+
+void InitFittlePlugins(HWND hWnd){
+	RaiseEventPlugins(GENERAL_PLUGIN_EVENT_INIT);
 	WAEnumPlugins(NULL, "Plugins\\Fittle\\", "*.dll", RegisterFittlePlugin, 0);
 	RaiseEventPlugins(GENERAL_PLUGIN_EVENT_INIT2);
 }
