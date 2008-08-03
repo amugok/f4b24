@@ -31,7 +31,7 @@ typedef struct LX_PLUGIN_INFO_TAG {
 	int (CALLBACK *CompareColumnText)(LPVOID pFileInfoLeft, LPVOID pFileInfoRight, int nColumn, int nType);
 	void (CALLBACK *OnQuit)();
 
-	HWND hwndMain;
+	HWND hWndMain;
 	HMODULE hmodPlugin;
 	F4B24LX_INTERFACE *plxif;
 

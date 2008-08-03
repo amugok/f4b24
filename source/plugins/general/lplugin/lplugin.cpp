@@ -39,18 +39,8 @@ GENERAL_PLUGIN_INFO * CALLBACK GetGPluginInfo(void){
 
 static HMODULE m_hDLL = 0;
 static F4B24LX_INTERFACE *m_plxif = 0;
+
 #include "../../../fittle/src/wastr.cpp"
-
-BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
-	(void)lpvReserved;
-	if (fdwReason == DLL_PROCESS_ATTACH){
-		m_hDLL = hinstDLL;
-		DisableThreadLibraryCalls(hinstDLL);
-	}else if (fdwReason == DLL_PROCESS_DETACH){
-	}
-	return TRUE;
-}
-
 
 /* LXプラグインリスト */
 static struct PLUGIN_NODE {
@@ -76,6 +66,17 @@ static void FreePlugins(){
 		pList = pNext;
 	}
 	pTop = NULL;
+}
+
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
+	(void)lpvReserved;
+	if (fdwReason == DLL_PROCESS_ATTACH){
+		m_hDLL = hinstDLL;
+		DisableThreadLibraryCalls(hinstDLL);
+	}else if (fdwReason == DLL_PROCESS_DETACH){
+		FreePlugins();
+	}
+	return TRUE;
 }
 
 typedef struct USERDATA_NODE_TAG {
@@ -157,11 +158,12 @@ static BOOL CALLBACK RegisterPlugin(HMODULE hPlugin, LPVOID user){
 			pNewNode->pNext = NULL;
 			pNewNode->hDll = hPlugin;
 			if (pNewNode->pInfo){
-				pNewNode->pInfo->hWndMain = gpinfo.hWndMain;
-				pNewNode->pInfo->hmodPlugin = hPlugin;
-				pNewNode->pInfo->plxif = m_plxif;
-				pNewNode->pInfo->GetUserData = CBGetUserData;
-				pNewNode->pInfo->SetUserData = CBSetUserData;
+				LX_PLUGIN_INFO *pInfo = pNewNode->pInfo;
+				pInfo->hWndMain = gpinfo.hWndMain;
+				pInfo->hmodPlugin = hPlugin;
+				pInfo->plxif = m_plxif;
+				pInfo->GetUserData = CBGetUserData;
+				pInfo->SetUserData = CBSetUserData;
 				if (pTop) {
 					struct LX_PLUGIN_NODE *pList;
 					for (pList = pTop; pList->pNext; pList = pList->pNext);
@@ -199,11 +201,15 @@ static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg) {
 static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode) {
 	if (eCode == GENERAL_PLUGIN_EVENT_INIT0) {
 		LONG nAccessRight;
+
 		WAIsUnicode();
+
 		m_plxif = (F4B24LX_INTERFACE *)SendMessage(hWnd, WM_F4B24_IPC, WM_F4B24_IPC_GET_LX_IF, 0);
 		if (!m_plxif || m_plxif->nVersion != 36) return FALSE;
+
 		nAccessRight = InterlockedExchange(&m_plxif->nAccessRight, 0);
 		if (!nAccessRight) return FALSE;
+
 		m_plxif->HookOnAlloc = OnAlloc;
 		m_plxif->HookOnFree = OnFree;
 		m_plxif->HookInitColumnOrder = InitColumnOrder;
@@ -211,7 +217,10 @@ static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode) {
 		m_plxif->HookGetColumnText = GetColumnText;
 		m_plxif->HookCompareColumnText = CompareColumnText;
 		m_plxif->HookOnSave = OnSave;
+
+		WAEnumPlugins(NULL, "Plugins\\flp\\", "*.flp", RegisterPlugin, 0);
 	} else if (eCode == GENERAL_PLUGIN_EVENT_QUIT) {
+		FreePlugins();
 	}
 	return TRUE;
 }

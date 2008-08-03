@@ -365,10 +365,13 @@ static DWORD CALLBACK GetConfigPageCount(void){
 static HPROPSHEETPAGE CALLBACK GetConfigPage(int nIndex, int nLevel, LPSTR pszConfigPath, int nConfigPathSize){
 	LPCSTR lpszTemplate, lpszPath;
 	DLGPROC lpfnDlgProc = 0;
-	WAIsUnicode();
-	if (!pTop) WAEnumPlugins(NULL, "Plugins\\fop\\", "*.fop", RegisterOutputPlugin, 0);
+
 	if (nLevel == 1){
 		if (nIndex == 0){
+
+			WAIsUnicode();
+			if (!pTop) WAEnumPlugins(NULL, "Plugins\\fop\\", "*.fop", RegisterOutputPlugin, 0);
+
 			lpszTemplate = "OUTPUT_SHEET";
 			lpfnDlgProc = (DLGPROC)OutputSheetProc;
 			lpszPath = "fittle/output";
