@@ -96,6 +96,41 @@ void WAstrcat(LPWASTR pBuf, LPCWASTR pValue){
 		WAstrcatA(pBuf, pValue->A);
 }
 
+int WAStrStrI(LPCWASTR pBuf, LPCWASTR pPtn){
+	if (m_WAIsUnicode){
+		LPWSTR pMatch = StrStrIW(pBuf->W, pPtn->W);
+		return pMatch ? pMatch - pBuf->W + 1: 0;
+	}else{
+		LPSTR pMatch = StrStrIA(pBuf->A, pPtn->A);
+		return pMatch ? pMatch - pBuf->A + 1: 0;
+	}
+}
+
+void WAAddBackslash(LPWASTR pBuf){
+	int l = WAstrlen(pBuf) - 1;
+	if (l >= 0 && (m_WAIsUnicode ? pBuf->W[l] != L'\\' : pBuf->A[l] != '\\'))
+		WAstrcatA(pBuf, "\\");
+}
+
+BOOL WAIsUNCPath(LPCWASTR pPath){
+	return (m_WAIsUnicode) ?
+		(pPath->W[0] == L'\\' && pPath->W[1] == L'\\') :
+		(pPath->A[0] == '\\' && pPath->A[1] == '\\');
+}
+
+BOOL WAIsDirectory(LPCWASTR pPath){
+	return (m_WAIsUnicode) ?
+		PathIsDirectoryW(pPath->W) :
+		PathIsDirectoryA(pPath->A);
+}
+
+void WAGetFileName(LPWASTR pBuf, LPCWASTR pPath){
+	if (m_WAIsUnicode)
+		lstrcpynW(pBuf->W, PathFindFileNameW(pPath->W), WA_MAX_SIZE);
+	else
+		lstrcpynA(pBuf->A, PathFindFileNameA(pPath->A), WA_MAX_SIZE);
+}
+
 void WAGetModuleParentDir(HMODULE h, LPWASTR pBuf){
 	if (m_WAIsUnicode) {
 		GetModuleFileNameW(h, pBuf->W, WA_MAX_SIZE);
@@ -104,12 +139,6 @@ void WAGetModuleParentDir(HMODULE h, LPWASTR pBuf){
 		GetModuleFileNameA(h, pBuf->A, WA_MAX_SIZE);
 		*PathFindFileNameA(pBuf->A) = '\0';
 	}
-}
-
-static void WAAddBackslash(LPWASTR pBuf){
-	int l = WAstrlen(pBuf) - 1;
-	if (l >= 0 && (m_WAIsUnicode ? pBuf->W[l] != L'\\' : pBuf->A[l] != '\\'))
-		WAstrcatA(pBuf, "\\");
 }
 
 void WAGetIniDir(HMODULE h, LPWASTR pBuf){

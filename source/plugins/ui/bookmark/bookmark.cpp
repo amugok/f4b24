@@ -29,8 +29,9 @@
 
 typedef struct StringList {
 	struct StringList *pNext;
-	TCHAR szString[1];
+	WASTR szString;
 } STRING_LIST, *LPSTRING_LIST;
+
 
 static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg);
 static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode);
@@ -60,6 +61,7 @@ static void HookComboUpdate(HWND);
 static BOOL HookTreeRoot(HWND);
 
 static HMODULE m_hinstDLL = 0;
+static BOOL m_bIsUnicode = FALSE;
 
 #define MAX_BM_SIZE 100			// しおりの数
 
@@ -91,13 +93,13 @@ static  LPSTRING_LIST StringListWalk(LPSTRING_LIST *pList, int nIndex){
 	return NULL;
 }
 
-static int StringListAdd(LPSTRING_LIST *pList, LPTSTR szValue){
+static int StringListAdd(LPSTRING_LIST *pList, LPCWASTR pszValue){
 	int i = 0;
 	LPSTRING_LIST pCur = *pList;
-	LPSTRING_LIST pNew = (LPSTRING_LIST)HeapAlloc(GetProcessHeap(), 0, sizeof(STRING_LIST) + sizeof(TCHAR) * lstrlen(szValue));
+	LPSTRING_LIST pNew = (LPSTRING_LIST)HeapAlloc(GetProcessHeap(), 0, sizeof(STRING_LIST));
 	if (!pNew) return -1;
 	pNew->pNext = NULL;
-	lstrcpy(pNew->szString, szValue);
+	WAstrcpy(&pNew->szString, pszValue);
 	if (pCur){
 		i++;
 		/* 末尾に追加 */
@@ -117,15 +119,14 @@ static void ClearBookmark(void){
 	StringListFree(&g_cfgbm.lpBookmark);
 }
 
-LPCTSTR GetBookmark(int nIndex){
-	static TCHAR szNull[1] = {0};
+LPCWASTR GetBookmark(int nIndex){
 	LPSTRING_LIST lpbm = StringListWalk(&g_cfgbm.lpBookmark, nIndex);
-	return lpbm ? lpbm->szString : szNull;
+	return lpbm ? &lpbm->szString : 0;
 }
 
-static int AppendBookmark(LPTSTR szPath){
-	if (!szPath || !*szPath) return TRUE;
-	return StringListAdd(&g_cfgbm.lpBookmark, szPath);
+static int AppendBookmark(LPCWASTR pszPath){
+	if (!pszPath || !WAstrlen(pszPath)) return TRUE;
+	return StringListAdd(&g_cfgbm.lpBookmark, pszPath);
 }
 
 static void UpdateDriveList(HWND hWnd){
@@ -185,19 +186,19 @@ static HWND CreateWorkWindow(void){
 	return CreateWindow(TEXT("STATIC"),TEXT(""),0,0,0,0,0,NULL,NULL,m_hinstDLL,NULL);
 }
 
-static void GetCurPath(HWND hWnd, LPTSTR lpszBuf, int nBufSize) {
+static void GetCurPath(HWND hWnd, LPWASTR lpszBuf) {
 	HWND hwndWork = CreateWorkWindow();
 	if (hwndWork){
 		SendMessage(hWnd, WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_GET_CURPATH, (LPARAM)hwndWork);
-		SendMessage(hwndWork, WM_GETTEXT, (WPARAM)nBufSize, (LPARAM)lpszBuf);
+		WAGetWindowText(hwndWork, lpszBuf);
 		DestroyWindow(hwndWork);
 	}
 }
 
-static void SetCurPath(HWND hWnd, LPCTSTR lpszPath) {
+static void SetCurPath(HWND hWnd, LPCWASTR lpszPath) {
 	HWND hwndWork = CreateWorkWindow();
 	if (hwndWork){
-		SendMessage(hwndWork, WM_SETTEXT, (WPARAM)0, (LPARAM)lpszPath);
+		WASetWindowText(hwndWork, lpszPath);
 		SendMessage(hWnd, WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_SET_CURPATH, (LPARAM)hwndWork);
 		DestroyWindow(hwndWork);
 	}
@@ -208,8 +209,8 @@ static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg) {
 	case WM_SYSCOMMAND:
 	case WM_COMMAND:
 		if(IDM_BM_FIRST<=LOWORD(pMsg->wp) && LOWORD(pMsg->wp)<IDM_BM_FIRST+MAX_BM_SIZE){
-			LPCTSTR lpszBMPath = GetBookmark(LOWORD(pMsg->wp)-IDM_BM_FIRST);
-			if(!lpszBMPath[0]) break;
+			LPCWASTR lpszBMPath = GetBookmark(LOWORD(pMsg->wp)-IDM_BM_FIRST);
+			if(!lpszBMPath || !WAstrlen(lpszBMPath)) break;
 			SetCurPath(pMsg->hWnd, lpszBMPath);
 			break;
 		}
@@ -246,6 +247,7 @@ static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg) {
 
 static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode) {
 	if (eCode == GENERAL_PLUGIN_EVENT_INIT) {
+		m_bIsUnicode = WAIsUnicode();
 		LoadState(hWnd);
 
 		EnableMenuItem(GetMenu(hWnd), IDM_BM_ADD, MF_BYCOMMAND | MF_ENABLED);
@@ -260,10 +262,27 @@ static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode) {
 	return TRUE;
 }
 
+static void AddBMMenu(HMENU hBMMenu, int i, LPCWASTR lpszBMPath){
+	WASTR szMenuBuf;
+	CHAR buf[16];
+	wsprintfA(buf, "&%d: ", i);
+	WAstrcpyA(&szMenuBuf, buf);
+	if (g_cfgbm.nBMFullPath) {
+		WAstrcat(&szMenuBuf, lpszBMPath);
+	} else {
+		WASTR szFileName;
+		WAGetFileName(&szFileName, lpszBMPath);
+		WAstrcat(&szMenuBuf, &szFileName);
+	}
+	if (m_bIsUnicode)
+		AppendMenuW(hBMMenu, MF_STRING | MF_ENABLED, IDM_BM_FIRST+i, szMenuBuf.W);
+	else
+		AppendMenuA(hBMMenu, MF_STRING | MF_ENABLED, IDM_BM_FIRST+i, szMenuBuf.A);
+}
+
 // しおりをメニューに描画
 static void DrawBookMark(HMENU hBMMenu){
 	int i;
-	TCHAR szMenuBuff[MAX_FITTLE_PATH+4];
 
 	// 今あるメニューを削除
 	for(i=0;i<MAX_BM_SIZE;i++){
@@ -272,132 +291,148 @@ static void DrawBookMark(HMENU hBMMenu){
 
 	// 新しくメニューを追加
 	for(i=0;i<MAX_BM_SIZE;i++){
-		LPCTSTR lpszBMPath = GetBookmark(i);
-		if(!lpszBMPath[0]) break;
-		if(g_cfgbm.nBMFullPath){
-			wsprintf(szMenuBuff, TEXT("&%d: %s"), i, lpszBMPath);
-		}else{
-			wsprintf(szMenuBuff, TEXT("&%d: %s"), i, PathFindFileName(lpszBMPath));
-		}
-		AppendMenu(hBMMenu, MF_STRING | MF_ENABLED, IDM_BM_FIRST+i, szMenuBuff);
+		LPCWASTR lpszBMPath = GetBookmark(i);
+		if(!lpszBMPath || !WAstrlen(lpszBMPath)) break;
+		AddBMMenu(hBMMenu, i, lpszBMPath);
 	}
 	return;
 }
 
 // しおりに追加（あとで修正）
 static int AddBookMark(HMENU hBMMenu, HWND hWnd){
-	TCHAR szBuf[MAX_FITTLE_PATH];
-	TCHAR szMenuBuff[MAX_FITTLE_PATH+4];
+	WASTR szBuf;
 	int i;
 
-	if (*GetBookmark(MAX_BM_SIZE-1)){
+	if (GetBookmark(MAX_BM_SIZE - 1)){
 		MessageBox(hWnd, TEXT("しおりの個数制限を越えました。"), TEXT("Fittle"), MB_OK | MB_ICONEXCLAMATION);
 		return -1;
 	}
 
-	szBuf[0] = TEXT('\0');
-	GetCurPath(hWnd, szBuf, MAX_FITTLE_PATH);
-	if (!szBuf[0]) return -1;
+	WAstrcpyA(&szBuf, "");
+	GetCurPath(hWnd, &szBuf);
+	if (!WAstrlen(&szBuf)) return -1;
 
-	i = AppendBookmark(szBuf);
+	i = AppendBookmark(&szBuf);
 	if (i < 0){
 		return -1;
 	}
-	
-	if(g_cfgbm.nBMFullPath){
-		wsprintf(szMenuBuff, TEXT("&%d: %s"), i, szBuf);
-	}else{
-		wsprintf(szMenuBuff, TEXT("&%d: %s"), i, PathFindFileName(szBuf));
-	}
-	AppendMenu(hBMMenu, MF_STRING | MF_ENABLED, IDM_BM_FIRST+i, szMenuBuff);
+	AddBMMenu(hBMMenu, i, &szBuf);
+
 	return i;
 }
 
+static int LV_GetWidth(HWND hList, LPCWASTR lpszString){
+	return (m_bIsUnicode) ?
+		SendMessageW(hList, LVM_GETSTRINGWIDTHW, 0, (LPARAM)lpszString->W) :
+		SendMessageA(hList, LVM_GETSTRINGWIDTHA, 0, (LPARAM)lpszString->A);
+}
 
-/*  既に実行中のFittleにパラメータを送信する */
-static void SendCopyData(HWND hFittle, int iType, LPTSTR lpszString){
-#ifdef UNICODE
-	CHAR nameA[MAX_FITTLE_PATH];
-	LPBYTE lpWork;
-	COPYDATASTRUCT cds;
-	DWORD la, lw, cbData;
-	WideCharToMultiByte(CP_ACP, 0, lpszString, -1, nameA, MAX_FITTLE_PATH, NULL, NULL);
-	la = lstrlenA(nameA) + 1;
-	if (la & 1) la++; /* WORD align */
-	lw = lstrlenW(lpszString) + 1;
-	cbData = la * sizeof(CHAR) + lw * sizeof(WCHAR);
-	lpWork = (LPBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, cbData);
-	if (!lpWork) return;
-	lstrcpyA((LPSTR)(lpWork), nameA);
-	lstrcpyW((LPWSTR)(lpWork + la), lpszString);
-	cds.dwData = iType;
-	cds.lpData = (LPVOID)lpWork;
-	cds.cbData = cbData;
-	SendMessage(hFittle, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
-	HeapFree(GetProcessHeap(), 0, lpWork);
-#else
-	COPYDATASTRUCT cds;
-	cds.dwData = iType;
-	cds.lpData = (LPVOID)lpszString;
-	cds.cbData = (lstrlenA(lpszString) + 1) * sizeof(CHAR);
-	// 文字列送信
-	SendMessage(hFittle, WM_COPYDATA, (WPARAM)NULL, (LPARAM)&cds);
-#endif
+static LV_InsertItem(HWND hList, int nPos, LPCWASTR lpszString){
+	union {
+		LVITEMA A;
+		LVITEMW W;
+	} item;
+	if (m_bIsUnicode){
+		item.W.mask = LVIF_TEXT;
+		item.W.iSubItem = 0;
+		item.W.pszText = (LPWSTR)lpszString->W;
+		item.W.iItem = nPos;
+		SendMessageW(hList, LVM_INSERTITEMW, 0, (LPARAM)&item.W);
+	}else{
+		item.A.mask = LVIF_TEXT;
+		item.A.iSubItem = 0;
+		item.A.pszText = (LPSTR)lpszString->A;
+		item.A.iItem = nPos;
+		SendMessageA(hList, LVM_INSERTITEMA, 0, (LPARAM)&item.A);
+	}
+}
+
+static LV_GetItemText(HWND hList, int nPos, LPWASTR lpszBuf){
+	union {
+		LVITEMA A;
+		LVITEMW W;
+	} item;
+	if (m_bIsUnicode){
+		item.W.iSubItem = 0;
+		item.W.pszText = lpszBuf->W;
+		item.W.cchTextMax = WA_MAX_SIZE;
+		SendMessageW(hList, LVM_GETITEMTEXTW, nPos, (LPARAM)&item.W);
+	}else{
+		item.A.iSubItem = 0;
+		item.A.pszText = lpszBuf->A;
+		item.A.cchTextMax = WA_MAX_SIZE;
+		SendMessageA(hList, LVM_GETITEMTEXTA, nPos, (LPARAM)&item.A);
+	}
+}
+
+static LV_SetItemText(HWND hList, int nPos, LPCWASTR lpszBuf){
+	union {
+		LVITEMA A;
+		LVITEMW W;
+	} item;
+	if (m_bIsUnicode){
+		item.W.iSubItem = 0;
+		item.W.pszText = (LPWSTR)lpszBuf->W;
+		SendMessageW(hList, LVM_SETITEMTEXTW, nPos, (LPARAM)&item.W);
+	}else{
+		item.A.iSubItem = 0;
+		item.A.pszText = (LPSTR)lpszBuf->A;
+		SendMessageA(hList, LVM_SETITEMTEXTA, nPos, (LPARAM)&item.A);
+	}
 }
 
 static BOOL CALLBACK BookMarkDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM /*lp*/){
 	static HWND hList = NULL;
-	int i;
-	LVITEM item;
 
 	switch (msg)
 	{
 		case WM_INITDIALOG:	// 初期化
-			hList = GetDlgItem(hDlg, IDC_LIST1);
+			{
+				int i;
+				int nMax;
+				LVCOLUMN lvcol;
+				hList = GetDlgItem(hDlg, IDC_LIST1);
 
-			LVCOLUMN lvcol;
-			ZeroMemory(&lvcol, sizeof(LVCOLUMN));
-			lvcol.mask = LVCF_FMT;
-			lvcol.fmt = LVCFMT_LEFT;
-			ListView_InsertColumn(hList, 0, &lvcol);
+				ZeroMemory(&lvcol, sizeof(LVCOLUMN));
+				lvcol.mask = LVCF_FMT;
+				lvcol.fmt = LVCFMT_LEFT;
+				ListView_InsertColumn(hList, 0, &lvcol);
 
-			ZeroMemory(&item, sizeof(LVITEM));
-			item.mask = LVIF_TEXT;
-			item.iSubItem = 0;
-			int nMax;
-			nMax = 300;
+				nMax = 300;
 
-			for(i=0;i<MAX_BM_SIZE;i++){
-				TCHAR szBMPath[MAX_FITTLE_PATH];
-				lstrcpyn(szBMPath, GetBookmark(i), MAX_FITTLE_PATH);
-				if(!szBMPath[0]) break;
-				item.pszText = szBMPath;
-				nMax = ListView_GetStringWidth(hList, item.pszText)+10>nMax?ListView_GetStringWidth(hList, item.pszText)+10:nMax;
-				item.iItem = i;
-				ListView_InsertItem(hList, &item);
+				for(i=0;i<MAX_BM_SIZE;i++){
+					LPCWASTR lpszBMPath = GetBookmark(i);
+					if(!lpszBMPath || !WAstrlen(lpszBMPath)) break;
+
+					nMax = LV_GetWidth(hList, lpszBMPath) + 10 > nMax ? LV_GetWidth(hList, lpszBMPath) + 10 : nMax;
+					LV_InsertItem(hList, i, lpszBMPath);
+				}
+				ListView_SetColumnWidth(hList, 0, nMax);
+				ListView_SetItemState(hList, 0, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED));
+				SendDlgItemMessage(hDlg, IDC_CHECK1, BM_SETCHECK, (WPARAM)(g_cfgbm.nBMRoot?BST_CHECKED:BST_UNCHECKED), 0);
+				SendDlgItemMessage(hDlg, IDC_CHECK6, BM_SETCHECK, (WPARAM)(g_cfgbm.nBMFullPath?BST_CHECKED:BST_UNCHECKED), 0);
 			}
-			ListView_SetColumnWidth(hList, 0, nMax);
-			ListView_SetItemState(hList, 0, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED));
-			SendDlgItemMessage(hDlg, IDC_CHECK1, BM_SETCHECK, (WPARAM)(g_cfgbm.nBMRoot?BST_CHECKED:BST_UNCHECKED), 0);
-			SendDlgItemMessage(hDlg, IDC_CHECK6, BM_SETCHECK, (WPARAM)(g_cfgbm.nBMFullPath?BST_CHECKED:BST_UNCHECKED), 0);
 			return FALSE;
 
 		case WM_COMMAND:
 			switch(LOWORD(wp))
 			{
 				case IDOK:
-					int nCount;
+					{
+						int i;
+						int nCount;
 
-					ClearBookmark();
-					nCount = ListView_GetItemCount(hList);
-					for(i=0;i<nCount;i++){
-						TCHAR szBuf[MAX_FITTLE_PATH];
-						ListView_GetItemText(hList, i, 0, szBuf, MAX_FITTLE_PATH);
-						AppendBookmark(szBuf);
+						ClearBookmark();
+						nCount = ListView_GetItemCount(hList);
+						for(i=0;i<nCount;i++){
+							WASTR szBuf;
+							LV_GetItemText(hList, i, &szBuf);
+							AppendBookmark(&szBuf);
+						}
+						g_cfgbm.nBMRoot = SendDlgItemMessage(hDlg, IDC_CHECK1, BM_GETCHECK, 0, 0);
+						g_cfgbm.nBMFullPath = SendDlgItemMessage(hDlg, IDC_CHECK6, BM_GETCHECK, 0, 0);
+						EndDialog(hDlg, 1);
 					}
-					g_cfgbm.nBMRoot = SendDlgItemMessage(hDlg, IDC_CHECK1, BM_GETCHECK, 0, 0);
-					g_cfgbm.nBMFullPath = SendDlgItemMessage(hDlg, IDC_CHECK6, BM_GETCHECK, 0, 0);
-					EndDialog(hDlg, 1);
 					return TRUE;
 
 				case IDCANCEL:
@@ -405,32 +440,37 @@ static BOOL CALLBACK BookMarkDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM /*lp
 					return TRUE;
 
 				case IDC_BUTTON1:	// 上へ
-					int nSel;
-					TCHAR szPath[MAX_FITTLE_PATH], szSub[MAX_FITTLE_PATH];
-
-					nSel = ListView_GetNextItem(hList, -1, LVNI_FOCUSED);
-					if(nSel<=0) return FALSE;
-					ListView_GetItemText(hList, nSel-1, 0, szSub, MAX_FITTLE_PATH);
-					ListView_GetItemText(hList, nSel, 0, szPath, MAX_FITTLE_PATH);
-					ListView_SetItemText(hList, nSel-1, 0, szPath);
-					ListView_SetItemText(hList, nSel, 0, szSub);
-					ListView_SetItemState(hList, nSel-1, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED));
+					{
+						WASTR szPath, szSub;
+						int nSel = ListView_GetNextItem(hList, -1, LVNI_FOCUSED);
+						if(nSel<=0) return FALSE;
+						LV_GetItemText(hList, nSel-1, &szSub);
+						LV_GetItemText(hList, nSel, &szPath);
+						LV_SetItemText(hList, nSel-1, &szPath);
+						LV_SetItemText(hList, nSel, &szSub);
+						ListView_SetItemState(hList, nSel-1, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED));
+					}
 					return TRUE;
 
 				case IDC_BUTTON2:	// 下へ
-					nSel = ListView_GetNextItem(hList, -1, LVNI_FOCUSED);
-					if(nSel+1==ListView_GetItemCount(hList)) return FALSE;
-					ListView_GetItemText(hList, nSel+1, 0, szSub, MAX_FITTLE_PATH);
-					ListView_GetItemText(hList, nSel, 0, szPath, MAX_FITTLE_PATH);
-					ListView_SetItemText(hList, nSel+1, 0, szPath);
-					ListView_SetItemText(hList, nSel, 0, szSub);
-					ListView_SetItemState(hList, nSel+1, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED));
+					{
+						WASTR szPath, szSub;
+						int nSel = ListView_GetNextItem(hList, -1, LVNI_FOCUSED);
+						if(nSel+1==ListView_GetItemCount(hList)) return FALSE;
+						LV_GetItemText(hList, nSel+1, &szSub);
+						LV_GetItemText(hList, nSel, &szPath);
+						LV_SetItemText(hList, nSel+1, &szPath);
+						LV_SetItemText(hList, nSel, &szSub);
+						ListView_SetItemState(hList, nSel+1, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED));
+					}
 					return TRUE;
 
 				case IDC_BUTTON3:
-					nSel = ListView_GetNextItem(hList, -1, LVNI_FOCUSED);
-					if(nSel<0) return FALSE;
-					ListView_DeleteItem(hList, nSel);
+					{
+						int nSel = ListView_GetNextItem(hList, -1, LVNI_FOCUSED);
+						if(nSel<0) return FALSE;
+						ListView_DeleteItem(hList, nSel);
+					}
 					return TRUE;
 
 			}
@@ -451,25 +491,16 @@ static void LoadBookMark(HMENU hBMMenu){
 	int i;
 	CHAR szSec[10];
 	WASTR szItem;
-	TCHAR szMenuBuff[MAX_FITTLE_PATH+4];
 
 	ClearBookmark();
 	for(i=0;i<MAX_BM_SIZE;i++){
 		int j;
 		wsprintfA(szSec, "Path%d", i);
-		szMenuBuff[0] = 0;
 		WAGetIniStr("BookMark", szSec, &szItem);
-		WAstrcpyt(szMenuBuff, &szItem, MAX_FITTLE_PATH+4);
-		if(!szMenuBuff[0]) break;
-		j =  AppendBookmark(szMenuBuff);
+		if(!WAstrlen(&szItem)) break;
+		j =  AppendBookmark(&szItem);
 		if (j >= 0){
-			LPCTSTR lpszBMPath = GetBookmark(j);
-			if(g_cfgbm.nBMFullPath){
-				wsprintf(szMenuBuff, TEXT("&%d: %s"), j, lpszBMPath);
-			}else{
-				wsprintf(szMenuBuff, TEXT("&%d: %s"), j, PathFindFileName(lpszBMPath));
-			}
-			AppendMenu(hBMMenu, MF_STRING | MF_ENABLED, IDM_BM_FIRST+j, szMenuBuff);
+			AddBMMenu(hBMMenu, i, &szItem);
 		}
 	}
 	return;
@@ -479,79 +510,89 @@ static void LoadBookMark(HMENU hBMMenu){
 static void SaveBookMark(){
 	int i;
 	CHAR szSec[10];
-	WASTR szItem;
 
 	for(i=0;i<MAX_BM_SIZE;i++){
-		LPCTSTR lpszBMPath = GetBookmark(i);
+		LPCWASTR lpszBMPath = GetBookmark(i);
 		wsprintfA(szSec, "Path%d", i);
-		WAstrcpyT(&szItem, lpszBMPath);
-		WASetIniStr("BookMark", szSec, lpszBMPath[0] ? &szItem : NULL);
-		if (!lpszBMPath[0]) break;
+		if (!lpszBMPath || !WAstrlen(lpszBMPath)){
+			WASetIniStr("BookMark", szSec, NULL);
+			break;
+		}
+		WASetIniStr("BookMark", szSec, lpszBMPath);
 	}
 	return;
 }
 
 static void HookComboUpdate(HWND hCB){
 	int i,j;
-	TCHAR szDrawBuff[MAX_FITTLE_PATH];
-
-	COMBOBOXEXITEM citem = {0};
-	citem.mask = CBEIF_TEXT | CBEIF_LPARAM | CBEIF_IMAGE | CBEIF_SELECTEDIMAGE;
-	citem.cchTextMax = MAX_FITTLE_PATH;
+	WASTR szDrawBuff;
+	union {
+		COMBOBOXEXITEMA A;
+		COMBOBOXEXITEMW W;
+	} citem;
 
 	// しおりフォルダ列挙
 	i = SendMessage(hCB, CB_GETCOUNT, 0, 0);
 	for(j=0;j<MAX_BM_SIZE;j++){
-		LPCTSTR lpszBMPath = GetBookmark(j);
-		if (!lpszBMPath[0]) break;
-		if((lpszBMPath[0]==TEXT('\\') && lpszBMPath[1]==TEXT('\\')) || PathIsDirectory(lpszBMPath)){
-			lstrcpyn(szDrawBuff, lpszBMPath, MAX_FITTLE_PATH);
-			PathAddBackslash(szDrawBuff);
-			citem.pszText = szDrawBuff;
-			citem.iItem = i;
-			//TODO
-			citem.lParam = citem.iImage = citem.iSelectedImage = -1;
-			SendMessage(hCB, CBEM_INSERTITEM, 0, (LPARAM)&citem);
-			i++;
-//		}else if(IsPlayList(lpszBMPath) || IsArchive(lpszBMPath)){
+		LPCWASTR lpszBMPath = GetBookmark(j);
+		if(!lpszBMPath || !WAstrlen(lpszBMPath)) break;
+		if(WAIsUNCPath(lpszBMPath) || WAIsDirectory(lpszBMPath)){
+			WAstrcpy(&szDrawBuff, lpszBMPath);
+			WAAddBackslash(&szDrawBuff);
 		} else {
-			wsprintf(szDrawBuff, TEXT("%s"), lpszBMPath);
-			citem.pszText = szDrawBuff;
-			citem.iItem = i;
-			citem.lParam = citem.iImage = citem.iSelectedImage = -1;
-			SendMessage(hCB, CBEM_INSERTITEM, 0, (LPARAM)&citem);
-			i++;
+			WAstrcpy(&szDrawBuff, lpszBMPath);
 		}
+		if (m_bIsUnicode){
+			citem.W.mask = CBEIF_TEXT | CBEIF_LPARAM | CBEIF_IMAGE | CBEIF_SELECTEDIMAGE;
+			citem.W.cchTextMax = WA_MAX_SIZE;
+			citem.W.iItem = i;
+			citem.W.lParam = citem.W.iImage = citem.W.iSelectedImage = -1;
+			citem.W.pszText = szDrawBuff.W;
+			SendMessageW(hCB, CBEM_INSERTITEMW, 0, (LPARAM)&citem.W);
+		} else {
+			citem.A.mask = CBEIF_TEXT | CBEIF_LPARAM | CBEIF_IMAGE | CBEIF_SELECTEDIMAGE;
+			citem.A.cchTextMax = WA_MAX_SIZE;
+			citem.A.iItem = i;
+			citem.A.lParam = citem.A.iImage = citem.A.iSelectedImage = -1;
+			citem.A.pszText = szDrawBuff.A;
+			SendMessageA(hCB, CBEM_INSERTITEMW, 0, (LPARAM)&citem.A);
+		}
+		i++;
 	}
 }
 
 
+static BOOL IsSeparator(LPCWASTR lpszpath, int nPos){
+	if (m_bIsUnicode)
+		return lpszpath->W[nPos] == L'\\' || lpszpath->W[nPos] == L'\0';
+	else
+		return lpszpath->A[nPos] == '\\' || lpszpath->A[nPos] == '\0';
+}
 
 static BOOL HookTreeRoot(HWND hwndWork){
 	int i;
-	TCHAR szSetPath[MAX_FITTLE_PATH];
-	TCHAR szTempRoot[MAX_FITTLE_PATH];
+	WASTR szSetPath;
+	WASTR szTempRoot;
 	
-	szTempRoot[0] = TEXT('\0');
-	SendMessage(hwndWork, WM_GETTEXT, (WPARAM)MAX_FITTLE_PATH, (LPARAM)szSetPath);
+	WAstrcpyA(&szTempRoot, "");
+	WAGetWindowText(hwndWork, &szSetPath);
 
 	// ドライブボックスの変更
 	if(g_cfgbm.nBMRoot){
 		for(i=0;i<MAX_BM_SIZE;i++){
-			LPCTSTR lpszBMPath = GetBookmark(i);
-			// しおり終了で抜ける
-			if(!lpszBMPath[0]) break;
+			LPCWASTR lpszBMPath = GetBookmark(i);
+			if(!lpszBMPath || !WAstrlen(lpszBMPath)) break;
 
-			if(StrStrI(szSetPath, lpszBMPath)){
-				int len = lstrlen(lpszBMPath);
-				if(len>lstrlen(szTempRoot) && (szSetPath[len]==TEXT('\0') || szSetPath[len]==TEXT('\\'))){
-					lstrcpyn(szTempRoot, lpszBMPath, MAX_FITTLE_PATH);
+			if(WAStrStrI(&szSetPath, lpszBMPath) == 1){
+				int len = WAstrlen(lpszBMPath);
+				if(len > WAstrlen(&szTempRoot) && IsSeparator(&szSetPath, len)){
+					WAstrcpy(&szTempRoot, lpszBMPath);
 				}
 			}
 		}
 	}
-	if (!szTempRoot[0]) return FALSE;
+	if (!WAstrlen(&szTempRoot)) return FALSE;
 
-	SendMessage(hwndWork, WM_SETTEXT, (WPARAM)0, (LPARAM)szTempRoot);	
+	WASetWindowText(hwndWork, &szTempRoot);	
 	return TRUE;
 }

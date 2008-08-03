@@ -79,8 +79,7 @@ Pluginsフォルダ
 
 追加した専用一般プラグイン
 	addurl.fgp      URLを追加 Ansi/Unicode両対応 要test29以降
-	bookmark.fgp    しおり 要test30以降 Win9x/Me以外では非推奨
-	bookmarku.fgp   しおり Unicode対応 要test30以降
+	bookmark.fgp    しおり Ansi/Unicode両対応 要test30以降
 	fconfig.fgp     設定画面 fconfig.exeとほぼ同等機能 simalistの設定画面を使わない場合不要 Ansi/Unicode両対応 要test29以降
 	minipaneu.fgp   ミニパネル Unicode対応 要test29以降 Win9x/Me非対応
 	replaygain.fgp  ReplayGain Ansi/Unicode両対応 要test29以降
@@ -94,7 +93,8 @@ Pluginsフォルダ
 	addurl.dll      -> addurl.fgp
 	addurlu.dll     -> addurl.fgp
 	bookmark.dll    -> bookmark.fgp
-	bookmarku.dll   -> bookmarku.fgp
+	bookmarku.dll   -> bookmark.fgp
+	bookmarku.fgp   -> bookmark.fgp
 	fconfig.dll     -> fconfig.fgp
 	fconfigu.dll    -> fconfig.fgp
 	minipaneu.dll   -> minipaneu.fgp
