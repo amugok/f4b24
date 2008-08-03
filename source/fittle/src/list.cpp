@@ -25,7 +25,7 @@ static void CALLBACK LXAddColumn(HWND hList, int nColumn, LPVOID pLabel, int nWi
 
 static F4B24LX_INTERFACE m_lxif = {
 	1,
-	0,
+	36,
 #ifdef UNICODE
 	1,
 #else
@@ -611,7 +611,7 @@ void GetColumnText(struct FILEINFO *pTmp, int nRow, int nColumn, LPTSTR pWork, i
 			pText = pItem->szTime;
 			break;
 		default:
-			if (m_lxif.HookGetColumnText) m_lxif.HookGetColumnText(pItem, nColumn, nType, pWork, nWorkMax);
+			if (m_lxif.HookGetColumnText) m_lxif.HookGetColumnText(pItem, nRow, nColumn, nType, pWork, nWorkMax);
 			break;
 	}
 	if (pText) lstrcpyn(pWork, pText, nWorkMax);
