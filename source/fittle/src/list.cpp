@@ -18,6 +18,30 @@
 // ローカル関数
 static void Merge(struct FILEINFO **, struct FILEINFO **);
 static int CompareNode(struct FILEINFO *, struct FILEINFO *, int);
+static void CALLBACK LXAddColumn(HWND hList, int nColumn, LPVOID pLabel, int nWidth, int nFmt);
+
+
+#include "f4b24lx.h"
+
+static F4B24LX_INTERFACE m_lxif = {
+	1,
+	0,
+#ifdef UNICODE
+	1,
+#else
+	0,
+#endif
+	LXLoadMusic,
+	LXFreeMusic,
+	LXGetTag,
+	LXAddColumn,
+	0
+};
+
+static const BYTE m_aDefaultColumns[] = { 0, 1, 2, 3 };
+static int m_nNumColumns = 0;
+static LPBYTE m_pColumnTable = NULL;
+
 
 // リスト構造にセルを追加
 struct FILEINFO **AddList(struct FILEINFO **ptr, LPTSTR szFileName, LPTSTR pszFileSize, LPTSTR pszFileTime){
@@ -31,10 +55,16 @@ struct FILEINFO **AddList(struct FILEINFO **ptr, LPTSTR szFileName, LPTSTR pszFi
 		NewFileInfo->bPlayFlag = FALSE;
 		NewFileInfo->pNext = *ptr;
 		*ptr = NewFileInfo;
+		if (m_lxif.HookOnAlloc) m_lxif.HookOnAlloc(NewFileInfo);
 		return ptr;
 	}else{
 		return AddList(&((*ptr)->pNext), szFileName, pszFileSize, pszFileTime);
 	}
+}
+
+static void FreeListNode(FILEINFO *pDel){
+	if (m_lxif.HookOnFree) m_lxif.HookOnFree(pDel);
+	HFree(pDel);
 }
 
 // 一つのセルを削除
@@ -45,7 +75,7 @@ int DeleteAList(struct FILEINFO *pDel, struct FILEINFO **pRoot){
 		if(*pTmp==pDel){
 			if (pDel == g_pNextFile) g_pNextFile = NULL;
 			*pTmp = pDel->pNext; // 削除セルを飛ばして連結
-			HFree(pDel);
+			FreeListNode(pDel);
 			break;
 		}
 	}
@@ -61,7 +91,7 @@ int DeleteAllList(struct FILEINFO **pRoot){
 	while(pTmp){
 		if (pTmp == g_pNextFile) g_pNextFile = NULL;
 		pNxt = pTmp->pNext;
-		HFree(pTmp);
+		FreeListNode(pTmp);
 		pTmp = pNxt;
 	}
 	*pRoot = NULL;
@@ -496,13 +526,6 @@ int LinkCheck(struct FILEINFO **ppRoot){
 	return i;
 }
 
-
-static const BYTE m_aDefaultColumns[] = { 0, 1, 2, 3 };
-static int m_nNumColumns = 0;
-static LPBYTE m_pColumnTable = NULL;
-
-
-
 int GetColumnNum(){
 	return m_pColumnTable ? m_nNumColumns : (sizeof(m_aDefaultColumns)/sizeof(m_aDefaultColumns[0]));
 }
@@ -521,6 +544,11 @@ static void AddListColumn(HWND hList, int c, LPTSTR l, int w, int fmt){
 	lvcol.pszText = l;
 	ListView_InsertColumn(hList, c, &lvcol);
 }
+
+static void CALLBACK LXAddColumn(HWND hList, int nColumn, LPVOID pLabel, int nWidth, int nFmt){
+	AddListColumn(hList, nColumn, (LPTSTR)pLabel, nWidth, nFmt);
+}
+
 static void AddStandardColumn(HWND hList, int c, LPTSTR l, int w, int t){
 	char szKey[7] = "Width0";
 	szKey[5] = '0' + t;
@@ -532,11 +560,15 @@ static LPCTSTR GetPathType(struct FILEINFO *pInfo){
 }
 
 static int CompareNode(struct FILEINFO *pLeft, struct FILEINFO *pRight, int nSortType){
+	int nColumn;
+	int nType;
 	if (nSortType == 0)
 		return lstrcmpi(pLeft->szFilePath, pRight->szFilePath);	// フルパス
 	else if (nSortType < 0)
 		return -CompareNode(pLeft, pRight, -nSortType);	// 逆順
-	switch(GetColumnType(nSortType - 1)){
+	nColumn = nSortType - 1;
+	nType = GetColumnType(nColumn);
+	switch(nType){
 		case 0:		// ファイル名昇順
 			return lstrcmpi(GetFileName(pLeft->szFilePath), GetFileName(pRight->szFilePath));
 		case 1:		// サイズ昇順
@@ -545,6 +577,9 @@ static int CompareNode(struct FILEINFO *pLeft, struct FILEINFO *pRight, int nSor
 			return lstrcmpi(GetPathType(pLeft), GetPathType(pRight));
 		case 3:		// 更新日時昇順
 			return lstrcmp(pLeft->szTime, pRight->szTime);
+		default:
+			if (m_lxif.HookCompareColumnText) m_lxif.HookCompareColumnText(pLeft, pRight, nColumn, nType);
+			break;
 	}
 	return 0;
 }
@@ -552,7 +587,8 @@ static int CompareNode(struct FILEINFO *pLeft, struct FILEINFO *pRight, int nSor
 void GetColumnText(struct FILEINFO *pTmp, int nRow, int nColumn, LPTSTR pWork, int nWorkMax){
 	LPCTSTR pText = 0;
 	struct FILEINFO *pItem = GetPtrFromIndex(pTmp, nRow);
-	switch(GetColumnType(nColumn)){
+	int nType = GetColumnType(nColumn);
+	switch(nType){
 		case 0:
 			pText = GetFileName(pItem->szFilePath);
 			break;
@@ -574,23 +610,30 @@ void GetColumnText(struct FILEINFO *pTmp, int nRow, int nColumn, LPTSTR pWork, i
 		case 3:
 			pText = pItem->szTime;
 			break;
+		default:
+			if (m_lxif.HookGetColumnText) m_lxif.HookGetColumnText(pItem, nColumn, nType, pWork, nWorkMax);
+			break;
 	}
 	if (pText) lstrcpyn(pWork, pText, nWorkMax);
 }
 
-static void AddColumn(HWND hList, int c){
-	switch(GetColumnType(c)) {
+static void AddColumn(HWND hList, int nColumn){
+	int nType = GetColumnType(nColumn);
+	switch(nType) {
 	case 0:
-		AddStandardColumn(hList, c, TEXT("ファイル名"), 200, 0);
+		AddStandardColumn(hList, nColumn, TEXT("ファイル名"), 200, 0);
 		break;
 	case 1:
-		AddStandardColumn(hList, c, TEXT("サイズ"), 70, 1);
+		AddStandardColumn(hList, nColumn, TEXT("サイズ"), 70, 1);
 		break;
 	case 2:
-		AddStandardColumn(hList, c, TEXT("種類"), 40, 2);
+		AddStandardColumn(hList, nColumn, TEXT("種類"), 40, 2);
 		break;
 	case 3:
-		AddStandardColumn(hList, c, TEXT("更新日時"), 130, 3);
+		AddStandardColumn(hList, nColumn, TEXT("更新日時"), 130, 3);
+		break;
+	default:
+		if (m_lxif.HookAddColumn) m_lxif.HookAddColumn(hList, nColumn, nType);
 		break;
 	}
 }
@@ -603,4 +646,31 @@ void AddColumns(HWND hList){
 }
 
 void LoadColumnsOrder(){
+	int nColumnNum = WAGetIniInt("Column", "ColumnNum", 0);
+	if (m_pColumnTable) {
+		HFree(m_pColumnTable);
+		m_pColumnTable = 0;
+	}
+	if (nColumnNum) {
+		int c;
+		int nColumn;
+		m_pColumnTable = (LPBYTE)HZAlloc(sizeof(BYTE) * nColumnNum);
+		for (c = nColumn = 0; nColumn < nColumnNum; nColumn++){
+			CHAR szSec[16];
+			int nType;
+			wsprintfA(szSec, "ColumnType%d", nColumn);
+			nType = WAGetIniInt("Column", szSec, -1);
+			if ((nType >= 0) && ((nType < 4) || (m_lxif.HookInitColumnOrder && m_lxif.HookInitColumnOrder(c, nType)))){
+				m_pColumnTable[c++] = nType;
+			}
+		}
+		m_nNumColumns = c;
+	}
+}
+void SaveColumnsOrder(){
+	if (m_lxif.HookOnSave) m_lxif.HookOnSave();
+}
+
+LPVOID GetLXIf(){
+	return &m_lxif;
 }

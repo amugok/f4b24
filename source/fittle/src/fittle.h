@@ -79,6 +79,7 @@ struct FILEINFO{
 	TCHAR szTime[50];			// 更新時間
 	BOOL bPlayFlag;				// 再生済みチェックフラグ
 	struct FILEINFO *pNext;		// 次のリストへのポインタ
+	LPVOID userdata;
 };
 
 typedef struct {
@@ -170,6 +171,10 @@ int TabGetListFocus();
 void TabSetListFocus(int nIndex);
 int TabGetListCount();
 void TabAdjustRect(LPRECT pRect);
+
+LPVOID CALLBACK LXLoadMusic(LPVOID lpszPath);
+BOOL CALLBACK LXGetTag(LPVOID pMusic, LPVOID pTagInfo);
+void CALLBACK LXFreeMusic(LPVOID pMusic);
 
 
 #endif

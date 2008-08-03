@@ -265,6 +265,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\f4b24lx.h"
+				>
+			</File>
+			<File
 				RelativePath=".\src\finddlg.h"
 				>
 			</File>

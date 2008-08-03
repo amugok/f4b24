@@ -1,4 +1,3 @@
-
 /*
  * Fittle.cpp
  *
@@ -53,9 +52,9 @@
 #define F4B24_VERSION 36
 #define F4B24_IF_VERSION 36
 #ifndef _DEBUG
-#define FITTLE_TITLE TEXT("Fittle - f4b24") F4B24_VERSION_STRING
+#define FITTLE_TITLE TEXT("Fittle - f4b24 ") F4B24_VERSION_STRING
 #else
-#define FITTLE_TITLE TEXT("Fittle - f4b24") F4B24_VERSION_STRING TEXT(" <Debug>")
+#define FITTLE_TITLE TEXT("Fittle - f4b24 ") F4B24_VERSION_STRING TEXT(" <Debug>")
 #endif
 
 /* 1:出力プラグインなしでも音声出力可能 0:音声出力はプラグインに任せる */
@@ -380,7 +379,6 @@ static HWND Initialze(HINSTANCE hCurInst, int nCmdShow){
 
 	LoadState();
 	LoadConfig();
-	LoadColumnsOrder();
 
 	// ウィンドウ作成
 	hWnd = CreateWindow(szClassName,
@@ -572,6 +570,10 @@ static void OnCreate(HWND hWnd){
 	// 一般プラグイン初期化
 	InitGeneralPlugins(hWnd);
 	TIMECHECK("一般プラグイン初期化")
+
+	// リストプラグイン初期化
+	LoadColumnsOrder();
+	TIMECHECK("リストプラグイン初期化")
 
 	// タスクトレイ再描画のメッセージを保存
 	s_uTaskbarRestart = RegisterWindowMessage(TEXT("TaskbarCreated"));
@@ -1044,6 +1046,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			DeleteCriticalSection(&m_cs);
 
 			SaveState(hWnd);
+			SaveColumnsOrder();
 			SavePlaylists(m_hTab);
 
 			if(m_bTrayFlag){
@@ -2299,6 +2302,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			case WM_F4B24_IPC_TRAYICONMENU:
 				PopupTrayMenu();
 				break;
+			case WM_F4B24_IPC_GET_LX_IF:
+				return (LRESULT)GetLXIf();
 
 			case WM_F4B24_IPC_GET_VERSION_STRING:
 				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)FITTLE_VERSION);
@@ -2827,6 +2832,35 @@ static BOOL OpenSoundFile(CHANNELINFO *pCh, LPTSTR lpszOpenSoundPath, BOOL fOpen
 	}
 }
 
+static BOOL GetTagInfo(CHANNELINFO *pCh, TAGINFO *pTagInfo){
+	return GetArchiveTagInfo(pCh->szFilePath, pTagInfo) || BASS_TAG_Read(pCh->hChan, pTagInfo);
+}
+
+LPVOID CALLBACK LXLoadMusic(LPVOID lpszPath){
+	CHANNELINFO *pCh = (CHANNELINFO *)HZAlloc(sizeof(CHANNELINFO));
+	if (pCh){
+		if (!OpenSoundFile(pCh, (LPTSTR)lpszPath, FALSE)) {
+			HFree(pCh);
+			pCh = NULL;
+		}
+	}
+	return pCh;
+}
+
+void CALLBACK LXFreeMusic(LPVOID pMusic){
+	CHANNELINFO *pCh = (CHANNELINFO *)pMusic;
+	if (pCh) {
+		FreeSoundFile(pCh, FALSE);
+		HFree(pCh);
+	}
+}
+
+BOOL CALLBACK LXGetTag(LPVOID pMusic, LPVOID pTagInfo){
+	CHANNELINFO *pCh = (CHANNELINFO *)pMusic;
+	return pCh? GetTagInfo(pCh, (TAGINFO *)pTagInfo) : FALSE;
+}
+
+
 
 static BOOL SetChannelInfo(BOOL bFlag, struct FILEINFO *pInfo){
 	// ファイルをオープン、構造体を設定
@@ -2945,8 +2979,7 @@ static void OnChangeTrack(){
 
 
 	// タグを
-	if(GetArchiveTagInfo(pCh->szFilePath, &m_taginfo)
-	|| BASS_TAG_Read(pCh->hChan, &m_taginfo)){
+	if(GetTagInfo(pCh, &m_taginfo)){
 		if(!g_cfg.nTagReverse){
 			wsprintf(m_szTag, TEXT("%s / %s"), m_taginfo.szTitle, m_taginfo.szArtist);
 		}else{
