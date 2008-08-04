@@ -3202,7 +3202,9 @@ static BOOL SeekToPos(BOOL fFadeOut, QWORD qPos){
 
 	if (fFadeOut) OPSetFadeOut(150);
 
-	OPStop();
+	if(nOldStatus == OUTPUT_PLUGIN_STATUS_PLAY){
+		OPStop();
+	}
 
 	fRet = TrackSetPos(qPos);
 

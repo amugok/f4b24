@@ -60,6 +60,8 @@ LX_PLUGIN_INFO * CALLBACK GetLXPluginInfo(void){
 
 static HMODULE m_hDLL = 0;
 
+int (CALLBACK *pStrCmpLogicalW)(LPCWSTR psz1, LPCWSTR psz2) = 0;
+ 
 void *HAlloc(DWORD dwSize){
 	return HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwSize);
 }
@@ -115,6 +117,8 @@ void CALLBACK AddColumn(HWND hList, int nColumn, int nType){
 		CHAR szSec[16];
 		wsprintfA(szSec, "WidthEx%d", nType);
 		lxpinfo.plxif->AddColumn(hList, nColumn, lxpinfo.plxif->nUnicode ? (LPVOID)lbltblW[nType - COLUMN_TYPE_ID] : (LPVOID)lbltblA[nType - COLUMN_TYPE_ID], lxpinfo.GetIniInt("Column", szSec, 100), LVCFMT_LEFT);
+		if (nType == COLUMN_TYPE_ID + 3)
+			pStrCmpLogicalW = (int (CALLBACK *)(LPCWSTR psz1, LPCWSTR psz2))GetProcAddress(GetModuleHandleA("shlwapi.dll"), "StrCmpLogicalW");
 	}
 }
 
@@ -209,7 +213,7 @@ int CALLBACK CompareColumnText(LPVOID pFileInfoLeft, LPVOID pFileInfoRight, int 
 			return lstrcmpW(pTagL->szAlbum, pTagR->szAlbum);
 			break;
 		case COLUMN_TYPE_ID + 3:
-			return lstrcmpW(pTagL->szTrack, pTagR->szTrack);
+			return pStrCmpLogicalW ? pStrCmpLogicalW(pTagL->szTrack, pTagR->szTrack) : lstrcmpW(pTagL->szTrack, pTagR->szTrack);
 		}
 	}else{
 		TAGINFOA *pTagL = GetTagInfoA(pFileInfoLeft);
