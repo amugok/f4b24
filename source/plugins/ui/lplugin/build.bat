@@ -51,7 +51,7 @@ goto exitcmd
 
 set CFLAGS=/GF /Gy /Ox /Os /MD
 set PREFIX=..\..\..\..\bin\Plugins\fgp\
-set VER_STR=0808030_
+set VER_STR=0808040_
 
 call %0 lplugin fgp
 
