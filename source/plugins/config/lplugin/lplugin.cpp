@@ -185,10 +185,21 @@ static void DeleteListItem(HWND hList, int nRow) {
 	SendMessage(hList, LB_DELETESTRING, (WPARAM)nRow, (LPARAM)0);
 }
 
-static int FindListSelect(HWND hList) {
+static int FindListSelectU(HWND hList, int nFrom) {
 	int c = GetListCount(hList);
 	int i;
-	for (i = 0; i < c; i++){
+	for (i = nFrom; i < c; i++){
+		if (GetListItemSel(hList, i)) return i;
+	}
+	return -1;
+}
+static int FindListSelect(HWND hList) {
+	return FindListSelectU(hList, 0);
+}
+
+static int FindListSelectD(HWND hList, int nFrom) {
+	int i;
+	for (i = nFrom; i >= 0; i--){
 		if (GetListItemSel(hList, i)) return i;
 	}
 	return -1;
@@ -196,11 +207,7 @@ static int FindListSelect(HWND hList) {
 
 static int FindListSelectR(HWND hList) {
 	int c = GetListCount(hList);
-	int i;
-	for (i = c - 1; i >= 0; i--){
-		if (GetListItemSel(hList, i)) return i;
-	}
-	return -1;
+	return FindListSelectD(hList, c - 1);
 }
 
 static int FindListItem(HWND hList, int nItemData) {
@@ -317,6 +324,8 @@ static void MoveList(HWND hListFrom, HWND hListTo){
 		if (nAdd >= 0) {
 			SetListItemSel(hListTo, nAdd, TRUE);
 		}
+		else
+			break;
 		nFind = FindListSelect(hListFrom);
 	}
 }
@@ -327,10 +336,10 @@ static void MoveListUp(HWND hDlg){
 	int nFind = FindListSelect(hListLeft);
 	while (nFind >= 1) {
 		nAdd = MoveListItemTo(hListLeft, hListLeft, nFind, nFind - 1);
-		nFind = FindListSelect(hListLeft);
-	}
-	if (nAdd >= 0) {
-		SetListItemSel(hListLeft, nAdd, TRUE);
+		if (nAdd >= 0) {
+			SetListItemSel(hListLeft, nAdd, TRUE);
+		}
+		nFind = FindListSelectU(hListLeft, nAdd + 1);
 	}
 }
 
@@ -338,12 +347,13 @@ static void MoveListDown(HWND hDlg){
 	int nAdd = -1;
 	HWND hListLeft = GetDlgItem(hDlg, IDC_LIST1);
 	int nFind = FindListSelectR(hListLeft);
-	while (nFind >= 0) {
+	int c = GetListCount(hListLeft);
+	while (nFind >= 0 && nFind < c - 1) {
 		nAdd = MoveListItemTo(hListLeft, hListLeft, nFind, nFind + 1);
-		nFind = FindListSelectR(hListLeft);
-	}
-	if (nAdd >= 0) {
-		SetListItemSel(hListLeft, nAdd, TRUE);
+		if (nAdd >= 0) {
+			SetListItemSel(hListLeft, nAdd, TRUE);
+		}
+		nFind = FindListSelectD(hListLeft, nAdd - 1);
 	}
 }
 
