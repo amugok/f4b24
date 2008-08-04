@@ -99,28 +99,46 @@ void CALLBACK AddColumn(HWND hList, int nColumn, int nType){
 		lxpinfo.plxif->AddColumn(hList, nColumn, lxpinfo.plxif->nUnicode ? (LPVOID)L"ファイル名" : (LPVOID)"ファイル名", lxpinfo.GetIniInt("Column", szSec, 100), LVCFMT_LEFT);
 	}
 }
+
+static void GetFileNameNoExtW(LPVOID pFileInfo, LPVOID pBuf, int nBufSize){
+	LPWSTR pExt;
+	lstrcpynW((LPWSTR)pBuf, (LPCWSTR)lxpinfo.plxif->GetFileName(pFileInfo), nBufSize);
+	if (!lxpinfo.plxif->CheckPath(pFileInfo, F4B24LX_CHECK_URL) && !lxpinfo.plxif->CheckPath(pFileInfo, F4B24LX_CHECK_CUE)){
+		pExt = PathFindExtensionW((LPWSTR)pBuf);
+		if (pExt) *pExt = 0;
+	}
+}
+
+static void GetFileNameNoExtA(LPVOID pFileInfo, LPVOID pBuf, int nBufSize){
+	LPSTR pExt;
+	lstrcpynA((LPSTR)pBuf, (LPCSTR)lxpinfo.plxif->GetFileName(pFileInfo), nBufSize);
+	if (!lxpinfo.plxif->CheckPath(pFileInfo, F4B24LX_CHECK_URL) && !lxpinfo.plxif->CheckPath(pFileInfo, F4B24LX_CHECK_CUE)){
+		pExt = PathFindExtensionA((LPSTR)pBuf);
+		if (pExt) *pExt = 0;
+	}
+}
+
 void CALLBACK GetColumnText(LPVOID pFileInfo, int nRow, int nColumn, int nType, LPVOID pBuf, int nBufSize){
 	if (lxpinfo.plxif->nUnicode) {
-		LPWSTR pExt;
-		lstrcpynW((LPWSTR)pBuf, (LPCWSTR)lxpinfo.plxif->GetFileName(pFileInfo), nBufSize);
-		if (!lxpinfo.plxif->CheckPath(pFileInfo, F4B24LX_CHECK_URL) && !lxpinfo.plxif->CheckPath(pFileInfo, F4B24LX_CHECK_CUE)){
-			pExt = PathFindExtensionW((LPWSTR)pBuf);
-			if (pExt) *pExt = 0;
-		}
+		GetFileNameNoExtW(pFileInfo, pBuf, nBufSize);
 	}else{
-		LPSTR pExt;
-		lstrcpynA((LPSTR)pBuf, (LPCSTR)lxpinfo.plxif->GetFileName(pFileInfo), nBufSize);
-		if (!lxpinfo.plxif->CheckPath(pFileInfo, F4B24LX_CHECK_URL) && !lxpinfo.plxif->CheckPath(pFileInfo, F4B24LX_CHECK_CUE)){
-			pExt = PathFindExtensionA((LPSTR)pBuf);
-			if (pExt) *pExt = 0;
-		}
+		GetFileNameNoExtA(pFileInfo, pBuf, nBufSize);
 	}
 }
 int CALLBACK CompareColumnText(LPVOID pFileInfoLeft, LPVOID pFileInfoRight, int nColumn, int nType){
-	if (lxpinfo.plxif->nUnicode)
-		return lstrcmpiW((LPCWSTR)lxpinfo.plxif->GetFileName(pFileInfoLeft), (LPCWSTR)lxpinfo.plxif->GetFileName(pFileInfoRight));
-	else
-		return lstrcmpiA((LPCSTR)lxpinfo.plxif->GetFileName(pFileInfoLeft), (LPCSTR)lxpinfo.plxif->GetFileName(pFileInfoRight));
+	if (lxpinfo.plxif->nUnicode) {
+		WCHAR bufL[MAX_PATH];
+		WCHAR bufR[MAX_PATH];
+		GetFileNameNoExtW(pFileInfoLeft, bufL, MAX_PATH);
+		GetFileNameNoExtW(pFileInfoRight, bufR, MAX_PATH);
+		return lstrcmpiW(bufL, bufR);
+	} else {
+		CHAR bufL[MAX_PATH];
+		CHAR bufR[MAX_PATH];
+		GetFileNameNoExtA(pFileInfoLeft, bufL, MAX_PATH);
+		GetFileNameNoExtA(pFileInfoRight, bufR, MAX_PATH);
+		return lstrcmpiA(bufL, bufR);
+	}
 }
 
 void CALLBACK OnSave(HWND hList, int nColumn, int nType, int nWidth){

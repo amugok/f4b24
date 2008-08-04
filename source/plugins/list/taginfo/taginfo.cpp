@@ -199,6 +199,27 @@ void CALLBACK GetColumnText(LPVOID pFileInfo, int nRow, int nColumn, int nType, 
 		}
 	}
 }
+
+static int XATOIW(LPCWSTR p){
+	int r = 0;
+	while (*p == L' ' || *p == L'\t') p++;
+	while (*p >= L'0' && *p <= L'9'){
+		r = r * 10 + (*p - L'0');
+		p++;
+	}
+	return r;
+}
+
+static int XATOIA(LPCSTR p){
+	int r = 0;
+	while (*p == ' ' || *p == '\t') p++;
+	while (*p >= '0' && *p <= '9'){
+		r = r * 10 + (*p - '0');
+		p++;
+	}
+	return r;
+}
+
 int CALLBACK CompareColumnText(LPVOID pFileInfoLeft, LPVOID pFileInfoRight, int nColumn, int nType){
 	if (lxpinfo.plxif->nUnicode) {
 		TAGINFOW *pTagL = GetTagInfoW(pFileInfoLeft);
@@ -213,7 +234,11 @@ int CALLBACK CompareColumnText(LPVOID pFileInfoLeft, LPVOID pFileInfoRight, int 
 			return lstrcmpW(pTagL->szAlbum, pTagR->szAlbum);
 			break;
 		case COLUMN_TYPE_ID + 3:
-			return pStrCmpLogicalW ? pStrCmpLogicalW(pTagL->szTrack, pTagR->szTrack) : lstrcmpW(pTagL->szTrack, pTagR->szTrack);
+			if  (pStrCmpLogicalW)
+				return pStrCmpLogicalW(pTagL->szTrack, pTagR->szTrack);
+			if (XATOIW(pTagL->szTrack) > XATOIW(pTagR->szTrack)) return 1;
+			if (XATOIW(pTagL->szTrack) < XATOIW(pTagR->szTrack)) return -1;
+			return lstrcmpW(pTagL->szTrack, pTagR->szTrack);
 		}
 	}else{
 		TAGINFOA *pTagL = GetTagInfoA(pFileInfoLeft);
@@ -228,6 +253,8 @@ int CALLBACK CompareColumnText(LPVOID pFileInfoLeft, LPVOID pFileInfoRight, int 
 			return lstrcmpA(pTagL->szAlbum, pTagR->szAlbum);
 			break;
 		case COLUMN_TYPE_ID + 3:
+			if (XATOIA(pTagL->szTrack) > XATOIA(pTagR->szTrack)) return 1;
+			if (XATOIA(pTagL->szTrack) < XATOIA(pTagR->szTrack)) return -1;
 			return lstrcmpA(pTagL->szTrack, pTagR->szTrack);
 		}
 	}

@@ -3955,7 +3955,10 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 									LVITEM *item = &((NMLVDISPINFO*)lp)->item;
 									// テキストをセット
 									if(item->mask & LVIF_TEXT){
-										GetColumnText(GetListTab(m_hTab, GetListIndex(pnmhdr->hwndFrom))->pRoot, item->iItem, item->iSubItem, item->pszText, item->cchTextMax);
+										LISTTAB *pList = GetListTab(m_hTab, GetListIndex(pnmhdr->hwndFrom));
+										if (pList){
+											GetColumnText(pList->pRoot, item->iItem, item->iSubItem, item->pszText, item->cchTextMax);
+										}
 									}
 								}
 								break;
