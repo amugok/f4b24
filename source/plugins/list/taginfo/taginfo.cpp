@@ -23,7 +23,7 @@
 #endif
 
 #define COLUMN_TYPE_ID 8
-#define COLUMN_TYPE_NUM 4
+#define COLUMN_TYPE_NUM 5
 
 // {C3FC1E93-09A1-497b-BC58-1CAECD93AF78}
 static const GUID ID_TAGINFO = { 0xc3fc1e93, 0x9a1, 0x497b, { 0xbc, 0x58, 0x1c, 0xae, 0xcd, 0x93, 0xaf, 0x78 } };
@@ -89,25 +89,34 @@ int CALLBACK GetTypeCode(int nIndex){
 	return -1;
 }
 
+static LPCSTR lbltblL[]= {
+	"Title",
+	"Artist",
+	"Album",
+	"Track",
+	"Title‚ª–³‚¯‚ê‚Îƒtƒ@ƒCƒ‹–¼"
+};
 static LPCSTR lbltblA[]= {
 	"Title",
 	"Artist",
 	"Album",
-	"Track"
+	"Track",
+	"Title"
 };
 static LPCWSTR lbltblW[]= {
 	L"Title",
 	L"Artist",
 	L"Album",
-	L"Track"
+	L"Track",
+	L"Title"
 };
 
 LPCSTR CALLBACK GetTypeName(int nIndex){
-	if (nIndex >= 0 && nIndex < COLUMN_TYPE_NUM) return lbltblA[nIndex];
+	if (nIndex >= 0 && nIndex < COLUMN_TYPE_NUM) return lbltblL[nIndex];
 	return "";
 }
 BOOL CALLBACK IsSupported(int nType){
-	return (nType >= COLUMN_TYPE_ID) && (nType < COLUMN_TYPE_ID + 4);
+	return (nType >= COLUMN_TYPE_ID) && (nType < COLUMN_TYPE_ID + COLUMN_TYPE_NUM);
 }
 BOOL CALLBACK InitColumnOrder(int nColumn, int nType){
 	return IsSupported(nType);
@@ -162,9 +171,41 @@ static TAGINFOA *GetTagInfoA(LPVOID pFileInfo){
 	return pTagInfo;
 }
 
+static void GetFileNameNoExtW(LPVOID pFileInfo, LPVOID pBuf, int nBufSize){
+	LPWSTR pExt;
+	lstrcpynW((LPWSTR)pBuf, (LPCWSTR)lxpinfo.plxif->GetFileName(pFileInfo), nBufSize);
+	if (!lxpinfo.plxif->CheckPath(pFileInfo, F4B24LX_CHECK_URL) && !lxpinfo.plxif->CheckPath(pFileInfo, F4B24LX_CHECK_CUE)){
+		pExt = PathFindExtensionW((LPWSTR)pBuf);
+		if (pExt) *pExt = 0;
+	}
+}
+
+static void GetFileNameNoExtA(LPVOID pFileInfo, LPVOID pBuf, int nBufSize){
+	LPSTR pExt;
+	lstrcpynA((LPSTR)pBuf, (LPCSTR)lxpinfo.plxif->GetFileName(pFileInfo), nBufSize);
+	if (!lxpinfo.plxif->CheckPath(pFileInfo, F4B24LX_CHECK_URL) && !lxpinfo.plxif->CheckPath(pFileInfo, F4B24LX_CHECK_CUE)){
+		pExt = PathFindExtensionA((LPSTR)pBuf);
+		if (pExt) *pExt = 0;
+	}
+}
+
+static void GetTitleFnameW(TAGINFOW *pTag, LPVOID pFileInfo, LPVOID pBuf, int nBufSize){
+	if (pTag) lstrcpynW((LPWSTR)pBuf, pTag->szTitle, nBufSize);
+	if (!pTag || !pTag->szTitle[0]) GetFileNameNoExtW(pFileInfo, pBuf, nBufSize);
+}
+
+static void GetTitleFnameA(TAGINFOA *pTag, LPVOID pFileInfo, LPVOID pBuf, int nBufSize){
+	if (pTag) lstrcpynA((LPSTR)pBuf, pTag->szTitle, nBufSize);
+	if (!pTag || !pTag->szTitle[0]) GetFileNameNoExtA(pFileInfo, pBuf, nBufSize);
+}
+
 void CALLBACK GetColumnText(LPVOID pFileInfo, int nRow, int nColumn, int nType, LPVOID pBuf, int nBufSize){
 	if (lxpinfo.plxif->nUnicode) {
 		TAGINFOW *pTag = GetTagInfoW(pFileInfo);
+		if (nType == COLUMN_TYPE_ID + 4) {
+			GetTitleFnameW(pTag, pFileInfo, pBuf, nBufSize);
+			return;
+		}
 		if (!pTag) return;
 		switch (nType) {
 		case COLUMN_TYPE_ID + 0:
@@ -182,6 +223,10 @@ void CALLBACK GetColumnText(LPVOID pFileInfo, int nRow, int nColumn, int nType, 
 		}
 	}else{
 		TAGINFOA *pTag = GetTagInfoA(pFileInfo);
+		if (nType == COLUMN_TYPE_ID + 4) {
+			GetTitleFnameA(pTag, pFileInfo, pBuf, nBufSize);
+			return;
+		}
 		if (!pTag) return;
 		switch (nType) {
 		case COLUMN_TYPE_ID + 0:
@@ -224,38 +269,52 @@ int CALLBACK CompareColumnText(LPVOID pFileInfoLeft, LPVOID pFileInfoRight, int 
 	if (lxpinfo.plxif->nUnicode) {
 		TAGINFOW *pTagL = GetTagInfoW(pFileInfoLeft);
 		TAGINFOW *pTagR = GetTagInfoW(pFileInfoRight);
+		if (nType == COLUMN_TYPE_ID + 4) {
+			WCHAR bufL[MAX_PATH];
+			WCHAR bufR[MAX_PATH];
+			GetTitleFnameW(pTagL, pFileInfoLeft, bufL, MAX_PATH);
+			GetTitleFnameW(pTagR, pFileInfoRight, bufR, MAX_PATH);
+			return lstrcmpiW(bufL, bufR);
+		}
 		if (!pTagL || !pTagR) return (!pTagL && !pTagR) ? 0 : ((!pTagL) ? -1 : 1);
 		switch (nType) {
 		case COLUMN_TYPE_ID + 0:
-			return lstrcmpW(pTagL->szTitle, pTagR->szTitle);
+			return lstrcmpiW(pTagL->szTitle, pTagR->szTitle);
 		case COLUMN_TYPE_ID + 1:
-			return lstrcmpW(pTagL->szArtist, pTagR->szArtist);
+			return lstrcmpiW(pTagL->szArtist, pTagR->szArtist);
 		case COLUMN_TYPE_ID + 2:
-			return lstrcmpW(pTagL->szAlbum, pTagR->szAlbum);
+			return lstrcmpiW(pTagL->szAlbum, pTagR->szAlbum);
 			break;
 		case COLUMN_TYPE_ID + 3:
 			if  (pStrCmpLogicalW)
 				return pStrCmpLogicalW(pTagL->szTrack, pTagR->szTrack);
 			if (XATOIW(pTagL->szTrack) > XATOIW(pTagR->szTrack)) return 1;
 			if (XATOIW(pTagL->szTrack) < XATOIW(pTagR->szTrack)) return -1;
-			return lstrcmpW(pTagL->szTrack, pTagR->szTrack);
+			return lstrcmpiW(pTagL->szTrack, pTagR->szTrack);
 		}
 	}else{
 		TAGINFOA *pTagL = GetTagInfoA(pFileInfoLeft);
 		TAGINFOA *pTagR = GetTagInfoA(pFileInfoRight);
+		if (nType == COLUMN_TYPE_ID + 4) {
+			CHAR bufL[MAX_PATH];
+			CHAR bufR[MAX_PATH];
+			GetTitleFnameA(pTagL, pFileInfoLeft, bufL, MAX_PATH);
+			GetTitleFnameA(pTagR, pFileInfoRight, bufR, MAX_PATH);
+			return lstrcmpiA(bufL, bufR);
+		}
 		if (!pTagL || !pTagR) return (!pTagL && !pTagR) ? 0 : ((!pTagL) ? -1 : 1);
 		switch (nType) {
 		case COLUMN_TYPE_ID + 0:
-			return lstrcmpA(pTagL->szTitle, pTagR->szTitle);
+			return lstrcmpiA(pTagL->szTitle, pTagR->szTitle);
 		case COLUMN_TYPE_ID + 1:
-			return lstrcmpA(pTagL->szArtist, pTagR->szArtist);
+			return lstrcmpiA(pTagL->szArtist, pTagR->szArtist);
 		case COLUMN_TYPE_ID + 2:
-			return lstrcmpA(pTagL->szAlbum, pTagR->szAlbum);
+			return lstrcmpiA(pTagL->szAlbum, pTagR->szAlbum);
 			break;
 		case COLUMN_TYPE_ID + 3:
 			if (XATOIA(pTagL->szTrack) > XATOIA(pTagR->szTrack)) return 1;
 			if (XATOIA(pTagL->szTrack) < XATOIA(pTagR->szTrack)) return -1;
-			return lstrcmpA(pTagL->szTrack, pTagR->szTrack);
+			return lstrcmpiA(pTagL->szTrack, pTagR->szTrack);
 		}
 	}
 	return 0;
