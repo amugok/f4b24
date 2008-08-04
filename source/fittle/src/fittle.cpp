@@ -45,11 +45,11 @@
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test36u")
+#define F4B24_VERSION_STRING TEXT("test37u")
 #else
-#define F4B24_VERSION_STRING TEXT("test36")
+#define F4B24_VERSION_STRING TEXT("test37")
 #endif
-#define F4B24_VERSION 36
+#define F4B24_VERSION 37
 #define F4B24_IF_VERSION 36
 #ifndef _DEBUG
 #define FITTLE_TITLE TEXT("Fittle - f4b24 ") F4B24_VERSION_STRING
@@ -3694,7 +3694,7 @@ static LRESULT CALLBACK NewSliderProc(HWND hSB, UINT msg, WPARAM wp, LPARAM lp){
 				ReleaseCapture();
 				SendMessage(m_hSliderTip, TTM_TRACKACTIVATE, (WPARAM)FALSE, (LPARAM)&tin);
 			}else if(msg!=WM_LBUTTONUP){
-				SendFittleMessage(WM_CONTEXTMENU, (WPARAM)m_hMainWnd, lp);
+				SendFittleMessage(WM_CONTEXTMENU, (WPARAM)m_hRebar, lp);
 			}
 			return 0;
 
