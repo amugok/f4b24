@@ -55,6 +55,7 @@ Pluginsフォルダ
 	minipane.dll    ミニパネル minipane.fcpを同じ場所に置けば設定画面も拡張される Win9x/Meや公式で使わない場合minipaneu.fgpを推奨
 	taskvol.dll     タスクバー上ホイールで音量を変える 強制終了時にエクスプローラごと落ちる問題に対処
 	xdelfile.dll    ファイル削除機能無効化
+	seekrev.dll     反転
 
 追加した専用書庫プラグイン
 	cue.fap         cueシート対応 Ansi版専用 cueシート注釈によるreplaygain対応 要test14以降
@@ -90,7 +91,7 @@ Pluginsフォルダ
 	replaygain.fgp  ReplayGain Ansi/Unicode両対応 要test29以降
 	wadsp.fgp       WinampDSPプラグイン対応 Ansi/Unicode両対応 要test32以降 要bass_wadsp.dll
 
-追加したリストカラム拡張出力プラグイン (要lplugin.fgp)
+追加したリストカラム拡張プラグイン (要lplugin.fgp)
 	filename.flp    ファイル名(拡張子無し) 要test36以降
 	taginfo.flp     Title/Album/Artist/Track 要test36以降
 
