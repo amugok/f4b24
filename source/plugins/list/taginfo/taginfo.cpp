@@ -126,7 +126,7 @@ static TAGINFOW *GetTagInfoW(LPVOID pFileInfo){
 	if (!pTagInfo) {
 		pTagInfo = (TAGINFOW *)HAlloc(sizeof(TAGINFOW));
 		if (pTagInfo) {
-			if (!StrStrIW((LPCWSTR)pFileInfo, L"://")) {
+			if (!lxpinfo.plxif->CheckPath(pFileInfo, F4B24LX_CHECK_URL)) {
 				LPVOID pMusic = lxpinfo.plxif->LoadMusic(pFileInfo);
 				if (pMusic){
 					lxpinfo.plxif->GetTag(pMusic, pTagInfo);
@@ -144,7 +144,7 @@ static TAGINFOA *GetTagInfoA(LPVOID pFileInfo){
 	if (!pTagInfo) {
 		pTagInfo = (TAGINFOA *)HAlloc(sizeof(TAGINFOA));
 		if (pTagInfo) {
-			if (!StrStrIA((LPCSTR)pFileInfo, "://")) {
+			if (!lxpinfo.plxif->CheckPath(pFileInfo, F4B24LX_CHECK_URL)) {
 				LPVOID pMusic = lxpinfo.plxif->LoadMusic(pFileInfo);
 				if (pMusic){
 					lxpinfo.plxif->GetTag(pMusic, pTagInfo);

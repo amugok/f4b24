@@ -39,6 +39,9 @@ Pluginsフォルダ
 	Plugins\Fittle\
 		公式Fittle用プラグインを入れる
 
+	Plugins\flp\
+		拡張子flpのプラグインを入れる
+
 	Plugins\fop\
 		拡張子fopのプラグインを入れる
 
@@ -71,8 +74,9 @@ Pluginsフォルダ
 	taru.fap        tar書庫対応 Unicode版専用 ただしUnicode非対応 要統合アーカイバプロジェクト版tar32.dll
 	zipu.fap        zip書庫対応 Unicode版専用 ただしUnicode非対応 要統合アーカイバプロジェクト版unzip32.dll
 
-追加した専用設定プラグイン
+追加した専用設定プラグイン (要fconfig.exe もしくは fconfig.fgp)
 	fittle.fcp      fittle.exe 設定 標準で同梱
+	lplugin.fcp     lplugin.fgp 設定
 	minipane.fcp    minipane.dll/minipaneu.fgp 設定
 	output.fcp      bass.fop bassasio.fop replaygain.fgp cue.fap cueu.fap 設定
 	wadsp.fcp       wadsp.fgp 設定
@@ -80,10 +84,15 @@ Pluginsフォルダ
 追加した専用一般プラグイン
 	addurl.fgp      URLを追加 Ansi/Unicode両対応 要test29以降
 	bookmark.fgp    しおり Ansi/Unicode両対応 要test30以降
-	fconfig.fgp     設定画面 fconfig.exeとほぼ同等機能 simalistの設定画面を使わない場合不要 Ansi/Unicode両対応 要test29以降
+	fconfig.fgp     fconfig.exeとほぼ同等機能 simalistの設定画面を使わない場合不要 Ansi/Unicode両対応 要test29以降
+	lplugin.fgp     リストカラム拡張 要test36以降
 	minipaneu.fgp   ミニパネル Unicode対応 要test29以降 Win9x/Me非対応
 	replaygain.fgp  ReplayGain Ansi/Unicode両対応 要test29以降
 	wadsp.fgp       WinampDSPプラグイン対応 Ansi/Unicode両対応 要test32以降 要bass_wadsp.dll
+
+追加したリストカラム拡張出力プラグイン (要lplugin.fgp)
+	filename.flp    ファイル名(拡張子無し) 要test36以降
+	taginfo.flp     Title/Album/Artist/Track 要test36以降
 
 追加した専用出力プラグイン
 	bass.fop        bass.dllによる音声出力 要test28以降 標準で同梱

@@ -56,8 +56,6 @@ LX_PLUGIN_INFO * CALLBACK GetLXPluginInfo(void){
 
 static HMODULE m_hDLL = 0;
 
-#include "../../../fittle/src/wastr.cpp"
-
 void *HAlloc(DWORD dwSize){
 	return HeapAlloc(GetProcessHeap(), 0, dwSize);
 }
@@ -104,14 +102,14 @@ void CALLBACK GetColumnText(LPVOID pFileInfo, int nRow, int nColumn, int nType, 
 	if (lxpinfo.plxif->nUnicode) {
 		LPWSTR pExt;
 		lstrcpynW((LPWSTR)pBuf, (LPCWSTR)lxpinfo.plxif->GetFileName(pFileInfo), nBufSize);
-		if (!StrStrIW((LPWSTR)pFileInfo, L"://") && !StrStrIW((LPWSTR)pFileInfo, L".cue/")){
+		if (!lxpinfo.plxif->CheckPath(pFileInfo, F4B24LX_CHECK_URL) && !lxpinfo.plxif->CheckPath(pFileInfo, F4B24LX_CHECK_CUE)){
 			pExt = PathFindExtensionW((LPWSTR)pBuf);
 			if (pExt) *pExt = 0;
 		}
 	}else{
 		LPSTR pExt;
 		lstrcpynA((LPSTR)pBuf, (LPCSTR)lxpinfo.plxif->GetFileName(pFileInfo), nBufSize);
-		if (!StrStrIA((LPSTR)pFileInfo, "://") && !StrStrIA((LPSTR)pFileInfo, ".cue/")){
+		if (!lxpinfo.plxif->CheckPath(pFileInfo, F4B24LX_CHECK_URL) && !lxpinfo.plxif->CheckPath(pFileInfo, F4B24LX_CHECK_CUE)){
 			pExt = PathFindExtensionA((LPSTR)pBuf);
 			if (pExt) *pExt = 0;
 		}

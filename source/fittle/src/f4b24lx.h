@@ -1,5 +1,10 @@
 /* f4b24“à•”Šg’£IF */
 
+enum {
+	F4B24LX_CHECK_URL = 0,
+	F4B24LX_CHECK_CUE = 1,
+	F4B24LX_CHECK_ARC = 2
+};
 typedef struct {
 	LONG nAccessRight;
 	int nVersion;
@@ -10,6 +15,7 @@ typedef struct {
 	BOOL (CALLBACK *GetTag)(LPVOID pMusic, LPVOID pTagInfo);
 	void (CALLBACK *AddColumn)(HWND hList, int nColumn, LPVOID pLabel, int nWidth, int nFmt);
 	LPVOID (CALLBACK *GetFileName)(LPVOID pFileInfo);
+	BOOL (CALLBACK *CheckPath)(LPVOID pFileInfo, int nCheck);
 
 	void (CALLBACK *HookOnAlloc)(LPVOID pFileInfo);
 	void (CALLBACK *HookOnFree)(LPVOID pFileInfo);

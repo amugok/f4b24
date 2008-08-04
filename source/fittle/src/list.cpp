@@ -20,6 +20,7 @@ static void Merge(struct FILEINFO **, struct FILEINFO **);
 static int CompareNode(struct FILEINFO *, struct FILEINFO *, int);
 static void CALLBACK LXAddColumn(HWND hList, int nColumn, LPVOID pLabel, int nWidth, int nFmt);
 static LPVOID CALLBACK LXGetFileName(LPVOID pFileInfo);
+static BOOL CALLBACK LXCheckPath(LPVOID pFileInfo, int nCheck);
 
 #include "f4b24lx.h"
 
@@ -36,6 +37,7 @@ static F4B24LX_INTERFACE m_lxif = {
 	LXGetTag,
 	LXAddColumn,
 	LXGetFileName,
+	LXCheckPath,
 	0
 };
 
@@ -554,6 +556,20 @@ static LPVOID CALLBACK LXGetFileName(LPVOID pFileInfo){
 	struct FILEINFO *pItem = (struct FILEINFO *)pFileInfo;
 	return GetFileName(pItem->szFilePath);
 }
+	
+static BOOL CALLBACK LXCheckPath(LPVOID pFileInfo, int nCheck){
+	struct FILEINFO *pItem = (struct FILEINFO *)pFileInfo;
+	switch (nCheck) {
+	case F4B24LX_CHECK_URL:
+		return StrStrI(pItem->szFilePath, TEXT("://")) != NULL;
+	case F4B24LX_CHECK_CUE:
+		return StrStrI(pItem->szFilePath, TEXT(".cue/")) != NULL;
+	case F4B24LX_CHECK_ARC:
+		return IsArchiveFast(pItem->szFilePath);
+	}
+	return FALSE;
+}
+
 
 
 static void AddStandardColumn(HWND hList, int c, LPTSTR l, int w, int t){
