@@ -37,14 +37,15 @@ GENERAL_PLUGIN_INFO * CALLBACK GetGPluginInfo(void){
 	return &gpinfo;
 }
 
+static HWND m_hWndMain = 0;
 static HMODULE m_hDLL = 0;
 static F4B24LX_INTERFACE *m_plxif = 0;
 
 #include "../../../fittle/src/wastr.cpp"
 
 /* LXプラグインリスト */
-static struct PLUGIN_NODE {
-	struct PLUGIN_NODE *pNext;
+static struct LX_PLUGIN_NODE {
+	struct LX_PLUGIN_NODE *pNext;
 	LX_PLUGIN_INFO *pInfo;
 	HMODULE hDll;
 } *pTop = NULL;
@@ -87,6 +88,7 @@ typedef struct USERDATA_NODE_TAG {
 } USERDATA_NODE;
 
 LPVOID CALLBACK CBGetUserData(LPVOID pFileInfo, LPVOID pGuid){
+	return NULL;
 }
 void CALLBACK CBSetUserData(LPVOID pFileInfo, LPVOID pGuid, LPVOID pUserData, void (CALLBACK *pFreeProc)(LPVOID)){
 }
@@ -98,7 +100,7 @@ BOOL CALLBACK InitColumnOrder(int nColumn, int nType){
 	struct LX_PLUGIN_NODE *pList = pTop;
 	while (pList) {
 		LX_PLUGIN_INFO *pInfo = pList->pInfo;
-		if (pInfo->IsSuppported(nType)) {
+		if (pInfo->IsSupported(nType)) {
 			return pInfo->InitColumnOrder(nColumn, nType);
 		}
 		pList = pList->pNext;
@@ -109,7 +111,7 @@ void CALLBACK AddColumn(HWND hList, int nColumn, int nType){
 	struct LX_PLUGIN_NODE *pList = pTop;
 	while (pList) {
 		LX_PLUGIN_INFO *pInfo = pList->pInfo;
-		if (pInfo->IsSuppported(nType)) {
+		if (pInfo->IsSupported(nType)) {
 			pInfo->AddColumn(hList, nColumn, nType);
 			return;
 		}
@@ -120,7 +122,7 @@ void CALLBACK GetColumnText(LPVOID pFileInfo, int nRow, int nColumn, int nType, 
 	struct LX_PLUGIN_NODE *pList = pTop;
 	while (pList) {
 		LX_PLUGIN_INFO *pInfo = pList->pInfo;
-		if (pInfo->IsSuppported(nType)) {
+		if (pInfo->IsSupported(nType)) {
 			pInfo->GetColumnText(pFileInfo, nRow, nColumn, nType, pBuf, nBufSize);
 			return;
 		}
@@ -131,7 +133,7 @@ int CALLBACK CompareColumnText(LPVOID pFileInfoLeft, LPVOID pFileInfoRight, int 
 	struct LX_PLUGIN_NODE *pList = pTop;
 	while (pList) {
 		LX_PLUGIN_INFO *pInfo = pList->pInfo;
-		if (pInfo->IsSuppported(nType)) {
+		if (pInfo->IsSupported(nType)) {
 			return pInfo->CompareColumnText(pFileInfoLeft, pFileInfoRight, nColumn, nType);
 		}
 		pList = pList->pNext;
@@ -159,7 +161,7 @@ static BOOL CALLBACK RegisterPlugin(HMODULE hPlugin, LPVOID user){
 			pNewNode->hDll = hPlugin;
 			if (pNewNode->pInfo){
 				LX_PLUGIN_INFO *pInfo = pNewNode->pInfo;
-				pInfo->hWndMain = gpinfo.hWndMain;
+				pInfo->hWndMain = m_hWndMain;
 				pInfo->hmodPlugin = hPlugin;
 				pInfo->plxif = m_plxif;
 				pInfo->GetUserData = CBGetUserData;
@@ -204,6 +206,7 @@ static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode) {
 
 		WAIsUnicode();
 
+		m_hWndMain = hWnd;
 		m_plxif = (F4B24LX_INTERFACE *)SendMessage(hWnd, WM_F4B24_IPC, WM_F4B24_IPC_GET_LX_IF, 0);
 		if (!m_plxif || m_plxif->nVersion != 36) return FALSE;
 

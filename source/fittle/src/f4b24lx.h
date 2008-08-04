@@ -1,7 +1,7 @@
 /* f4b24“à•”Šg’£IF */
 
 typedef struct {
-	volatile LONG nAccessRight;
+	LONG nAccessRight;
 	int nVersion;
 	int nUnicode;
 
@@ -9,6 +9,7 @@ typedef struct {
 	void (CALLBACK *FreeMusic)(LPVOID pMusic);
 	BOOL (CALLBACK *GetTag)(LPVOID pMusic, LPVOID pTagInfo);
 	void (CALLBACK *AddColumn)(HWND hList, int nColumn, LPVOID pLabel, int nWidth, int nFmt);
+	LPVOID (CALLBACK *GetFileName)(LPVOID pFileInfo);
 
 	void (CALLBACK *HookOnAlloc)(LPVOID pFileInfo);
 	void (CALLBACK *HookOnFree)(LPVOID pFileInfo);

@@ -2,7 +2,7 @@
 #include "../cplugin.h"
 #include "../../../fittle/src/f4b24.h"
 #include "../../../fittle/src/f4b24lx.h"
-#include "../../general/lplugin/lplugin.h"
+#include "../../ui/lplugin/lplugin.h"
 
 #include "lplugin.rh"
 #include <shlwapi.h>

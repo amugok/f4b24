@@ -1,0 +1,127 @@
+#include "../../../fittle/src/fittle.h"
+#include "../../../fittle/src/f4b24.h"
+#include "../../../fittle/src/f4b24lx.h"
+#include "../../ui/lplugin/lplugin.h"
+
+#include <shlwapi.h>
+
+#if defined(_MSC_VER)
+#pragma comment(lib,"kernel32.lib")
+#pragma comment(lib,"user32.lib")
+#pragma comment(lib,"gdi32.lib")
+#pragma comment(lib,"comdlg32.lib")
+#pragma comment(lib,"comctl32.lib")
+#pragma comment(lib,"shlwapi.lib")
+#pragma comment(lib,"shell32.lib")
+#pragma comment(lib,"ole32.lib")
+#pragma comment(linker, "/EXPORT:GetLXPluginInfo=_GetLXPluginInfo@0")
+#endif
+#if defined(_MSC_VER) && !defined(_DEBUG)
+#pragma comment(linker,"/ENTRY:DllMain")
+#pragma comment(linker,"/MERGE:.rdata=.text")
+#pragma comment(linker,"/OPT:NOWIN98")
+#endif
+
+int CALLBACK GetTypeNum();
+int CALLBACK GetTypeCode(int nIndex);
+LPCSTR CALLBACK GetTypeName(int nIndex);
+BOOL CALLBACK IsSupported(int nType);
+BOOL CALLBACK InitColumnOrder(int nColumn, int nType);
+void CALLBACK AddColumn(HWND hList, int nColumn, int nType);
+void CALLBACK GetColumnText(LPVOID pFileInfo, int nRow, int nColumn, int nType, LPVOID pBuf, int nBufSize);
+int CALLBACK CompareColumnText(LPVOID pFileInfoLeft, LPVOID pFileInfoRight, int nColumn, int nType);
+void CALLBACK OnQuit();
+
+static LX_PLUGIN_INFO lxpinfo = {
+	LPDK_VER,
+	GetTypeNum,
+	GetTypeCode,
+	GetTypeName,
+	IsSupported,
+	InitColumnOrder,
+	AddColumn,
+	GetColumnText,
+	CompareColumnText,
+	OnQuit
+};
+
+#ifdef __cplusplus
+extern "C"
+#endif
+LX_PLUGIN_INFO * CALLBACK GetLXPluginInfo(void){
+	return &lxpinfo;
+}
+
+static HMODULE m_hDLL = 0;
+
+#include "../../../fittle/src/wastr.cpp"
+
+void *HAlloc(DWORD dwSize){
+	return HeapAlloc(GetProcessHeap(), 0, dwSize);
+}
+
+void HFree(LPVOID pPtr){
+	HeapFree(GetProcessHeap(), 0, pPtr);
+}
+
+
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
+	(void)lpvReserved;
+	if (fdwReason == DLL_PROCESS_ATTACH){
+		m_hDLL = hinstDLL;
+		DisableThreadLibraryCalls(hinstDLL);
+	}else if (fdwReason == DLL_PROCESS_DETACH){
+	}
+	return TRUE;
+}
+
+int CALLBACK GetTypeNum(){
+	return 1;
+}
+int CALLBACK GetTypeCode(int nIndex){
+	if (nIndex == 0) return 8;
+	return -1;
+}
+LPCSTR CALLBACK GetTypeName(int nIndex){
+	if (nIndex == 0) return "ファイル名(拡張子無し)";
+	return "";
+}
+BOOL CALLBACK IsSupported(int nType){
+	return nType == 8;
+}
+BOOL CALLBACK InitColumnOrder(int nColumn, int nType){
+	return IsSupported(nType);
+}
+void CALLBACK AddColumn(HWND hList, int nColumn, int nType){
+	if (IsSupported(nType)) {
+		int w = 100;
+		lxpinfo.plxif->AddColumn(hList, nColumn, lxpinfo.plxif->nUnicode ? (LPVOID)L"ファイル名" : (LPVOID)"ファイル名", w, LVCFMT_LEFT);
+	}
+}
+void CALLBACK GetColumnText(LPVOID pFileInfo, int nRow, int nColumn, int nType, LPVOID pBuf, int nBufSize){
+	if (lxpinfo.plxif->nUnicode) {
+		LPWSTR pExt;
+		lstrcpynW((LPWSTR)pBuf, (LPCWSTR)lxpinfo.plxif->GetFileName(pFileInfo), nBufSize);
+		if (!StrStrIW((LPWSTR)pFileInfo, L"://") && !StrStrIW((LPWSTR)pFileInfo, L".cue/")){
+			pExt = PathFindExtensionW((LPWSTR)pBuf);
+			if (pExt) *pExt = 0;
+		}
+	}else{
+		LPSTR pExt;
+		lstrcpynA((LPSTR)pBuf, (LPCSTR)lxpinfo.plxif->GetFileName(pFileInfo), nBufSize);
+		if (!StrStrIA((LPSTR)pFileInfo, "://") && !StrStrIA((LPSTR)pFileInfo, ".cue/")){
+			pExt = PathFindExtensionA((LPSTR)pBuf);
+			if (pExt) *pExt = 0;
+		}
+	}
+}
+int CALLBACK CompareColumnText(LPVOID pFileInfoLeft, LPVOID pFileInfoRight, int nColumn, int nType){
+	if (lxpinfo.plxif->nUnicode)
+		return lstrcmpiW((LPCWSTR)lxpinfo.plxif->GetFileName(pFileInfoLeft), (LPCWSTR)lxpinfo.plxif->GetFileName(pFileInfoRight));
+	else
+		return lstrcmpiA((LPCSTR)lxpinfo.plxif->GetFileName(pFileInfoLeft), (LPCSTR)lxpinfo.plxif->GetFileName(pFileInfoRight));
+}
+
+void CALLBACK OnQuit(){
+}
+

@@ -19,7 +19,7 @@
 static void Merge(struct FILEINFO **, struct FILEINFO **);
 static int CompareNode(struct FILEINFO *, struct FILEINFO *, int);
 static void CALLBACK LXAddColumn(HWND hList, int nColumn, LPVOID pLabel, int nWidth, int nFmt);
-
+static LPVOID CALLBACK LXGetFileName(LPVOID pFileInfo);
 
 #include "f4b24lx.h"
 
@@ -35,6 +35,7 @@ static F4B24LX_INTERFACE m_lxif = {
 	LXFreeMusic,
 	LXGetTag,
 	LXAddColumn,
+	LXGetFileName,
 	0
 };
 
@@ -548,6 +549,12 @@ static void AddListColumn(HWND hList, int c, LPTSTR l, int w, int fmt){
 static void CALLBACK LXAddColumn(HWND hList, int nColumn, LPVOID pLabel, int nWidth, int nFmt){
 	AddListColumn(hList, nColumn, (LPTSTR)pLabel, nWidth, nFmt);
 }
+
+static LPVOID CALLBACK LXGetFileName(LPVOID pFileInfo){
+	struct FILEINFO *pItem = (struct FILEINFO *)pFileInfo;
+	return GetFileName(pItem->szFilePath);
+}
+
 
 static void AddStandardColumn(HWND hList, int c, LPTSTR l, int w, int t){
 	char szKey[7] = "Width0";
