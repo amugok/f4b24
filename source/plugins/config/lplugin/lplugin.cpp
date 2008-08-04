@@ -104,12 +104,14 @@ static BOOL CALLBACK RegisterPlugin(HMODULE hPlugin, LPVOID user){
 			pNewNode->pNext = NULL;
 			pNewNode->hDll = hPlugin;
 			if (pNewNode->pInfo){
+/*
 				LX_PLUGIN_INFO *pInfo = pNewNode->pInfo;
 				pInfo->hWndMain = 0;
 				pInfo->hmodPlugin = hPlugin;
 				pInfo->plxif = 0;
 				pInfo->GetUserData = 0;
 				pInfo->SetUserData = 0;
+*/
 				if (pTop) {
 					struct LX_PLUGIN_NODE *pList;
 					for (pList = pTop; pList->pNext; pList = pList->pNext);
