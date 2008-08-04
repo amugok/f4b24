@@ -22,6 +22,8 @@
 #pragma comment(linker,"/OPT:NOWIN98")
 #endif
 
+#define COLUMN_TYPE_ID 7
+
 int CALLBACK GetTypeNum();
 int CALLBACK GetTypeCode(int nIndex);
 LPCSTR CALLBACK GetTypeName(int nIndex);
@@ -79,7 +81,7 @@ int CALLBACK GetTypeNum(){
 	return 1;
 }
 int CALLBACK GetTypeCode(int nIndex){
-	if (nIndex == 0) return 8;
+	if (nIndex == 0) return COLUMN_TYPE_ID;
 	return -1;
 }
 LPCSTR CALLBACK GetTypeName(int nIndex){
@@ -87,7 +89,7 @@ LPCSTR CALLBACK GetTypeName(int nIndex){
 	return "";
 }
 BOOL CALLBACK IsSupported(int nType){
-	return nType == 8;
+	return nType == COLUMN_TYPE_ID;
 }
 BOOL CALLBACK InitColumnOrder(int nColumn, int nType){
 	return IsSupported(nType);

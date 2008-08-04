@@ -87,14 +87,62 @@ typedef struct USERDATA_NODE_TAG {
 	void (CALLBACK *pFreeProc)(LPVOID);
 } USERDATA_NODE;
 
+static USERDATA_NODE *GetTopNode(LPVOID pFileInfo){
+	if (m_plxif->nUnicode){
+		FILEINFOW *p = (FILEINFOW *)pFileInfo;
+		return (USERDATA_NODE *)p->userdata;
+	}else{
+		FILEINFOA *p = (FILEINFOA *)pFileInfo;
+		return (USERDATA_NODE *)p->userdata;
+	}
+}
+
+static void SetTopNode(LPVOID pFileInfo, USERDATA_NODE *pTop){
+	if (m_plxif->nUnicode){
+		FILEINFOW *p = (FILEINFOW *)pFileInfo;
+		p->userdata = pTop;
+	}else{
+		FILEINFOA *p = (FILEINFOA *)pFileInfo;
+		p->userdata = pTop;
+	}
+}
+
 LPVOID CALLBACK CBGetUserData(LPVOID pFileInfo, LPVOID pGuid){
+	USERDATA_NODE *pList = GetTopNode(pFileInfo);
+	while (pList){
+		if (IsEqualGUID(pList->guid, *(LPGUID)pGuid))
+			return pList->pUserData;
+		pList = pList->pNext;
+	}
 	return NULL;
 }
 void CALLBACK CBSetUserData(LPVOID pFileInfo, LPVOID pGuid, LPVOID pUserData, void (CALLBACK *pFreeProc)(LPVOID)){
+	USERDATA_NODE *pItem = (USERDATA_NODE *)HAlloc(sizeof(USERDATA_NODE));
+	if (pItem) {
+		USERDATA_NODE *pList = GetTopNode(pFileInfo);
+		pItem->pNext = NULL;
+		pItem->guid = *(LPGUID)pGuid;
+		pItem->pUserData = pUserData;
+		pItem->pFreeProc = pFreeProc;
+		if (pList) {
+			while (pList->pNext) pList = pList->pNext;
+			pList->pNext = pItem;
+		} else {
+			SetTopNode(pFileInfo, pItem);
+		}
+	}
 }
 void CALLBACK OnAlloc(LPVOID pFileInfo){
+	SetTopNode(pFileInfo, NULL);
 }
 void CALLBACK OnFree(LPVOID pFileInfo){
+	USERDATA_NODE *pList = GetTopNode(pFileInfo);
+	while (pList) {
+		USERDATA_NODE *pNext = pList->pNext;
+		if (pList->pFreeProc) pList->pFreeProc(pList->pUserData);
+		HFree(pList);
+		pList = pNext;
+	}
 }
 BOOL CALLBACK InitColumnOrder(int nColumn, int nType){
 	struct LX_PLUGIN_NODE *pList = pTop;
