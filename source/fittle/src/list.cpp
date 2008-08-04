@@ -601,7 +601,7 @@ static int CompareNode(struct FILEINFO *pLeft, struct FILEINFO *pRight, int nSor
 		case 3:		// XV“úŽž¸‡
 			return lstrcmp(pLeft->szTime, pRight->szTime);
 		default:
-			if (m_lxif.HookCompareColumnText) m_lxif.HookCompareColumnText(pLeft, pRight, nColumn, nType);
+			if (m_lxif.HookCompareColumnText) return m_lxif.HookCompareColumnText(pLeft, pRight, nColumn, nType);
 			break;
 	}
 	return 0;

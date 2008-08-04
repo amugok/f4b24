@@ -200,10 +200,32 @@ int CALLBACK CompareColumnText(LPVOID pFileInfoLeft, LPVOID pFileInfoRight, int 
 		TAGINFOW *pTagL = GetTagInfoW(pFileInfoLeft);
 		TAGINFOW *pTagR = GetTagInfoW(pFileInfoRight);
 		if (!pTagL || !pTagR) return (!pTagL && !pTagR) ? 0 : ((!pTagL) ? -1 : 1);
+		switch (nType) {
+		case COLUMN_TYPE_ID + 0:
+			return lstrcmpW(pTagL->szTitle, pTagR->szTitle);
+		case COLUMN_TYPE_ID + 1:
+			return lstrcmpW(pTagL->szArtist, pTagR->szArtist);
+		case COLUMN_TYPE_ID + 2:
+			return lstrcmpW(pTagL->szAlbum, pTagR->szAlbum);
+			break;
+		case COLUMN_TYPE_ID + 3:
+			return lstrcmpW(pTagL->szTrack, pTagR->szTrack);
+		}
 	}else{
 		TAGINFOA *pTagL = GetTagInfoA(pFileInfoLeft);
 		TAGINFOA *pTagR = GetTagInfoA(pFileInfoRight);
 		if (!pTagL || !pTagR) return (!pTagL && !pTagR) ? 0 : ((!pTagL) ? -1 : 1);
+		switch (nType) {
+		case COLUMN_TYPE_ID + 0:
+			return lstrcmpA(pTagL->szTitle, pTagR->szTitle);
+		case COLUMN_TYPE_ID + 1:
+			return lstrcmpA(pTagL->szArtist, pTagR->szArtist);
+		case COLUMN_TYPE_ID + 2:
+			return lstrcmpA(pTagL->szAlbum, pTagR->szAlbum);
+			break;
+		case COLUMN_TYPE_ID + 3:
+			return lstrcmpA(pTagL->szTrack, pTagR->szTrack);
+		}
 	}
 	return 0;
 }
