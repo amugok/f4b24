@@ -179,15 +179,6 @@ static int InsertListItem(HWND hList, int nItemData, LPCSTR lpszText, int nTo) {
 	return -1;
 }
 
-static int AddListItem(HWND hList, int nItemData, LPCSTR lpszText) {
-	LRESULT lSel = SendMessageA(hList, LB_ADDSTRING, (WPARAM)0, (LPARAM)lpszText);
-	if (lSel != LB_ERR && lSel != LB_ERRSPACE) {
-		SetListItemData(hList, lSel, nItemData);
-		return lSel;
-	}
-	return -1;
-}
-
 static void DeleteListItem(HWND hList, int nRow) {
 	SendMessage(hList, LB_DELETESTRING, (WPARAM)nRow, (LPARAM)0);
 }
@@ -231,6 +222,7 @@ static void LoadConfig(HWND hDlg){
 	if (nColumnNum) {
 		int c;
 		int nColumn;
+		HWND hListLeft = GetDlgItem(hDlg, IDC_LIST1);
 		HWND hListRight = GetDlgItem(hDlg, IDC_LIST4);
 		m_pColumnTable = (LPBYTE)HAlloc(sizeof(BYTE) * nColumnNum);
 		for (c = nColumn = 0; nColumn < nColumnNum; nColumn++){
@@ -238,7 +230,7 @@ static void LoadConfig(HWND hDlg){
 			int nType;
 			wsprintfA(szSec, "ColumnType%d", nColumn);
 			nType = WAGetIniInt("Column", szSec, -1);
-			if (FindListItem(hListRight, nType) >= 0){
+			if (FindListItem(hListLeft, nType) >= 0 || FindListItem(hListRight, nType) >= 0){
 				m_pColumnTable[c++] = nType;
 			}
 		}
@@ -246,12 +238,52 @@ static void LoadConfig(HWND hDlg){
 	}
 }
 
-static BOOL CheckConfig(HWND hDlg){
+static BOOL IsChangedConfig(HWND hDlg){
+	int i;
+	HWND hListLeft = GetDlgItem(hDlg, IDC_LIST1);
+	int c = GetListCount(hListLeft);
+	if (c != GetColumnNum()) return TRUE;
+	for (i = 0; i < c; i++){
+		if (GetListItemData(hListLeft, i) != GetColumnType(i)) return TRUE;
+	}
 	return FALSE;
+}
+
+static void CheckConfig(HWND hDlg){
+	if (IsChangedConfig(hDlg))
+		PropSheet_Changed(GetParent(hDlg) , hDlg);
+	else
+		PropSheet_UnChanged(GetParent(hDlg) , hDlg);
 }
 
 
 static void SaveConfig(HWND hDlg){
+	CHAR szSec[16];
+	HWND hListLeft = GetDlgItem(hDlg, IDC_LIST1);
+	int c;
+	int nColumnNum;
+
+	WASetIniFile(NULL, "Fittle.ini");
+	/* 旧設定の削除 */
+	nColumnNum = WAGetIniInt("Column", "ColumnNum", 0);
+	for (c = 0; c < nColumnNum; c++){
+		wsprintfA(szSec, "ColumnType%d", c);
+		WASetIniStr("Column", szSec, NULL);
+	}
+	WAFlushIni();
+	nColumnNum = GetListCount(hListLeft);
+	if (nColumnNum == 4 && GetListItemData(hListLeft, 0) == 0 && GetListItemData(hListLeft, 1) == 1 && GetListItemData(hListLeft, 2) == 2 && GetListItemData(hListLeft, 3) == 3){
+		/* デフォルト */
+		WASetIniInt("Column", "ColumnNum", 0);
+	}else{
+		WASetIniInt("Column", "ColumnNum", nColumnNum);
+		for (c = 0; c < nColumnNum; c++){
+			wsprintfA(szSec, "ColumnType%d", c);
+			WASetIniInt("Column", szSec, GetListItemData(hListLeft, c));
+		}
+	}
+	WAFlushIni();
+
 }
 
 static int MoveListItemTo(HWND hListFrom, HWND hListTo, int nFind, int nTo){
@@ -264,11 +296,6 @@ static int MoveListItemTo(HWND hListFrom, HWND hListTo, int nFind, int nTo){
 
 static int MoveListItem(HWND hListFrom, HWND hListTo, int nFind){
 	return MoveListItemTo(hListFrom, hListTo, nFind, -1);
-//	CHAR szCaption[64];
-//	int nItemData = GetListItemData(hListFrom, nFind);
-//	GetListItem(hListFrom, nFind, szCaption, 64);
-//	DeleteListItem(hListFrom, nFind);
-//	return AddListItem(hListTo, nItemData, szCaption);
 }
 
 
@@ -375,15 +402,14 @@ static BOOL CALLBACK LXPageProc(HWND hDlg , UINT msg , WPARAM wp , LPARAM lp) {
 				MoveListDown(hDlg);
 			}
 		}
-		if (CheckConfig(hDlg))
-			PropSheet_Changed(GetParent(hDlg) , hDlg);
-		else
-			PropSheet_UnChanged(GetParent(hDlg) , hDlg);
+		CheckConfig(hDlg);
 		return TRUE;
 
 	case WM_NOTIFY:
 		if (((NMHDR *)lp)->code == PSN_APPLY){
 			SaveConfig(hDlg);
+			LoadConfig(hDlg);
+			CheckConfig(hDlg);
 		}
 		return TRUE;
 	}
