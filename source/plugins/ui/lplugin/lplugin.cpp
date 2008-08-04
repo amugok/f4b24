@@ -107,7 +107,7 @@ static void SetTopNode(LPVOID pFileInfo, USERDATA_NODE *pTop){
 	}
 }
 
-LPVOID CALLBACK CBGetUserData(LPVOID pFileInfo, LPVOID pGuid){
+static LPVOID CALLBACK CBGetUserData(LPVOID pFileInfo, LPVOID pGuid){
 	USERDATA_NODE *pList = GetTopNode(pFileInfo);
 	while (pList){
 		if (IsEqualGUID(pList->guid, *(LPGUID)pGuid))
@@ -116,7 +116,7 @@ LPVOID CALLBACK CBGetUserData(LPVOID pFileInfo, LPVOID pGuid){
 	}
 	return NULL;
 }
-void CALLBACK CBSetUserData(LPVOID pFileInfo, LPVOID pGuid, LPVOID pUserData, void (CALLBACK *pFreeProc)(LPVOID)){
+static void CALLBACK CBSetUserData(LPVOID pFileInfo, LPVOID pGuid, LPVOID pUserData, void (CALLBACK *pFreeProc)(LPVOID)){
 	USERDATA_NODE *pItem = (USERDATA_NODE *)HAlloc(sizeof(USERDATA_NODE));
 	if (pItem) {
 		USERDATA_NODE *pList = GetTopNode(pFileInfo);
@@ -132,10 +132,19 @@ void CALLBACK CBSetUserData(LPVOID pFileInfo, LPVOID pGuid, LPVOID pUserData, vo
 		}
 	}
 }
-void CALLBACK OnAlloc(LPVOID pFileInfo){
+
+static int CALLBACK CBGetIniInt(LPCSTR pSec, LPCSTR pKey, int nDefault){
+	return WAGetIniInt(pSec, pKey, nDefault);
+}
+static void CALLBACK CBSetIniInt(LPCSTR pSec, LPCSTR pKey, int nValue){
+	WASetIniInt(pSec, pKey, nValue);
+}
+
+
+static void CALLBACK OnAlloc(LPVOID pFileInfo){
 	SetTopNode(pFileInfo, NULL);
 }
-void CALLBACK OnFree(LPVOID pFileInfo){
+static void CALLBACK OnFree(LPVOID pFileInfo){
 	USERDATA_NODE *pList = GetTopNode(pFileInfo);
 	while (pList) {
 		USERDATA_NODE *pNext = pList->pNext;
@@ -144,7 +153,7 @@ void CALLBACK OnFree(LPVOID pFileInfo){
 		pList = pNext;
 	}
 }
-BOOL CALLBACK InitColumnOrder(int nColumn, int nType){
+static BOOL CALLBACK InitColumnOrder(int nColumn, int nType){
 	struct LX_PLUGIN_NODE *pList = pTop;
 	while (pList) {
 		LX_PLUGIN_INFO *pInfo = pList->pInfo;
@@ -155,7 +164,7 @@ BOOL CALLBACK InitColumnOrder(int nColumn, int nType){
 	}
 	return FALSE;
 }
-void CALLBACK AddColumn(HWND hList, int nColumn, int nType){
+static void CALLBACK AddColumn(HWND hList, int nColumn, int nType){
 	struct LX_PLUGIN_NODE *pList = pTop;
 	while (pList) {
 		LX_PLUGIN_INFO *pInfo = pList->pInfo;
@@ -166,7 +175,7 @@ void CALLBACK AddColumn(HWND hList, int nColumn, int nType){
 		pList = pList->pNext;
 	}
 }
-void CALLBACK GetColumnText(LPVOID pFileInfo, int nRow, int nColumn, int nType, LPVOID pBuf, int nBufSize){
+static void CALLBACK GetColumnText(LPVOID pFileInfo, int nRow, int nColumn, int nType, LPVOID pBuf, int nBufSize){
 	struct LX_PLUGIN_NODE *pList = pTop;
 	while (pList) {
 		LX_PLUGIN_INFO *pInfo = pList->pInfo;
@@ -177,7 +186,7 @@ void CALLBACK GetColumnText(LPVOID pFileInfo, int nRow, int nColumn, int nType, 
 		pList = pList->pNext;
 	}
 }
-int CALLBACK CompareColumnText(LPVOID pFileInfoLeft, LPVOID pFileInfoRight, int nColumn, int nType){
+static int CALLBACK CompareColumnText(LPVOID pFileInfoLeft, LPVOID pFileInfoRight, int nColumn, int nType){
 	struct LX_PLUGIN_NODE *pList = pTop;
 	while (pList) {
 		LX_PLUGIN_INFO *pInfo = pList->pInfo;
@@ -188,11 +197,14 @@ int CALLBACK CompareColumnText(LPVOID pFileInfoLeft, LPVOID pFileInfoRight, int 
 	}
 	return 0;
 }
-void CALLBACK OnSave(){
+
+static void CALLBACK OnSave(HWND hList, int nColumn, int nType, int nWidth){
 	struct LX_PLUGIN_NODE *pList = pTop;
 	while (pList) {
 		LX_PLUGIN_INFO *pInfo = pList->pInfo;
-		pInfo->OnQuit();
+		if (pInfo->IsSupported(nType)) {
+			pInfo->OnSave(hList, nColumn, nType, nWidth);
+		}
 		pList = pList->pNext;
 	}
 }
@@ -214,6 +226,8 @@ static BOOL CALLBACK RegisterPlugin(HMODULE hPlugin, LPVOID user){
 				pInfo->plxif = m_plxif;
 				pInfo->GetUserData = CBGetUserData;
 				pInfo->SetUserData = CBSetUserData;
+				pInfo->GetIniInt = CBGetIniInt;
+				pInfo->SetIniInt= CBSetIniInt;
 				if (pTop) {
 					struct LX_PLUGIN_NODE *pList;
 					for (pList = pTop; pList->pNext; pList = pList->pNext);
@@ -253,6 +267,8 @@ static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode) {
 		LONG nAccessRight;
 
 		WAIsUnicode();
+
+		WASetIniFile(NULL, "Fittle.ini");
 
 		m_hWndMain = hWnd;
 		m_plxif = (F4B24LX_INTERFACE *)SendMessage(hWnd, WM_F4B24_IPC, WM_F4B24_IPC_GET_LX_IF, 0);

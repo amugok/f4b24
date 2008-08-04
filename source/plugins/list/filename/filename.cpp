@@ -32,7 +32,7 @@ BOOL CALLBACK InitColumnOrder(int nColumn, int nType);
 void CALLBACK AddColumn(HWND hList, int nColumn, int nType);
 void CALLBACK GetColumnText(LPVOID pFileInfo, int nRow, int nColumn, int nType, LPVOID pBuf, int nBufSize);
 int CALLBACK CompareColumnText(LPVOID pFileInfoLeft, LPVOID pFileInfoRight, int nColumn, int nType);
-void CALLBACK OnQuit();
+void CALLBACK OnSave(HWND hList, int nColumn, int nType, int nWidth);
 
 static LX_PLUGIN_INFO lxpinfo = {
 	LPDK_VER,
@@ -44,7 +44,7 @@ static LX_PLUGIN_INFO lxpinfo = {
 	AddColumn,
 	GetColumnText,
 	CompareColumnText,
-	OnQuit
+	OnSave
 };
 
 #ifdef __cplusplus
@@ -94,8 +94,9 @@ BOOL CALLBACK InitColumnOrder(int nColumn, int nType){
 }
 void CALLBACK AddColumn(HWND hList, int nColumn, int nType){
 	if (IsSupported(nType)) {
-		int w = 100;
-		lxpinfo.plxif->AddColumn(hList, nColumn, lxpinfo.plxif->nUnicode ? (LPVOID)L"ファイル名" : (LPVOID)"ファイル名", w, LVCFMT_LEFT);
+		CHAR szSec[16];
+		wsprintfA(szSec, "WidthEx%d", nType);
+		lxpinfo.plxif->AddColumn(hList, nColumn, lxpinfo.plxif->nUnicode ? (LPVOID)L"ファイル名" : (LPVOID)"ファイル名", lxpinfo.GetIniInt("Column", szSec, 100), LVCFMT_LEFT);
 	}
 }
 void CALLBACK GetColumnText(LPVOID pFileInfo, int nRow, int nColumn, int nType, LPVOID pBuf, int nBufSize){
@@ -122,6 +123,9 @@ int CALLBACK CompareColumnText(LPVOID pFileInfoLeft, LPVOID pFileInfoRight, int 
 		return lstrcmpiA((LPCSTR)lxpinfo.plxif->GetFileName(pFileInfoLeft), (LPCSTR)lxpinfo.plxif->GetFileName(pFileInfoRight));
 }
 
-void CALLBACK OnQuit(){
+void CALLBACK OnSave(HWND hList, int nColumn, int nType, int nWidth){
+	CHAR szSec[16];
+	wsprintfA(szSec, "WidthEx%d", nType);
+	lxpinfo.SetIniInt("Column", szSec, nWidth);
 }
 

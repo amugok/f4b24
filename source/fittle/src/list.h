@@ -34,7 +34,7 @@ int GetColumnType(int nColumn);
 void GetColumnText(struct FILEINFO *pTmp, int nRow, int nColumn, LPTSTR pWork, int nWorkMax);
 void AddColumns(HWND hList);
 void LoadColumnsOrder();
-void SaveColumnsOrder();
+void SaveColumnsOrder(HWND hList);
 LPVOID GetLXIf();
 
 #endif

@@ -690,8 +690,15 @@ void LoadColumnsOrder(){
 		m_nNumColumns = c;
 	}
 }
-void SaveColumnsOrder(){
-	if (m_lxif.HookOnSave) m_lxif.HookOnSave();
+void SaveColumnsOrder(HWND hList){
+	if (m_lxif.HookOnSave)
+	{
+		int nMax = GetColumnNum();
+		int c;
+		for (c = 0; c < nMax; c++) {
+			m_lxif.HookOnSave(hList, c, GetColumnType(c), ListView_GetColumnWidth(hList, c));
+		}
+	}
 }
 
 LPVOID GetLXIf(){

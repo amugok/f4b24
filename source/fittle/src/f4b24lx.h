@@ -23,6 +23,6 @@ typedef struct {
 	void (CALLBACK *HookAddColumn)(HWND hList, int nColumn, int nType);
 	void (CALLBACK *HookGetColumnText)(LPVOID pFileInfo, int nRow, int nColumn, int nType, LPVOID pBuf, int nBufSize);
 	int (CALLBACK *HookCompareColumnText)(LPVOID pFileInfoLeft, LPVOID pFileInfoRight, int nColumn, int nType);
-	void (CALLBACK *HookOnSave)();
+	void (CALLBACK *HookOnSave)(HWND hList, int nColumn, int nType, int nWidth);
 } F4B24LX_INTERFACE;
 

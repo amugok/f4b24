@@ -1046,7 +1046,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			DeleteCriticalSection(&m_cs);
 
 			SaveState(hWnd);
-			SaveColumnsOrder();
+			SaveColumnsOrder(GetSelListTab()->hList);
 			SavePlaylists(m_hTab);
 
 			if(m_bTrayFlag){

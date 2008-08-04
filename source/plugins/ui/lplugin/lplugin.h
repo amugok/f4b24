@@ -29,7 +29,7 @@ typedef struct LX_PLUGIN_INFO_TAG {
 	void (CALLBACK *AddColumn)(HWND hList, int nColumn, int nType);
 	void (CALLBACK *GetColumnText)(LPVOID pFileInfo, int nRow, int nColumn, int nType, LPVOID pBuf, int nBufSize);
 	int (CALLBACK *CompareColumnText)(LPVOID pFileInfoLeft, LPVOID pFileInfoRight, int nColumn, int nType);
-	void (CALLBACK *OnQuit)();
+	void (CALLBACK *OnSave)(HWND hList, int nColumn, int nType, int nWidth);
 
 	HWND hWndMain;
 	HMODULE hmodPlugin;
@@ -37,6 +37,8 @@ typedef struct LX_PLUGIN_INFO_TAG {
 
 	LPVOID (CALLBACK *GetUserData)(LPVOID pFileInfo, LPVOID pGuid);
 	void (CALLBACK *SetUserData)(LPVOID pFileInfo, LPVOID pGuid, LPVOID pUserData, void (CALLBACK *FreeProc)(LPVOID));
+	int (CALLBACK * GetIniInt)(LPCSTR pSec, LPCSTR pKey, int nDefault);
+	void (CALLBACK * SetIniInt)(LPCSTR pSec, LPCSTR pKey, int nValue);
 #endif
 } LX_PLUGIN_INFO;
 
