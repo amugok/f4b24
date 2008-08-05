@@ -37,13 +37,14 @@ void ShowSettingDialog(HWND, int);
 int SaveM3UDialog(LPTSTR, LPTSTR);
 HMODULE ExpandArgs(int *pARGC, LPTSTR **pARGV);
 
-void ListView_ClearSelect(HWND hLV);
-void ListView_ClearHilite(HWND hLV);
-void ListView_SingleSelect(HWND hLV, int nIndex);
-void ListView_SingleSelectView(HWND hLV, int nIndex);
-void ListView_SingleSelectViewP(HWND hLV, int nIndex);
-int ListView_GetNextSelect(HWND hLV, int nIndex);
-int ListView_GetCount(HWND hLV);
+void LV_SetState(HWND hLV, int nItem, int nState);
+void LV_ClearSelect(HWND hLV);
+void LV_ClearHilite(HWND hLV);
+void LV_SingleSelect(HWND hLV, int nIndex);
+void LV_SingleSelectView(HWND hLV, int nIndex);
+void LV_SingleSelectViewP(HWND hLV, int nIndex);
+int LV_GetNextSelect(HWND hLV, int nIndex);
+int LV_GetCount(HWND hLV);
 
 void lstrcpyntA(LPSTR lpDst, LPCTSTR lpSrc, int nDstMax);
 void lstrcpyntW(LPWSTR lpDst, LPCTSTR lpSrc, int nDstMax);

@@ -132,7 +132,7 @@ int TraverseList(struct LISTTAB *pListTab){
 		i++;
 	}
 	ListView_SetItemCountEx(pListTab->hList, i, LVSICF_NOINVALIDATEALL);
-	ListView_SingleSelect(pListTab->hList, 0);
+	LV_SingleSelect(pListTab->hList, 0);
 	
 	if(bVisible){
 		ShowWindow(pListTab->hList, SW_SHOW);
@@ -156,11 +156,11 @@ int ChangeOrder(struct LISTTAB *pListTab, int nAfter){
 	struct FILEINFO *pPlaying = NULL;
 
 	//先頭選択ファイルのインデックス取得
-	nSelect = ListView_GetNextSelect(pListTab->hList, -1);
+	nSelect = LV_GetNextSelect(pListTab->hList, -1);
 	if(nSelect==-1)	return -1;	// 選択ファイルが無ければ抜ける
 
 	// 調整
-	nCount = ListView_GetCount(pListTab->hList);
+	nCount = LV_GetCount(pListTab->hList);
 	if(nCount==nAfter) nAfter--;
 	if(nSelect<nAfter) nAfter++;
 
@@ -170,7 +170,7 @@ int ChangeOrder(struct LISTTAB *pListTab, int nAfter){
 	// 描画ロック
 	LockWindowUpdate(GetParent(pListTab->hList));
 
-	while((nSelect = ListView_GetNextSelect(pListTab->hList, -1))!=-1){
+	while((nSelect = LV_GetNextSelect(pListTab->hList, -1))!=-1){
 		// サブリストに追加
 		if(!pSubRoot){
 			pSubRoot = GetPtrFromIndex(pListTab->pRoot, nSelect);
@@ -213,7 +213,7 @@ int DeleteFiles(struct LISTTAB *pListTab){
 	int nStack;
 	FILEINFO *pTmp;
 
-	nIndex = ListView_GetNextSelect(pListTab->hList, -1);
+	nIndex = LV_GetNextSelect(pListTab->hList, -1);
 	while(nIndex!=-1){
 		nBefore = nIndex;
 		ListView_DeleteItem(pListTab->hList, nIndex);
@@ -230,10 +230,10 @@ int DeleteFiles(struct LISTTAB *pListTab){
 		}
 		DeleteAList(pTmp, &(pListTab->pRoot));
 		if(nIndex<=pListTab->nPlaying) pListTab->nPlaying--;
-		if(nIndex==ListView_GetCount(pListTab->hList)) nIndex--;
-		nIndex = ListView_GetNextSelect(pListTab->hList, -1);
+		if(nIndex==LV_GetCount(pListTab->hList)) nIndex--;
+		nIndex = LV_GetNextSelect(pListTab->hList, -1);
 	}
-	ListView_SingleSelect(pListTab->hList, nBefore);
+	LV_SingleSelect(pListTab->hList, nBefore);
 	return nIndex;
 }
 
@@ -242,19 +242,19 @@ void SendToPlaylist(struct LISTTAB *ltFrom, struct LISTTAB *ltTo){
 	int nIndex = -1;
 	FILEINFO *pTmp;
 	HWND hListTo = ltTo->hList;
-	int nOldCount = ListView_GetCount(hListTo);
+	int nOldCount = LV_GetCount(hListTo);
 	int nNewCount;
 
-	while((nIndex = ListView_GetNextSelect(ltFrom->hList, nIndex))!=-1){
+	while((nIndex = LV_GetNextSelect(ltFrom->hList, nIndex))!=-1){
 		pTmp = GetPtrFromIndex(ltFrom->pRoot, nIndex);
 		AddList(&(ltTo->pRoot), pTmp->szFilePath, pTmp->szSize, pTmp->szTime);
 	}
 	TraverseList(ltTo);
 
-	nNewCount = ListView_GetCount(hListTo);
-	ListView_ClearSelect(hListTo);
+	nNewCount = LV_GetCount(hListTo);
+	LV_ClearSelect(hListTo);
 	for (nIndex = nOldCount; nIndex < nNewCount; nIndex++){
-		ListView_SetItemState(hListTo, nIndex, LVNI_SELECTED, LVNI_SELECTED);
+		LV_SetState(hListTo, nIndex, LVNI_SELECTED);
 	}
 	ListView_EnsureVisible(hListTo, nNewCount-1, TRUE);
 }
@@ -380,7 +380,7 @@ int InsertList(struct LISTTAB *pTo, int nStart, struct FILEINFO *pSub){
 	if(!pSub) return 0;
 
 	// インデックスの処理
-	nMainCount = ListView_GetCount(pTo->hList);
+	nMainCount = LV_GetCount(pTo->hList);
 	nSubCount = GetListCount(pSub);
 	if(nStart<0) nStart = nMainCount;
 
@@ -401,9 +401,9 @@ int InsertList(struct LISTTAB *pTo, int nStart, struct FILEINFO *pSub){
 	ListView_SetItemCountEx(pTo->hList, nMainCount + nSubCount, LVSICF_NOINVALIDATEALL);
 
 	// 選択状態の設定
-	ListView_SetItemState(pTo->hList, nStart, LVIS_FOCUSED, LVIS_FOCUSED);
+	LV_SetState(pTo->hList, nStart, LVIS_FOCUSED);
 	for(i=0;i<nSubCount;i++){
-		ListView_SetItemState(pTo->hList, i+nStart, LVNI_SELECTED, LVNI_SELECTED);
+		LV_SetState(pTo->hList, i+nStart, LVNI_SELECTED);
 	}
 
 	/*if(bVisible){
@@ -533,7 +533,7 @@ BOOL SavePlaylists(HWND hTab){
 	}
 
 	for(i=1;i<=nTabCount;i++){
-		nBuffSize += ListView_GetCount(GetListTab(hTab, i)->hList) + 2; //タイトル分で+1
+		nBuffSize += LV_GetCount(GetListTab(hTab, i)->hList) + 2; //タイトル分で+1
 	}
 #ifdef UNICODE
 	nBuffSize = sizeof(TCHAR) + nBuffSize * (MAX_FITTLE_PATH + 2) * sizeof(TCHAR);
@@ -633,7 +633,7 @@ BOOL CALLBACK TabNameDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 
 void AppendToList(LISTTAB *pList, FILEINFO *pSub){
 	HWND hList = pList->hList;
-	ListView_ClearSelect(hList);
+	LV_ClearSelect(hList);
 	InsertList(pList, -1, pSub);
-	ListView_EnsureVisible(hList, ListView_GetCount(hList)-1, TRUE);
+	ListView_EnsureVisible(hList, LV_GetCount(hList)-1, TRUE);
 }

@@ -309,46 +309,54 @@ HMODULE ExpandArgs(int *pARGC, LPTSTR **pARGV){
 
 */
 
+void LV_SetState(HWND hLV, int nItem, int nState){
+	ListView_SetItemState(hLV, nItem, nState, nState);
+}
+
+static void LV_ClearStateAll(HWND hLV, int nState){
+	ListView_SetItemState(hLV, -1, 0, nState);
+}
+
 // 選択状態クリア
-void ListView_ClearSelect(HWND hLV){
-	ListView_SetItemState(hLV, -1, 0, (LVIS_SELECTED | LVIS_FOCUSED));
+void LV_ClearSelect(HWND hLV){
+	LV_ClearStateAll(hLV, (LVIS_SELECTED | LVIS_FOCUSED));
 }
 
 // ハイライト状態クリア
-void ListView_ClearHilite(HWND hLV){
-	ListView_SetItemState(hLV, -1, 0, LVIS_DROPHILITED);
+void LV_ClearHilite(HWND hLV){
+	LV_ClearStateAll(hLV, LVIS_DROPHILITED);
 }
 
 
-static void ListView_SingleSelectViewSub(HWND hLV, int nIndex, int flag){
-	ListView_ClearSelect(hLV);
+static void LV_SingleSelectViewSub(HWND hLV, int nIndex, int flag){
+	LV_ClearSelect(hLV);
 	if (nIndex >= 0){
-		ListView_SetItemState(hLV, nIndex, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED));
+		LV_SetState(hLV, nIndex, (LVIS_SELECTED | LVIS_FOCUSED));
 		if (flag & 1) ListView_EnsureVisible(hLV, nIndex, TRUE);
 		if (flag & 2) PostMessage(hLV, LVM_ENSUREVISIBLE, (WPARAM)nIndex, (LPARAM)TRUE);
 	}
 }
 
 // 全ての選択状態を解除後、指定インデックスのアイテムを選択
-void ListView_SingleSelect(HWND hLV, int nIndex){
-	ListView_SingleSelectViewSub(hLV, nIndex, 0);
+void LV_SingleSelect(HWND hLV, int nIndex){
+	LV_SingleSelectViewSub(hLV, nIndex, 0);
 }
 
 // 全ての選択状態を解除後、指定インデックスのアイテムを選択、表示
-void ListView_SingleSelectView(HWND hLV, int nIndex){
-	ListView_SingleSelectViewSub(hLV, nIndex, 1);
+void LV_SingleSelectView(HWND hLV, int nIndex){
+	LV_SingleSelectViewSub(hLV, nIndex, 1);
 }
 
 // 全ての選択状態を解除後、指定インデックスのアイテムを選択、表示予約
-void ListView_SingleSelectViewP(HWND hLV, int nIndex) {
-	ListView_SingleSelectViewSub(hLV, nIndex, 3);
+void LV_SingleSelectViewP(HWND hLV, int nIndex) {
+	LV_SingleSelectViewSub(hLV, nIndex, 3);
 }
 
-int ListView_GetNextSelect(HWND hLV, int nIndex){
+int LV_GetNextSelect(HWND hLV, int nIndex){
 	return ListView_GetNextItem(hLV, nIndex, LVNI_SELECTED);
 }
 
-int ListView_GetCount(HWND hLV){
+int LV_GetCount(HWND hLV){
 	return ListView_GetItemCount(hLV);
 }
 

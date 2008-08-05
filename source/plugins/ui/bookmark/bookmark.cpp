@@ -408,7 +408,7 @@ static BOOL CALLBACK BookMarkDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM /*lp
 					LV_InsertItem(hList, i, lpszBMPath);
 				}
 				ListView_SetColumnWidth(hList, 0, nMax);
-				ListView_SetItemState(hList, 0, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED));
+				ListView_SetState(hList, 0, (LVIS_SELECTED | LVIS_FOCUSED));
 				SendDlgItemMessage(hDlg, IDC_CHECK1, BM_SETCHECK, (WPARAM)(g_cfgbm.nBMRoot?BST_CHECKED:BST_UNCHECKED), 0);
 				SendDlgItemMessage(hDlg, IDC_CHECK6, BM_SETCHECK, (WPARAM)(g_cfgbm.nBMFullPath?BST_CHECKED:BST_UNCHECKED), 0);
 			}
@@ -448,7 +448,7 @@ static BOOL CALLBACK BookMarkDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM /*lp
 						LV_GetItemText(hList, nSel, &szPath);
 						LV_SetItemText(hList, nSel-1, &szPath);
 						LV_SetItemText(hList, nSel, &szSub);
-						ListView_SetItemState(hList, nSel-1, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED));
+						ListView_SetState(hList, nSel-1, (LVIS_SELECTED | LVIS_FOCUSED));
 					}
 					return TRUE;
 
@@ -461,7 +461,7 @@ static BOOL CALLBACK BookMarkDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM /*lp
 						LV_GetItemText(hList, nSel, &szPath);
 						LV_SetItemText(hList, nSel+1, &szPath);
 						LV_SetItemText(hList, nSel, &szSub);
-						ListView_SetItemState(hList, nSel+1, (LVIS_SELECTED | LVIS_FOCUSED), (LVIS_SELECTED | LVIS_FOCUSED));
+						ListView_SetState(hList, nSel+1, (LVIS_SELECTED | LVIS_FOCUSED));
 					}
 					return TRUE;
 
