@@ -267,6 +267,10 @@ static HTREEITEM TreeGetSelection(){
 	return TreeView_GetSelection(m_hTree);
 }
 
+static void TreeSetColor(){
+	TreeView_SetBkColor(m_hTree, g_cfg.nBkColor);
+	TreeView_SetTextColor(m_hTree, g_cfg.nTextColor);
+}
 
 static void SetVolumeBar(int nVol){
 	SendMessage(m_hVolume, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)nVol);
@@ -665,8 +669,7 @@ static void OnCreate(HWND hWnd){
 		(HMENU)ID_TREE,
 		m_hInst,
 		NULL);
-	TreeView_SetBkColor(m_hTree, g_cfg.nBkColor);
-	TreeView_SetTextColor(m_hTree, g_cfg.nTextColor);
+	TreeSetColor();
 	DragAcceptFiles(m_hTree, TRUE);
 
 	TIMECHECK("ƒcƒŠ[ì¬")
@@ -3689,8 +3692,7 @@ static BOOL SetUIColor(void){
 		hList = GetListTab(m_hTab, i)->hList;
 		SetListColor(hList);
 	}
-	TreeView_SetBkColor(m_hTree, g_cfg.nBkColor);
-	TreeView_SetTextColor(m_hTree, g_cfg.nTextColor);
+	TreeSetColor();
 	InitTreeIconIndex(m_hCombo, m_hTree, g_cfg.nTreeIcon != 0);
 	InvalidateRect(GetSelListTab()->hList, NULL, TRUE);
 	return TRUE;
