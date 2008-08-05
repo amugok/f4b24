@@ -504,6 +504,28 @@ void SendSupportList(HWND hWnd){
 
 /*
 
+	--- ‰‰‘tŽžŠÔŠÖŒW ---
+
+*/
+
+float TrackPosToSec(QWORD qPos) {
+	return (float)BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, qPos);
+}
+
+QWORD TrackGetPos(){
+	CHANNELINFO *pCh = &g_cInfo[g_bNow];
+	return BASS_ChannelGetPosition(pCh->hChan, BASS_POS_BYTE) - pCh->qStart;
+}
+
+BOOL TrackSetPos(QWORD qPos) {
+	CHANNELINFO *pCh = &g_cInfo[g_bNow];
+	return BASS_ChannelSetPosition(pCh->hChan, qPos + pCh->qStart, BASS_POS_BYTE);
+}
+
+
+
+/*
+
 	--- ƒƒ‚ƒŠŠÇ— ---
 
 */

@@ -93,6 +93,7 @@ static void StatusBarDisplayTime();
 static void SelectListItem(struct LISTTAB *pList, LPTSTR lpszPath);
 static void SelectFolderItem(LPTSTR lpszPath);
 static BOOL GetTabName(LPTSTR szTabName);
+struct LISTTAB *CreateTab(LPTSTR szTabName); 
 static void DoTrayClickAction(int);
 static void PopupTrayMenu();
 static void PopupPlayModeMenu(HWND, NMTOOLBAR *);
@@ -197,6 +198,9 @@ struct FILEINFO *g_pNextFile = NULL;	// 再生曲
 
 #include "oplugins.h"
 
+
+// タブ関係
+
 int TabGetListSel(){
 	return TabCtrl_GetCurSel(m_hTab);
 }
@@ -240,6 +244,15 @@ static struct LISTTAB *GetSelListTab(){
 // フォルダタブのポインタを取得
 static struct LISTTAB *GetFolderListTab(){
 	return GetListTab(m_hTab, 0);
+}
+
+/* ボリュームバー関係 */
+static int GetVolumeBar() {
+	return SendMessage(m_hVolume, TBM_GETPOS, 0, 0);
+}
+
+static void SetVolumeBar(int nVol){
+	SendMessage(m_hVolume, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)nVol);
 }
 
 static LRESULT SendFittleMessage(UINT uMsg, WPARAM wp, LPARAM lp){
@@ -955,35 +968,6 @@ static void OnCreate(HWND hWnd){
 	TIMECHECK("ウインドウ作成終了")
 }
 
-static float TrackPosToSec(QWORD qPos) {
-	return (float)BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, qPos);
-}
-
-static QWORD TrackGetPos(){
-	CHANNELINFO *pCh = &g_cInfo[g_bNow];
-	return BASS_ChannelGetPosition(pCh->hChan, BASS_POS_BYTE) - pCh->qStart;
-}
-
-static BOOL TrackSetPos(QWORD qPos) {
-	CHANNELINFO *pCh = &g_cInfo[g_bNow];
-	return BASS_ChannelSetPosition(pCh->hChan, qPos + pCh->qStart, BASS_POS_BYTE);
-}
-
-static int GetVolumeBar() {
-	return SendMessage(m_hVolume, TBM_GETPOS, 0, 0);
-}
-
-static void SetVolumeBar(int nVol){
-	SendMessage(m_hVolume, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)nVol);
-}
-
-static void AppendToList(LISTTAB *pList, FILEINFO *pSub){
-	HWND hList = pList->hList;
-	ListView_ClearSelect(hList);
-	InsertList(pList, -1, pSub);
-	ListView_EnsureVisible(hList, ListView_GetItemCount(hList)-1, TRUE);
-}
-
 // ウィンドウプロシージャ
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 	static int s_nHitTab = -1;				// タブのヒットアイテム
@@ -1539,8 +1523,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				case IDM_LIST_NEW:	// 新規プレイリスト
 					{
 						lstrcpy(szLabel, TEXT("Default"));
-						if(GetTabName(szLabel)){
-							MakeNewTab(m_hTab, szLabel, -1);
+						if(CreateTab(szLabel)){
 							SendToPlaylist(GetSelListTab(), GetListTab(m_hTab, TabGetListCount()-1));
 							TabSetListFocus(TabGetListCount()-1);
 						}
@@ -1637,20 +1620,23 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case IDM_TREE_NEW:
-					GetPathFromNode(m_hTree, m_hHitTree, szNowDir);
-					lstrcpyn(szLabel, PathFindFileName(szNowDir), MAX_FITTLE_PATH);
-					if(IsPlayList(szNowDir) || IsArchive(szNowDir)){
-						// ".m3u"を削除
-						PathRemoveExtension(szLabel);
+					{
+						struct LISTTAB *pNew;
+						GetPathFromNode(m_hTree, m_hHitTree, szNowDir);
+						lstrcpyn(szLabel, PathFindFileName(szNowDir), MAX_FITTLE_PATH);
+						if(IsPlayList(szNowDir) || IsArchive(szNowDir)){
+							// ".m3u"を削除
+							PathRemoveExtension(szLabel);
+						}
+						pNew = CreateTab(szLabel);
+						if(pNew){
+							SearchFiles(&(pNew->pRoot), szNowDir, TRUE);
+							TraverseList(pNew);
+							TabSetListFocus(TabGetListCount()-1);
+							InvalidateRect(m_hTab, NULL, FALSE);
+						}
+						m_hHitTree = NULL;
 					}
-					if(GetTabName(szLabel)){
-						struct LISTTAB *pNew = MakeNewTab(m_hTab, szLabel, -1);
-						SearchFiles(&(pNew->pRoot), szNowDir, TRUE);
-						TraverseList(pNew);
-						TabSetListFocus(TabGetListCount()-1);
-						InvalidateRect(m_hTab, NULL, FALSE);
-					}
-					m_hHitTree = NULL;
 					break;
 
 				case IDM_EXPLORE:
@@ -1671,8 +1657,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 				case IDM_TAB_NEW:
 					lstrcpy(szLabel, TEXT("Default"));
-					if(GetTabName(szLabel)){
-						MakeNewTab(m_hTab, szLabel, -1);
+					if(CreateTab(szLabel)){
 						TabSetListFocus(TabGetListCount()-1);
 					}
 					break;
@@ -2381,6 +2366,11 @@ static void SelectFolderItem(LPTSTR lpszPath) {
 static BOOL GetTabName(LPTSTR szTabName){
 	return DialogBoxParam(m_hInst, TEXT("TAB_NAME_DIALOG"), m_hMainWnd, TabNameDlgProc, (LPARAM)szTabName) != 0;
 }
+
+struct LISTTAB *CreateTab(LPTSTR szTabName){
+	return GetTabName(szTabName) ? MakeNewTab(m_hTab, szTabName, -1) : 0;
+}
+
 
 
 static void DoTrayClickAction(int nKind){
@@ -3563,7 +3553,7 @@ static void OnDragList(HWND hLV, POINT pt){
 	ImageList_DragShowNolock(FALSE);
 	ListView_ClearHilite(hLV);
 	nHitItem = ListView_HitTest(hLV, &pinfo);
-	if(nHitItem!=-1)	ListView_SetItemState(hLV, nHitItem, LVIS_DROPHILITED, LVIS_DROPHILITED);
+	if(nHitItem!=-1) ListView_SetItemState(hLV, nHitItem, LVIS_DROPHILITED, LVIS_DROPHILITED);
 	UpdateWindow(hLV);
 	ImageList_DragShowNolock(TRUE);
 	ImageList_DragMove(pt.x, pt.y);

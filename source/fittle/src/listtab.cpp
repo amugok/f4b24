@@ -630,3 +630,10 @@ BOOL CALLBACK TabNameDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 			return FALSE;
 	}
 }
+
+void AppendToList(LISTTAB *pList, FILEINFO *pSub){
+	HWND hList = pList->hList;
+	ListView_ClearSelect(hList);
+	InsertList(pList, -1, pSub);
+	ListView_EnsureVisible(hList, ListView_GetItemCount(hList)-1, TRUE);
+}
