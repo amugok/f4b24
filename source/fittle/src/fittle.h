@@ -145,6 +145,8 @@ struct CONFIG{
 
 	WASTR szToolPath;
 
+	int nListSort;				// リストビューのソート方法
+
 	/* 状態 */
 
 	int nTreeWidth;				// ツリーの幅

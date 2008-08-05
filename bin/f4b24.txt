@@ -1,7 +1,7 @@
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test37
+              for BASS 2.4 test38
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
@@ -113,6 +113,9 @@ Pluginsフォルダ
 	wadsp.dll       -> wadsp.fgp
 
 実験履歴
+	test38/test38u
+
+
 	test37/test37u
 		ボリュームバーとシークバーでの右クリックで正常なメニューが表示されていなかった問題に対処
 

@@ -222,6 +222,10 @@ SOURCE=.\src\f4b24.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\src\f4b24lx.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\src\finddlg.h
 # End Source File
 # Begin Source File

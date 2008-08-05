@@ -7,8 +7,8 @@
 
 /* LPDK‚Ìƒo[ƒWƒ‡ƒ“ */
 #ifndef LPDK_VER
-#define LPDK_VER 1
-#elif LPDK_VER > 1
+#define LPDK_VER 2
+#elif LPDK_VER > 2
 #error "Incorrect LPDK version."
 #endif
 

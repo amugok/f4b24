@@ -62,7 +62,7 @@ static HMODULE m_hDLL = 0;
 
 int (CALLBACK *pStrCmpLogicalW)(LPCWSTR psz1, LPCWSTR psz2) = 0;
  
-void *HAlloc(DWORD dwSize){
+void *HZAlloc(DWORD dwSize){
 	return HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwSize);
 }
 
@@ -135,12 +135,21 @@ static void CALLBACK FreeTagInfo(LPVOID p){
 	HFree(p);
 }
 
+static BOOL CheckPath(LPVOID pFileInfo){
+	if (lxpinfo.plxif->CheckPath(pFileInfo, F4B24LX_CHECK_URL)) return FALSE;
+	if (lxpinfo.plxif->CheckPath(pFileInfo, F4B24LX_CHECK_CUE)) return TRUE;
+	if (lxpinfo.GetIniInt("Column", "DisallowTagInArchive", 0) == 1){
+		if (lxpinfo.plxif->CheckPath(pFileInfo, F4B24LX_CHECK_ARC)) return FALSE;
+	}
+	return TRUE;
+}
+
 static TAGINFOW *GetTagInfoW(LPVOID pFileInfo){
 	TAGINFOW *pTagInfo = (TAGINFOW *)lxpinfo.GetUserData(pFileInfo, (LPVOID)&ID_TAGINFO);
 	if (!pTagInfo) {
-		pTagInfo = (TAGINFOW *)HAlloc(sizeof(TAGINFOW));
+		pTagInfo = (TAGINFOW *)HZAlloc(sizeof(TAGINFOW));
 		if (pTagInfo) {
-			if (!lxpinfo.plxif->CheckPath(pFileInfo, F4B24LX_CHECK_URL)) {
+			if (CheckPath(pFileInfo)) {
 				LPVOID pMusic = lxpinfo.plxif->LoadMusic(pFileInfo);
 				if (pMusic){
 					lxpinfo.plxif->GetTag(pMusic, pTagInfo);
@@ -156,9 +165,9 @@ static TAGINFOW *GetTagInfoW(LPVOID pFileInfo){
 static TAGINFOA *GetTagInfoA(LPVOID pFileInfo){
 	TAGINFOA *pTagInfo = (TAGINFOA *)lxpinfo.GetUserData(pFileInfo, (LPVOID)&ID_TAGINFO);
 	if (!pTagInfo) {
-		pTagInfo = (TAGINFOA *)HAlloc(sizeof(TAGINFOA));
+		pTagInfo = (TAGINFOA *)HZAlloc(sizeof(TAGINFOA));
 		if (pTagInfo) {
-			if (!lxpinfo.plxif->CheckPath(pFileInfo, F4B24LX_CHECK_URL)) {
+			if (CheckPath(pFileInfo)) {
 				LPVOID pMusic = lxpinfo.plxif->LoadMusic(pFileInfo);
 				if (pMusic){
 					lxpinfo.plxif->GetTag(pMusic, pTagInfo);
@@ -274,23 +283,22 @@ int CALLBACK CompareColumnText(LPVOID pFileInfoLeft, LPVOID pFileInfoRight, int 
 			WCHAR bufR[MAX_PATH];
 			GetTitleFnameW(pTagL, pFileInfoLeft, bufL, MAX_PATH);
 			GetTitleFnameW(pTagR, pFileInfoRight, bufR, MAX_PATH);
-			return lstrcmpiW(bufL, bufR);
+			return lxpinfo.plxif->StrCmp(bufL, bufR);
 		}
 		if (!pTagL || !pTagR) return (!pTagL && !pTagR) ? 0 : ((!pTagL) ? -1 : 1);
 		switch (nType) {
 		case COLUMN_TYPE_ID + 0:
-			return lstrcmpiW(pTagL->szTitle, pTagR->szTitle);
+			return lxpinfo.plxif->StrCmp(pTagL->szTitle, pTagR->szTitle);
 		case COLUMN_TYPE_ID + 1:
-			return lstrcmpiW(pTagL->szArtist, pTagR->szArtist);
+			return lxpinfo.plxif->StrCmp(pTagL->szArtist, pTagR->szArtist);
 		case COLUMN_TYPE_ID + 2:
-			return lstrcmpiW(pTagL->szAlbum, pTagR->szAlbum);
-			break;
+			return lxpinfo.plxif->StrCmp(pTagL->szAlbum, pTagR->szAlbum);
 		case COLUMN_TYPE_ID + 3:
 			if  (pStrCmpLogicalW)
 				return pStrCmpLogicalW(pTagL->szTrack, pTagR->szTrack);
 			if (XATOIW(pTagL->szTrack) > XATOIW(pTagR->szTrack)) return 1;
 			if (XATOIW(pTagL->szTrack) < XATOIW(pTagR->szTrack)) return -1;
-			return lstrcmpiW(pTagL->szTrack, pTagR->szTrack);
+			return lxpinfo.plxif->StrCmp(pTagL->szTrack, pTagR->szTrack);
 		}
 	}else{
 		TAGINFOA *pTagL = GetTagInfoA(pFileInfoLeft);
@@ -300,21 +308,20 @@ int CALLBACK CompareColumnText(LPVOID pFileInfoLeft, LPVOID pFileInfoRight, int 
 			CHAR bufR[MAX_PATH];
 			GetTitleFnameA(pTagL, pFileInfoLeft, bufL, MAX_PATH);
 			GetTitleFnameA(pTagR, pFileInfoRight, bufR, MAX_PATH);
-			return lstrcmpiA(bufL, bufR);
+			return lxpinfo.plxif->StrCmp(bufL, bufR);
 		}
 		if (!pTagL || !pTagR) return (!pTagL && !pTagR) ? 0 : ((!pTagL) ? -1 : 1);
 		switch (nType) {
 		case COLUMN_TYPE_ID + 0:
-			return lstrcmpiA(pTagL->szTitle, pTagR->szTitle);
+			return lxpinfo.plxif->StrCmp(pTagL->szTitle, pTagR->szTitle);
 		case COLUMN_TYPE_ID + 1:
-			return lstrcmpiA(pTagL->szArtist, pTagR->szArtist);
+			return lxpinfo.plxif->StrCmp(pTagL->szArtist, pTagR->szArtist);
 		case COLUMN_TYPE_ID + 2:
-			return lstrcmpiA(pTagL->szAlbum, pTagR->szAlbum);
-			break;
+			return lxpinfo.plxif->StrCmp(pTagL->szAlbum, pTagR->szAlbum);
 		case COLUMN_TYPE_ID + 3:
 			if (XATOIA(pTagL->szTrack) > XATOIA(pTagR->szTrack)) return 1;
 			if (XATOIA(pTagL->szTrack) < XATOIA(pTagR->szTrack)) return -1;
-			return lstrcmpiA(pTagL->szTrack, pTagR->szTrack);
+			return lxpinfo.plxif->StrCmp(pTagL->szTrack, pTagR->szTrack);
 		}
 	}
 	return 0;

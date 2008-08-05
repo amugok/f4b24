@@ -131,13 +131,13 @@ int CALLBACK CompareColumnText(LPVOID pFileInfoLeft, LPVOID pFileInfoRight, int 
 		WCHAR bufR[MAX_PATH];
 		GetFileNameNoExtW(pFileInfoLeft, bufL, MAX_PATH);
 		GetFileNameNoExtW(pFileInfoRight, bufR, MAX_PATH);
-		return lstrcmpiW(bufL, bufR);
+		return lxpinfo.plxif->StrCmp(bufL, bufR);
 	} else {
 		CHAR bufL[MAX_PATH];
 		CHAR bufR[MAX_PATH];
 		GetFileNameNoExtA(pFileInfoLeft, bufL, MAX_PATH);
 		GetFileNameNoExtA(pFileInfoRight, bufR, MAX_PATH);
-		return lstrcmpiA(bufL, bufR);
+		return lxpinfo.plxif->StrCmp(bufL, bufR);
 	}
 }
 

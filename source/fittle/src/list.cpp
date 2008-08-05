@@ -21,12 +21,13 @@ static int CompareNode(struct FILEINFO *, struct FILEINFO *, int);
 static void CALLBACK LXAddColumn(HWND hList, int nColumn, LPVOID pLabel, int nWidth, int nFmt);
 static LPVOID CALLBACK LXGetFileName(LPVOID pFileInfo);
 static BOOL CALLBACK LXCheckPath(LPVOID pFileInfo, int nCheck);
+static int CALLBACK LXStrCmp(LPCVOID pStrLeft, LPCVOID pStrRight);
 
 #include "f4b24lx.h"
 
 static F4B24LX_INTERFACE m_lxif = {
 	1,
-	36,
+	38,
 #ifdef UNICODE
 	1,
 #else
@@ -38,6 +39,7 @@ static F4B24LX_INTERFACE m_lxif = {
 	LXAddColumn,
 	LXGetFileName,
 	LXCheckPath,
+	LXStrCmp,
 	0
 };
 
@@ -565,12 +567,34 @@ static BOOL CALLBACK LXCheckPath(LPVOID pFileInfo, int nCheck){
 	case F4B24LX_CHECK_CUE:
 		return StrStrI(pItem->szFilePath, TEXT(".cue/")) != NULL;
 	case F4B24LX_CHECK_ARC:
-		return IsArchiveFast(pItem->szFilePath);
+		return StrStrI(pItem->szFilePath, TEXT("/")) != NULL;
+//		return IsArchivePath(pItem->szFilePath);
 	}
 	return FALSE;
 }
 
-
+static int CALLBACK LXStrCmp(LPCVOID pStrLeft, LPCVOID pStrRight){
+	if (g_cfg.nListSort == 2) {
+		static int (CALLBACK *pStrCmpLogicalW)(LPCWSTR psz1, LPCWSTR psz2) = 0;
+		if (!pStrCmpLogicalW)
+			pStrCmpLogicalW = (int (CALLBACK *)(LPCWSTR psz1, LPCWSTR psz2))GetProcAddress(GetModuleHandleA("shlwapi.dll"), "StrCmpLogicalW");
+		if (pStrCmpLogicalW){
+#ifdef UNICODE
+			return pStrCmpLogicalW((LPCWSTR)pStrLeft, (LPCWSTR)pStrRight);
+#else
+			WCHAR bufL[MAX_PATH];
+			WCHAR bufR[MAX_PATH];
+			lstrcpyntW(bufL, (LPCSTR)pStrLeft, MAX_PATH);
+			lstrcpyntW(bufR, (LPCSTR)pStrRight, MAX_PATH);
+			return pStrCmpLogicalW(bufL, bufR);
+#endif
+		}
+		return lstrcmpi((LPCTSTR)pStrLeft, (LPCTSTR)pStrRight);
+	}
+	if (g_cfg.nListSort == 1)
+		return lstrcmp((LPCTSTR)pStrLeft, (LPCTSTR)pStrRight);
+	return lstrcmpi((LPCTSTR)pStrLeft, (LPCTSTR)pStrRight);
+}
 
 static void AddStandardColumn(HWND hList, int c, LPTSTR l, int w, int t){
 	char szKey[7] = "Width0";
@@ -593,11 +617,11 @@ static int CompareNode(struct FILEINFO *pLeft, struct FILEINFO *pRight, int nSor
 	nType = GetColumnType(nColumn);
 	switch(nType){
 		case 0:		// ファイル名昇順
-			return lstrcmpi(GetFileName(pLeft->szFilePath), GetFileName(pRight->szFilePath));
+			return LXStrCmp(GetFileName(pLeft->szFilePath), GetFileName(pRight->szFilePath));
 		case 1:		// サイズ昇順
 			return StrToInt(pLeft->szSize) - StrToInt(pRight->szSize);
 		case 2:		// 種類昇順
-			return lstrcmpi(GetPathType(pLeft), GetPathType(pRight));
+			return LXStrCmp(GetPathType(pLeft), GetPathType(pRight));
 		case 3:		// 更新日時昇順
 			return lstrcmp(pLeft->szTime, pRight->szTime);
 		default:

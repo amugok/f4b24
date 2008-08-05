@@ -45,12 +45,12 @@
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test37u")
+#define F4B24_VERSION_STRING TEXT("test38u")
 #else
-#define F4B24_VERSION_STRING TEXT("test37")
+#define F4B24_VERSION_STRING TEXT("test38")
 #endif
-#define F4B24_VERSION 37
-#define F4B24_IF_VERSION 36
+#define F4B24_VERSION 38
+#define F4B24_IF_VERSION 38
 #ifndef _DEBUG
 #define FITTLE_TITLE TEXT("Fittle - f4b24 ") F4B24_VERSION_STRING
 #else
@@ -2519,6 +2519,9 @@ static void LoadConfig(){
 	WAGetIniStr("Main", "StartPath", &g_cfg.szStartPath);
 	// ファイラのパス
 	WAGetIniStr("Main", "FilerPath", &g_cfg.szFilerPath);
+
+	// リストビューのソート方法
+	g_cfg.nListSort = WAGetIniInt("Column", "ListSort", 0);
 
 	// ホットキーの設定
 	for(i=0;i<HOTKEY_COUNT;i++){

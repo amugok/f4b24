@@ -16,6 +16,7 @@ typedef struct {
 	void (CALLBACK *AddColumn)(HWND hList, int nColumn, LPVOID pLabel, int nWidth, int nFmt);
 	LPVOID (CALLBACK *GetFileName)(LPVOID pFileInfo);
 	BOOL (CALLBACK *CheckPath)(LPVOID pFileInfo, int nCheck);
+	int (CALLBACK *StrCmp)(LPCVOID pStrLeft, LPCVOID pStrRight);
 
 	void (CALLBACK *HookOnAlloc)(LPVOID pFileInfo);
 	void (CALLBACK *HookOnFree)(LPVOID pFileInfo);

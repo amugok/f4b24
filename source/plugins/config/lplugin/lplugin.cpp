@@ -55,6 +55,11 @@ static const BYTE m_aDefaultColumns[] = { 0, 1, 2, 3 };
 static int m_nNumColumns = 0;
 static LPBYTE m_pColumnTable = NULL;
 
+static struct {
+	int nListSort;
+	int nDisallowTagInArchive;
+} m_cfg;
+
 #include "../../../fittle/src/wastr.cpp"
 
 /* LXプラグインリスト */
@@ -245,6 +250,8 @@ static void LoadConfig(HWND hDlg){
 		}
 		m_nNumColumns = c;
 	}
+	m_cfg.nListSort = WAGetIniInt("Column", "ListSort", 0);
+	m_cfg.nDisallowTagInArchive = WAGetIniInt("Column", "DisallowTagInArchive", 0);
 }
 
 static BOOL IsChangedConfig(HWND hDlg){
@@ -255,6 +262,8 @@ static BOOL IsChangedConfig(HWND hDlg){
 	for (i = 0; i < c; i++){
 		if (GetListItemData(hListLeft, i) != GetColumnType(i)) return TRUE;
 	}
+	if (m_cfg.nListSort != SendDlgItemMessage(hDlg, IDC_COMBO1, CB_GETCURSEL, (WPARAM)0, (LPARAM)0)) return TRUE;
+	if (m_cfg.nDisallowTagInArchive != (int)SendDlgItemMessage(hDlg, IDC_CHECK1, BM_GETCHECK, 0, 0)) return TRUE;
 	return FALSE;
 }
 
@@ -272,6 +281,9 @@ static void SaveConfig(HWND hDlg){
 	int c;
 	int nColumnNum;
 
+	m_cfg.nListSort = SendDlgItemMessage(hDlg, IDC_COMBO1, CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
+	m_cfg.nDisallowTagInArchive = (int)SendDlgItemMessage(hDlg, IDC_CHECK1, BM_GETCHECK, 0, 0);
+
 	WASetIniFile(NULL, "Fittle.ini");
 	/* 旧設定の削除 */
 	nColumnNum = WAGetIniInt("Column", "ColumnNum", 0);
@@ -280,6 +292,7 @@ static void SaveConfig(HWND hDlg){
 		WASetIniStr("Column", szSec, NULL);
 	}
 	WAFlushIni();
+
 	nColumnNum = GetListCount(hListLeft);
 	if (nColumnNum == 4 && GetListItemData(hListLeft, 0) == 0 && GetListItemData(hListLeft, 1) == 1 && GetListItemData(hListLeft, 2) == 2 && GetListItemData(hListLeft, 3) == 3){
 		/* デフォルト */
@@ -291,6 +304,8 @@ static void SaveConfig(HWND hDlg){
 			WASetIniInt("Column", szSec, GetListItemData(hListLeft, c));
 		}
 	}
+	WASetIniInt("Column", "ListSort",  m_cfg.nListSort);
+	WASetIniInt("Column", "DisallowTagInArchive", m_cfg.nDisallowTagInArchive);
 	WAFlushIni();
 
 }
@@ -395,7 +410,26 @@ static void ViewConfig(HWND hDlg){
 		int t = GetColumnType(i);
 		MoveListItemToLeft(hDlg, t);
 	}
+
+	SendDlgItemMessage(hDlg, IDC_COMBO1, CB_INSERTSTRING, (WPARAM)0, (LPARAM)TEXT("英大小文字を区別しない"));
+	SendDlgItemMessage(hDlg, IDC_COMBO1, CB_INSERTSTRING, (WPARAM)1, (LPARAM)TEXT("英大小文字を区別する"));
+	SendDlgItemMessage(hDlg, IDC_COMBO1, CB_INSERTSTRING, (WPARAM)2, (LPARAM)TEXT("ロジカル(XP以降)"));
+	SendDlgItemMessage(hDlg, IDC_COMBO1, CB_SETCURSEL, (WPARAM)m_cfg.nListSort, (LPARAM)0);
+	SendDlgItemMessage(hDlg, IDC_CHECK1, BM_SETCHECK, (WPARAM)m_cfg.nDisallowTagInArchive, 0);
+
 }
+
+static void PostF4B24Message(WPARAM wp, LPARAM lp){
+	HWND hFittle = FindWindow(TEXT("Fittle"), NULL);
+	if (hFittle && IsWindow(hFittle)){
+		PostMessage(hFittle, WM_F4B24_IPC, wp, lp);
+	}
+}
+
+static void ApplyFittle(){
+	PostF4B24Message(WM_F4B24_IPC_APPLY_CONFIG, 0);
+}
+
 
 static BOOL CALLBACK LXPageProc(HWND hDlg , UINT msg , WPARAM wp , LPARAM lp) {
 	switch (msg){
@@ -422,6 +456,7 @@ static BOOL CALLBACK LXPageProc(HWND hDlg , UINT msg , WPARAM wp , LPARAM lp) {
 			SaveConfig(hDlg);
 			LoadConfig(hDlg);
 			CheckConfig(hDlg);
+			ApplyFittle();
 		}
 		return TRUE;
 	}
