@@ -45,7 +45,7 @@ struct LISTTAB *MakeNewTab(HWND hTab, LPTSTR szTabName, int nItem){
 	hList = CreateWindowEx(WS_EX_CLIENTEDGE,
 		WC_LISTVIEW,
 		NULL,
-		WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_OWNERDATA | (g_cfg.nShowHeader?0:LVS_NOCOLUMNHEADER),// | WS_VISIBLE | WS_CLIPSIBLINGS //| WS_CLIPCHILDREN,
+		WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_OWNERDATA | (g_cfg.nShowHeader?0:LVS_NOCOLUMNHEADER) ,// | WS_VISIBLE | WS_CLIPSIBLINGS //| WS_CLIPCHILDREN,
 		0, 0, 500, 500,
 		hTab,
 		(HMENU)ID_LIST,
@@ -62,7 +62,7 @@ struct LISTTAB *MakeNewTab(HWND hTab, LPTSTR szTabName, int nItem){
 
 	pNew->nSortState = WAGetIniInt("Column", "Sort", 0);;	// フルパスでソート
 
-	ListView_SetExtendedListViewStyle(hList, (g_cfg.nGridLine?LVS_EX_GRIDLINES:0) | LVS_EX_FULLROWSELECT | LVS_EX_INFOTIP | 0x00010000/*LVS_EX_DOUBLEBUFFER*/);
+	ListView_SetExtendedListViewStyle(hList, (g_cfg.nGridLine?LVS_EX_GRIDLINES:0) | LVS_EX_FULLROWSELECT | LVS_EX_INFOTIP | 0x00010000/*LVS_EX_DOUBLEBUFFER*/ | LVS_EX_HEADERDRAGDROP);
 
 	SubClassControl(hList, NewListProc);
 
