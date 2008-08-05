@@ -1518,6 +1518,11 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 							*p = TEXT('/');
 							MakeTreeFromPath(m_hTree, m_hCombo, szNowDir);
 						}
+						if (1){
+							struct LISTTAB *pFolderTab = GetFolderListTab();
+							int nFileIndex = GetIndexFromPath(pFolderTab->pRoot, lpszPlayingPath);
+							ListView_SingleSelectViewP(pFolderTab->hList, nFileIndex);
+						}
 					}
 					break;
 
