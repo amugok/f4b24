@@ -610,7 +610,7 @@ static int CompareNode(struct FILEINFO *pLeft, struct FILEINFO *pRight, int nSor
 	int nColumn;
 	int nType;
 	if (nSortType == 0)
-		return lstrcmpi(pLeft->szFilePath, pRight->szFilePath);	// フルパス
+		return LXStrCmp(pLeft->szFilePath, pRight->szFilePath);	// フルパス
 	else if (nSortType < 0)
 		return -CompareNode(pLeft, pRight, -nSortType);	// 逆順
 	nColumn = nSortType - 1;
