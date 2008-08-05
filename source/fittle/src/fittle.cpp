@@ -259,6 +259,14 @@ static void TreeSelectDrive() {
 	TreeSelect(MakeDriveNode(m_hCombo, m_hTree));
 }
 
+static void TreeGetNextItem() {
+	m_hHitTree = TreeView_GetNextItem(m_hTree, TVI_ROOT, TVGN_CARET);
+}
+
+static HTREEITEM TreeGetSelection(){
+	return TreeView_GetSelection(m_hTree);
+}
+
 
 static void SetVolumeBar(int nVol){
 	SendMessage(m_hVolume, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)nVol);
@@ -1595,7 +1603,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						}
 					}else{
 						HTREEITEM hParent;
-						if(!m_hHitTree) m_hHitTree = TreeView_GetNextItem(m_hTree, TVI_ROOT, TVGN_CARET);
+						if(!m_hHitTree) TreeGetNextItem();
 						hParent = TreeView_GetParent(m_hTree, m_hHitTree);
 						if(hParent!=NULL){
 							TreeSelect(hParent);
@@ -1791,7 +1799,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						TVHITTESTINFO tvhti;
 
 						if(lp==-1){	// キーボード
-							m_hHitTree = TreeView_GetNextItem(m_hTree, TVI_ROOT, TVGN_CARET);
+							TreeGetNextItem();
 							if(!m_hHitTree) break; 
 							TreeView_GetItemRect(m_hTree, m_hHitTree, &rcItem, TRUE);
 							MapWindowPoints(m_hTree, HWND_DESKTOP, (LPPOINT)&rcItem, 2);
@@ -4267,7 +4275,7 @@ LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
 					GetScrollInfo(hLV, SB_HORZ, &sinfo);
 					if(g_cfg.nTreeState==TREE_SHOW && sinfo.nPos==0){
 						SetFocus(m_hTree);
-						TreeView_EnsureVisible(m_hTree, TreeView_GetSelection(m_hTree));
+						TreeView_EnsureVisible(m_hTree, TreeGetSelection());
 						MyScroll(m_hTree);
 					}
 					break;
@@ -4298,7 +4306,7 @@ LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
 static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 	switch(msg){
 		case WM_LBUTTONDBLCLK:	// 子を持たないノードダブルクリックで再生
-			if(!TreeView_GetChild(hTV, TreeView_GetSelection(hTV))){
+			if(!TreeView_GetChild(hTV, TreeGetSelection())){
 				m_nPlayTab = 0;
 				SendFittleCommand(IDM_NEXT);
 			}
@@ -4319,7 +4327,7 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 						m_nPlayTab = 0;
 						SendFittleCommand(IDM_NEXT);
 					}else{
-						TreeView_Expand(hTV, TreeView_GetSelection(hTV), TVE_TOGGLE);
+						TreeView_Expand(hTV, TreeGetSelection(), TVE_TOGGLE);
 					}
 					return 0;
 
@@ -4331,7 +4339,7 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 		case WM_KEYDOWN:
 			if(wp==VK_RIGHT){	// 子ノードがない or 展開状態ならばListにフォーカスを移す
 				TVITEM tvi;
-				HTREEITEM hti = TreeView_GetSelection(hTV);
+				HTREEITEM hti = TreeGetSelection();
 				tvi.mask = TVIF_STATE;
 				tvi.hItem = hti;
 				tvi.stateMask = TVIS_EXPANDED;
