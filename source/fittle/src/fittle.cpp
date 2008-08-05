@@ -90,6 +90,8 @@ static void SaveState(HWND);
 static void ApplyConfig(HWND hWnd);
 // コントロール関係
 static void StatusBarDisplayTime();
+static void SelectFolderItem(LPTSTR lpszPath);
+static void SelectListItem(struct LISTTAB *pList, LPTSTR lpszPath);
 static void DoTrayClickAction(int);
 static void PopupTrayMenu();
 static void PopupPlayModeMenu(HWND, NMTOOLBAR *);
@@ -527,7 +529,6 @@ static void OnCreate(HWND hWnd){
 	int nDevice;
 	MENUITEMINFO mii;
 	int i;
-	int nFileIndex;
 	WASTR temppath;
 	TCHAR szLastPath[MAX_FITTLE_PATH];
 	HWND hComboEx;
@@ -873,15 +874,10 @@ static void OnCreate(HWND hWnd){
 				break;
 
 			case FILES: // ファイル
-				{
-					struct LISTTAB *pFolderTab;
-					SetFolder(szLastPath);
-					GetLongPathName(XARGV[i], szLastPath, MAX_FITTLE_PATH); // 98以降
-					pFolderTab = GetFolderListTab();
-					nFileIndex = GetIndexFromPath(pFolderTab->pRoot, szLastPath);
-					ListView_SingleSelectViewP(pFolderTab->hList, nFileIndex);
-					bCmd = TRUE;
-				}
+				SetFolder(szLastPath);
+				GetLongPathName(XARGV[i], szLastPath, MAX_FITTLE_PATH); // 98以降
+				SelectFolderItem(szLastPath);
+				bCmd = TRUE;
 				break;
 		}
 	}
@@ -935,16 +931,14 @@ static void OnCreate(HWND hWnd){
 				PostFittleCommand(IDM_NEXT);
 			}else{
 				WAstrcpyt(szLastPath, &g_cfg.szLastFile, MAX_FITTLE_PATH);
-				nFileIndex = GetIndexFromPath(pCurList->pRoot, szLastPath);
-				ListView_SingleSelectViewP(pCurList->hList, nFileIndex);
+				SelectListItem(pCurList, szLastPath);
 				PostFittleCommand(IDM_PLAY);
 				// ポジションも復元
 				PostMessage(hWnd, WM_F4B24_IPC, WM_F4B24_INTERNAL_RESTORE_POSITION, 0);
 			}
 		}else if (g_cfg.nSelLastPlayed) {
 			WAstrcpyt(szLastPath, &g_cfg.szLastFile, MAX_FITTLE_PATH);
-			nFileIndex = GetIndexFromPath(pCurList->pRoot, szLastPath);
-			ListView_SingleSelectViewP(pCurList->hList, nFileIndex);
+			SelectListItem(pCurList, szLastPath);
 			if(GetKeyState(VK_SHIFT) < 0){
 				// Shiftキーが押されていたら再生
 				PostFittleCommand(IDM_PLAY);
@@ -988,8 +982,6 @@ static void AppendToList(LISTTAB *pList, FILEINFO *pSub){
 	InsertList(pList, -1, pSub);
 	ListView_EnsureVisible(hList, ListView_GetItemCount(hList)-1, TRUE);
 }
-
-
 
 // ウィンドウプロシージャ
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
@@ -1195,17 +1187,11 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 							return TRUE;
 
 						case FILES:
-							{
-								struct LISTTAB *pFolderTab;
-								int nFileIndex;
-								MakeTreeFromPath(m_hTree, m_hCombo, szParPath);
-								GetLongPathName(pRecieved, szParPath, MAX_FITTLE_PATH); // 98以降
-								pFolderTab = GetFolderListTab();
-								nFileIndex = GetIndexFromPath(pFolderTab->pRoot, szParPath);
-								ListView_SingleSelectView(pFolderTab->hList, nFileIndex);
-								SendFittleCommand(IDM_PLAY);
-								return TRUE;
-							}
+							MakeTreeFromPath(m_hTree, m_hCombo, szParPath);
+							GetLongPathName(pRecieved, szParPath, MAX_FITTLE_PATH); // 98以降
+							SelectFolderItem(szParPath);
+							PostFittleCommand(IDM_PLAY);
+							return TRUE;
 					}
 				}else{
 					struct FILEINFO *pSub = NULL;
@@ -1518,11 +1504,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 							*p = TEXT('/');
 							MakeTreeFromPath(m_hTree, m_hCombo, szNowDir);
 						}
-						if (1){
-							struct LISTTAB *pFolderTab = GetFolderListTab();
-							int nFileIndex = GetIndexFromPath(pFolderTab->pRoot, lpszPlayingPath);
-							ListView_SingleSelectViewP(pFolderTab->hList, nFileIndex);
-						}
+						SelectFolderItem(lpszPlayingPath);
 					}
 					break;
 
@@ -2370,9 +2352,9 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 	return 0L;
 }
 
+// 再生時間をステータスバーに表示
 static void StatusBarDisplayTime(){
 	TCHAR buf[16];
-	//再生時間をステータスバーに表示
 	QWORD qPos = TrackGetPos();
 	QWORD qLen = g_cInfo[g_bNow].qDuration;
 	int nPos = (int)TrackPosToSec(qPos);
@@ -2384,6 +2366,15 @@ static void StatusBarDisplayTime(){
 	//シーク中でなければ現在の再生位置をスライダバーに表示する
 	if(!(GetCapture()==m_hSeek || qLen==0))
 		PostMessage(m_hSeek, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)(SLIDER_DIVIDED * qPos / qLen));
+}
+
+static void SelectListItem(struct LISTTAB *pList, LPTSTR lpszPath) {
+	int nFileIndex = GetIndexFromPath(pList->pRoot, lpszPath);
+	ListView_SingleSelectView(pList->hList, nFileIndex);
+}
+
+static void SelectFolderItem(LPTSTR lpszPath) {
+	SelectListItem(GetFolderListTab(), lpszPath);
 }
 
 static void DoTrayClickAction(int nKind){
