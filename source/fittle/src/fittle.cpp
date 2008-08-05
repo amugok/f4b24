@@ -4365,7 +4365,7 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 					int nHitTab;
 					struct FILEINFO *pSub = NULL;
 					TCHAR szNowDir[MAX_FITTLE_PATH];
-					GetPathFromNode(m_hTree, m_hHitTree, szNowDir);
+					GetPathFromNode(hTV, m_hHitTree, szNowDir);
 					SearchFiles(&pSub, szNowDir, TRUE);
 					nHitTab = TabHitTest(POINTTOPOINTS(pt), 0x40 | TCHT_ONITEM);
 					if(nHitTab!=-1){
@@ -4401,7 +4401,7 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 			break;
 
 		case WM_MOUSEMOVE:
-			if(GetCapture()==m_hTree){
+			if(GetCapture()==hTV){
 				POINT pt;
 				HWND hWnd;
 				HWND hCurList = GetSelListTab()->hList;
@@ -4523,7 +4523,7 @@ static LRESULT CALLBACK MyHookProc(int nCode, WPARAM wp, LPARAM lp){
 
 	if(msg->message==WM_MOUSEWHEEL){
 #define WHEEL_TYPE 2
-#if WHEEL_TYPE == 1
+#if (WHEEL_TYPE == 1)
 		/* Fittle”ñŒÝŠ· taskvol“Á•Êˆµ‚¢ */
 		HWND hPosWnd = WindowFromPoint(msg->pt);
 		if (hPosWnd){
@@ -4542,7 +4542,7 @@ static LRESULT CALLBACK MyHookProc(int nCode, WPARAM wp, LPARAM lp){
 				msg->message = WM_NULL;
 			}
 		}
-#elif WHEEL_TYPE == 2
+#elif (WHEEL_TYPE == 2)
 		/* FittleŒÝŠ· –³ŒÀƒ‹[ƒv’ˆÓ */
 		HWND hPosWnd = WindowFromPoint(msg->pt);
 		if (hPosWnd){
