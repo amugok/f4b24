@@ -51,7 +51,7 @@ goto exitcmd
 
 set PREFIX=..\..\..\..\bin\Plugins\fgp\
 set CFLAGS=/GF /Gy /Ox /Os /MD
-set VER_STR=0807160_
+set VER_STR=0808060_
 
 call %0 wadsp fgp
 

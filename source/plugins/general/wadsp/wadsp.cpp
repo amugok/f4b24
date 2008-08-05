@@ -274,7 +274,7 @@ static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg){
 }
 
 static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode) {
-	if (eCode == GENERAL_PLUGIN_EVENT_INIT) {
+	if (eCode == GENERAL_PLUGIN_EVENT_INIT0) {
 		WAIsUnicode();
 		if (!LoadBASSWADSP()) return FALSE;
 	} else if (eCode == GENERAL_PLUGIN_EVENT_QUIT) {

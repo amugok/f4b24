@@ -826,7 +826,7 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 }
 
 
-static BOOL OnInitSub(){
+static void OnInitSub(){
 	HMENU hMainMenu = (HMENU)FittlePluginInterface(GET_MENU);
 	EnableMenuItem(hMainMenu, IDM_MINIPANEL, MF_BYCOMMAND | MF_ENABLED);
 
@@ -844,8 +844,6 @@ static BOOL OnInitSub(){
 	hMiniMenu = LoadMenu(m_hinstDLL, TEXT("TRAYMENU"));
 
 	LoadState();
-
-	return TRUE;
 }
 
 /* èIóπéûÇ…àÍìxÇæÇØåƒÇŒÇÍÇ‹Ç∑ */
@@ -950,7 +948,7 @@ static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode) {
 	if (eCode == GENERAL_PLUGIN_EVENT_INIT) {
 		WAIsUnicode();
 		m_hwndMain = hWnd;
-		return OnInitSub();
+		OnInitSub();
 	} else if (eCode == GENERAL_PLUGIN_EVENT_QUIT) {
 		OnQuit();
 	} else if (eCode == GENERAL_PLUGIN_EVENT_TRACK_CHANGE) {
@@ -986,7 +984,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 static BOOL OnInit(){
 	WAIsUnicode();
 	m_hOldProc = (WNDPROC)SetWindowLong(m_hwndMain, GWL_WNDPROC, (LONG)WndProc);
-	return OnInitSub();
+	OnInitSub();
+	return TRUE;
 }
 
 
