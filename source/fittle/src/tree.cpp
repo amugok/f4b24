@@ -148,11 +148,18 @@ int InitTreeIconIndex(HWND hCB, HWND hTV, BOOL bShow){
 	return 0;
 }
 
+HTREEITEM TV_InsertItem(HWND hTV, LPTV_INSERTSTRUCT ptvi){
+	ptvi->item.mask = TVIF_TEXT | TVIF_IMAGE | TVIF_SELECTEDIMAGE;
+	ptvi->item.iSelectedImage = ptvi->item.iImage;
+	//	ptvi->item.cchTextMax = MAX_FITTLE_PATH;
+	return TreeView_InsertItem(hTV, ptvi);
+}
+
 // ドライブノード作成
 HTREEITEM MakeDriveNode(HWND hCB, HWND hTV){
 	int nNowCBIndex;
 	TCHAR szNowDrive[MAX_FITTLE_PATH] = {0};
-	TV_INSERTSTRUCT tvi = {0};
+	TV_INSERTSTRUCT tvi;
 	HTREEITEM hDriveNode;
 
 	//コンボボックスの選択文字列取得
@@ -164,17 +171,16 @@ HTREEITEM MakeDriveNode(HWND hCB, HWND hTV){
 	//ツリービューにドライブ追加
 	TreeView_DeleteAllItems(hTV);
 	tvi.hInsertAfter = TVI_LAST;
-	tvi.item.mask = TVIF_TEXT | TVIF_IMAGE | TVIF_SELECTEDIMAGE;
 	tvi.hParent = TVI_ROOT;
 	tvi.item.pszText = szNowDrive;
 	if (nNowCBIndex >= 0)
-		tvi.item.iImage = tvi.item.iSelectedImage = (int)SendMessage(hCB, CB_GETITEMDATA, (int)nNowCBIndex, 0);
+		tvi.item.iImage = (int)SendMessage(hCB, CB_GETITEMDATA, (int)nNowCBIndex, 0);
 	else
-		tvi.item.iImage = tvi.item.iSelectedImage = -1;
-	hDriveNode = TreeView_InsertItem(hTV, &tvi);
+		tvi.item.iImage = -1;
+	hDriveNode = TV_InsertItem(hTV, &tvi);
 	// ダミーノードを追加
 	tvi.hParent = hDriveNode;
-	TreeView_InsertItem(hTV, &tvi);
+	TV_InsertItem(hTV, &tvi);
 	// 展開
 	TreeView_Expand(hTV, hDriveNode, TVE_EXPAND);
 	return hDriveNode;
@@ -184,7 +190,7 @@ HTREEITEM MakeDriveNode(HWND hCB, HWND hTV){
 HTREEITEM MakeTwoTree(HWND hTV,	HTREEITEM hTarNode){
 	HANDLE hFind;
 	HTREEITEM hChildNode = NULL;
-	TV_INSERTSTRUCT tvi = {0};
+	TV_INSERTSTRUCT tvi;
 	WIN32_FIND_DATA wfd;
 	TCHAR szParentPath[MAX_FITTLE_PATH];  //親ディレクトリ(フルパス)
 	TCHAR szParentPathW[MAX_FITTLE_PATH]; //親ディレクトリ("\*.*"を追加)
@@ -196,7 +202,6 @@ HTREEITEM MakeTwoTree(HWND hTV,	HTREEITEM hTarNode){
 	if(szParentPath[3]==TEXT('\0')) szParentPath[2] = TEXT('\0');	// ドライブ対策
 	wsprintf(szParentPathW, TEXT("%s\\*.*"), szParentPath);
 	tvi.hInsertAfter = TVI_SORT;
-	tvi.item.mask = TVIF_TEXT | TVIF_IMAGE | TVIF_SELECTEDIMAGE;
 	tvi.hParent = hTarNode;
 	tvi.item.pszText = (LPTSTR)wfd.cFileName;
 	hFind = FindFirstFile(szParentPathW, &wfd);
@@ -209,19 +214,19 @@ HTREEITEM MakeTwoTree(HWND hTV,	HTREEITEM hTarNode){
 					wsprintf(szTargetPath,TEXT("%s\\%s"), szParentPath, wfd.cFileName);
 					if(wfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY){
 						//----ディレクトリの処理----
-						tvi.item.iImage = tvi.item.iSelectedImage = m_iFolderIcon;
-						hChildNode = TreeView_InsertItem(hTV, &tvi);
+						tvi.item.iImage = m_iFolderIcon;
+						hChildNode = TV_InsertItem(hTV, &tvi);
 						if(CheckHaveChild(szTargetPath)){
 							tvi.hParent = hChildNode;
-							TreeView_InsertItem(hTV, &tvi);
+							TV_InsertItem(hTV, &tvi);
 							tvi.hParent = hTarNode;
 						}
 					}else if(IsArchiveFast(szTargetPath)){
-						tvi.item.iImage = tvi.item.iSelectedImage = (m_iListIcon != -1) ? GetArchiveIconIndex(szTargetPath) : -1;
-						hChildNode = TreeView_InsertItem(hTV, &tvi);
+						tvi.item.iImage = (m_iListIcon != -1) ? GetArchiveIconIndex(szTargetPath) : -1;
+						hChildNode = TV_InsertItem(hTV, &tvi);
 					}else if(IsPlayListFast(szTargetPath)){
-						tvi.item.iImage = tvi.item.iSelectedImage = m_iListIcon;
-						hChildNode = TreeView_InsertItem(hTV, &tvi);
+						tvi.item.iImage = m_iListIcon;
+						hChildNode = TV_InsertItem(hTV, &tvi);
 					}
 				}
 			}
@@ -373,13 +378,11 @@ HTREEITEM MakeTreeFromPath(HWND hTV, HWND hCB, LPCTSTR pszFolderPath){
 			TV_INSERTSTRUCT tvi;
 			tvi.hInsertAfter = TVI_SORT;
 			tvi.hParent = hFoundNode;
-			tvi.item.mask = TVIF_TEXT | TVIF_IMAGE | TVIF_SELECTEDIMAGE;
 			tvi.item.pszText = szCompPath;
-			tvi.item.cchTextMax = MAX_FITTLE_PATH;
-			tvi.item.iImage = tvi.item.iSelectedImage = m_iFolderIcon;
-			hFoundNode = TreeView_InsertItem(hTV, &tvi);
+			tvi.item.iImage = m_iFolderIcon;
+			hFoundNode = TV_InsertItem(hTV, &tvi);
 			tvi.hParent = hFoundNode;
-			TreeView_InsertItem(hTV, &tvi);	// ダミーを追加
+			TV_InsertItem(hTV, &tvi);	// ダミーを追加
 			TreeView_Expand(hTV, hFoundNode, TVE_EXPAND);
 		}
 	}while(szSetPath[i++]!=TEXT('\0'));
