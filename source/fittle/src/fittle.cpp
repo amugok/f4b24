@@ -251,6 +251,15 @@ static int GetVolumeBar() {
 	return SendMessage(m_hVolume, TBM_GETPOS, 0, 0);
 }
 
+static void TreeSelect(HTREEITEM hNode) {
+	TreeView_Select(m_hTree, hNode, TVGN_CARET);
+}
+
+static void TreeSelectDrive() {
+	TreeSelect(MakeDriveNode(m_hCombo, m_hTree));
+}
+
+
 static void SetVolumeBar(int nVol){
 	SendMessage(m_hVolume, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)nVol);
 }
@@ -931,7 +940,7 @@ static void OnCreate(HWND hWnd){
 			SetFolder(szLastPath);
 			TIMECHECK("フォルダ展開")
 		}else{
-			TreeView_Select(m_hTree, MakeDriveNode(m_hCombo, m_hTree), TVGN_CARET);
+			TreeSelectDrive();
 		}
 		// タブの復元
 		TabSetListFocus(m_nPlayTab = WAGetIniInt("Main", "TabIndex", 0));
@@ -1589,7 +1598,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						if(!m_hHitTree) m_hHitTree = TreeView_GetNextItem(m_hTree, TVI_ROOT, TVGN_CARET);
 						hParent = TreeView_GetParent(m_hTree, m_hHitTree);
 						if(hParent!=NULL){
-							TreeView_Select(m_hTree, hParent, TVGN_CARET);
+							TreeSelect(hParent);
 							MyScroll(m_hTree);
 						}else{
 							GetPathFromNode(m_hTree, m_hHitTree, szNowDir);
@@ -1603,7 +1612,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					break;
 
 				case IDM_TREE_SUB:
-					TreeView_Select(m_hTree, m_hHitTree, TVGN_CARET);
+					TreeSelect(m_hHitTree);
 					SendFittleCommand(IDM_SUB);
 					m_hHitTree = NULL;
 					break;
@@ -1726,7 +1735,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 				case ID_COMBO:
 					if(HIWORD(wp)==CBN_SELCHANGE){
-						TreeView_Select(m_hTree, MakeDriveNode(m_hCombo, m_hTree), TVGN_CARET);
+						TreeSelectDrive();
 					}
 					break;
 
