@@ -348,6 +348,11 @@ int ListView_GetNextSelect(HWND hLV, int nIndex){
 	return ListView_GetNextItem(hLV, nIndex, LVNI_SELECTED);
 }
 
+int ListView_GetCount(HWND hLV){
+	return ListView_GetItemCount(hLV);
+}
+
+
 /*
 
 	--- •¶Žš—ñ ---

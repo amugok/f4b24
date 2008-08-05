@@ -160,7 +160,7 @@ int ChangeOrder(struct LISTTAB *pListTab, int nAfter){
 	if(nSelect==-1)	return -1;	// 選択ファイルが無ければ抜ける
 
 	// 調整
-	nCount = ListView_GetItemCount(pListTab->hList);
+	nCount = ListView_GetCount(pListTab->hList);
 	if(nCount==nAfter) nAfter--;
 	if(nSelect<nAfter) nAfter++;
 
@@ -230,7 +230,7 @@ int DeleteFiles(struct LISTTAB *pListTab){
 		}
 		DeleteAList(pTmp, &(pListTab->pRoot));
 		if(nIndex<=pListTab->nPlaying) pListTab->nPlaying--;
-		if(nIndex==ListView_GetItemCount(pListTab->hList)) nIndex--;
+		if(nIndex==ListView_GetCount(pListTab->hList)) nIndex--;
 		nIndex = ListView_GetNextSelect(pListTab->hList, -1);
 	}
 	ListView_SingleSelect(pListTab->hList, nBefore);
@@ -242,7 +242,7 @@ void SendToPlaylist(struct LISTTAB *ltFrom, struct LISTTAB *ltTo){
 	int nIndex = -1;
 	FILEINFO *pTmp;
 	HWND hListTo = ltTo->hList;
-	int nOldCount = ListView_GetItemCount(hListTo);
+	int nOldCount = ListView_GetCount(hListTo);
 	int nNewCount;
 
 	while((nIndex = ListView_GetNextSelect(ltFrom->hList, nIndex))!=-1){
@@ -251,7 +251,7 @@ void SendToPlaylist(struct LISTTAB *ltFrom, struct LISTTAB *ltTo){
 	}
 	TraverseList(ltTo);
 
-	nNewCount = ListView_GetItemCount(hListTo);
+	nNewCount = ListView_GetCount(hListTo);
 	ListView_ClearSelect(hListTo);
 	for (nIndex = nOldCount; nIndex < nNewCount; nIndex++){
 		ListView_SetItemState(hListTo, nIndex, LVNI_SELECTED, LVNI_SELECTED);
@@ -380,7 +380,7 @@ int InsertList(struct LISTTAB *pTo, int nStart, struct FILEINFO *pSub){
 	if(!pSub) return 0;
 
 	// インデックスの処理
-	nMainCount = ListView_GetItemCount(pTo->hList);
+	nMainCount = ListView_GetCount(pTo->hList);
 	nSubCount = GetListCount(pSub);
 	if(nStart<0) nStart = nMainCount;
 
@@ -533,7 +533,7 @@ BOOL SavePlaylists(HWND hTab){
 	}
 
 	for(i=1;i<=nTabCount;i++){
-		nBuffSize += ListView_GetItemCount(GetListTab(hTab, i)->hList) + 2; //タイトル分で+1
+		nBuffSize += ListView_GetCount(GetListTab(hTab, i)->hList) + 2; //タイトル分で+1
 	}
 #ifdef UNICODE
 	nBuffSize = sizeof(TCHAR) + nBuffSize * (MAX_FITTLE_PATH + 2) * sizeof(TCHAR);
@@ -635,5 +635,5 @@ void AppendToList(LISTTAB *pList, FILEINFO *pSub){
 	HWND hList = pList->hList;
 	ListView_ClearSelect(hList);
 	InsertList(pList, -1, pSub);
-	ListView_EnsureVisible(hList, ListView_GetItemCount(hList)-1, TRUE);
+	ListView_EnsureVisible(hList, ListView_GetCount(hList)-1, TRUE);
 }

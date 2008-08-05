@@ -1304,7 +1304,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 							case PM_LIST:
 							case PM_SINGLE:
 								if(pPlayList->nPlaying<=0){
-									nPrev = ListView_GetItemCount(pPlayList->hList)-1;
+									nPrev = ListView_GetCount(pPlayList->hList)-1;
 								}else{
 									nPrev = pPlayList->nPlaying-1;
 								}
@@ -1533,7 +1533,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				case IDM_LIST_MOVEBOTTOM: //一番下に移動
 					{
 						struct LISTTAB *pCurList = GetSelListTab();
-						ChangeOrder(pCurList, ListView_GetItemCount(pCurList->hList) - 1);
+						ChangeOrder(pCurList, ListView_GetCount(pCurList->hList) - 1);
 					}
 					break;
 
@@ -3036,7 +3036,7 @@ static void OnChangeTrack(){
 	SendMessage(m_hStatus, SB_SETTEXT, (WPARAM)0|0, (LPARAM)szTitleCap);
 	SendMessage(m_hStatus, SB_SETTIPTEXT, (WPARAM)0, (LPARAM)szTitleCap);
 
-	wsprintf(szTitleCap, TEXT("\t%d / %d"), pPlayList->nPlaying + 1, ListView_GetItemCount(pPlayList->hList));
+	wsprintf(szTitleCap, TEXT("\t%d / %d"), pPlayList->nPlaying + 1, ListView_GetCount(pPlayList->hList));
 	SendMessage(m_hStatus, SB_SETTEXT, (WPARAM)1|0, (LPARAM)szTitleCap);
 
 	//シークバー
@@ -3072,7 +3072,7 @@ static struct FILEINFO *SelectNextFile(BOOL bTimer){
 	int nTmpIndex;
 	struct LISTTAB *pPlayList = GetPlayListTab();
 
-	nLBCount = ListView_GetItemCount(pPlayList->hList);
+	nLBCount = ListView_GetCount(pPlayList->hList);
 	if(nLBCount<=0){
 		return NULL;
 	}
@@ -4217,7 +4217,7 @@ LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
 						if(PtInRect(&rcItem, pt)){
 							DrawTabFocus(i, FALSE);
 							SendToPlaylist(GetSelListTab(), GetListTab(m_hTab, i));
-							//nCount = ListView_GetItemCount(GetListTab(m_hTab ,i)->hList) - 1;
+							//nCount = ListView_GetCount(GetListTab(m_hTab ,i)->hList) - 1;
 							//ListView_SingleSelectView(GetListTab(m_hTab ,i)->hList, nCount);
 							break;
 						}
@@ -4325,7 +4325,7 @@ static LRESULT CALLBACK NewTreeProc(HWND hTV, UINT msg, WPARAM wp, LPARAM lp){
 					return 0;
 
 				case VK_RETURN:
-					if(ListView_GetItemCount(GetFolderListTab()->hList)>0){
+					if(ListView_GetCount(GetFolderListTab()->hList)>0){
 						m_nPlayTab = 0;
 						SendFittleCommand(IDM_NEXT);
 					}else{
