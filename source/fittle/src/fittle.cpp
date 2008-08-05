@@ -3564,15 +3564,12 @@ static void OnBeginDragList(HWND hLV, POINT pt){
 
 // ドラッグイメージを動かしながらLVIS_DROPHILITEDを表示
 static void OnDragList(HWND hLV, POINT pt){
-	LVHITTESTINFO pinfo;
 	int nHitItem;
 	RECT rcLV;
 
-	pinfo.pt.x = pt.x;
-	pinfo.pt.y = pt.y;
 	ImageList_DragShowNolock(FALSE);
 	LV_ClearHilite(hLV);
-	nHitItem = ListView_HitTest(hLV, &pinfo);
+	nHitItem = LV_HitTest(hLV, MAKELONG(pt.x, pt.y));
 	if(nHitItem!=-1) LV_SetState(hLV, nHitItem, LVIS_DROPHILITED);
 	UpdateWindow(hLV);
 	ImageList_DragShowNolock(TRUE);
@@ -4196,13 +4193,10 @@ LRESULT CALLBACK NewListProc(HWND hLV, UINT msg, WPARAM wp, LPARAM lp){
 		case WM_LBUTTONUP:
 			if(GetCapture()==hLV){
 				int nBefore, nAfter;
-				LVHITTESTINFO pinfo;
 				OnEndDragList(hLV); //ドラッグ終了
 				//移動前アイテムと移動後アイテムのインデックスを取得
-				pinfo.pt.x = (short)LOWORD(lp);
-				pinfo.pt.y = (short)HIWORD(lp);
 				nBefore = LV_GetNextSelect(hLV, -1);
-				nAfter = ListView_HitTest(hLV, &pinfo);
+				nAfter = LV_HitTest(hLV, lp);
 				if(nAfter!=-1 && nBefore!=nAfter){
 					ChangeOrder(GetSelListTab(), nAfter);
 				}else{

@@ -360,6 +360,15 @@ int LV_GetCount(HWND hLV){
 	return ListView_GetItemCount(hLV);
 }
 
+int LV_HitTest(HWND hLV, LONG lPos){
+	LVHITTESTINFO pinfo;
+	pinfo.pt.x = (short)LOWORD(lPos);
+	pinfo.pt.y = (short)HIWORD(lPos);
+	return ListView_HitTest(hLV, &pinfo);
+}
+
+
+
 
 /*
 
