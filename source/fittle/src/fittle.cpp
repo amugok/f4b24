@@ -89,6 +89,7 @@ static void LoadConfig();
 static void SaveState(HWND);
 static void ApplyConfig(HWND hWnd);
 // コントロール関係
+static void StatusBarDisplayTime();
 static void DoTrayClickAction(int);
 static void PopupTrayMenu();
 static void PopupPlayModeMenu(HWND, NMTOOLBAR *);
@@ -1940,23 +1941,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			break;
 
 		case WM_TIMER:
-			QWORD qPos;
-			QWORD qLen;
-			int nPos;
-			int nLen;
 
 			switch (wp){
 				case ID_SEEKTIMER:
-					//再生時間をステータスバーに表示
-					qPos = TrackGetPos();
-					qLen = g_cInfo[g_bNow].qDuration;
-					nPos = (int)TrackPosToSec(qPos);
-					nLen = (int)TrackPosToSec(qLen);
-					wsprintf(m_szTime, TEXT("\t%02d:%02d / %02d:%02d"), nPos/60, nPos%60, nLen/60, nLen%60);
-					PostMessage(m_hStatus, SB_SETTEXT, (WPARAM)2|0, (LPARAM)m_szTime);
-					//シーク中でなければ現在の再生位置をスライダバーに表示する
-					if(!(GetCapture()==m_hSeek || qLen==0))
-						PostMessage(m_hSeek, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)(SLIDER_DIVIDED * qPos / qLen));
+					StatusBarDisplayTime();
 					break;
 
 				case ID_TIPTIMER:
@@ -2375,6 +2363,22 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			return DefWindowProc(hWnd, msg, wp, lp);
 	}
 	return 0L;
+}
+
+static void StatusBarDisplayTime(){
+	TCHAR buf[16];
+	//再生時間をステータスバーに表示
+	QWORD qPos = TrackGetPos();
+	QWORD qLen = g_cInfo[g_bNow].qDuration;
+	int nPos = (int)TrackPosToSec(qPos);
+	int nLen = (int)TrackPosToSec(qLen);
+	wsprintf(m_szTime, TEXT("\t%02d:%02d / %02d:%02d"), nPos/60, nPos%60, nLen/60, nLen%60);
+	SendMessage(m_hStatus, SB_GETTEXT, (WPARAM)2, (LPARAM)buf);
+	if (lstrcmpi(buf, m_szTime) != 0)
+		SendMessage(m_hStatus, SB_SETTEXT, (WPARAM)2|0, (LPARAM)m_szTime);
+	//シーク中でなければ現在の再生位置をスライダバーに表示する
+	if(!(GetCapture()==m_hSeek || qLen==0))
+		PostMessage(m_hSeek, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)(SLIDER_DIVIDED * qPos / qLen));
 }
 
 static void DoTrayClickAction(int nKind){
