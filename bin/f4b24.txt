@@ -55,7 +55,7 @@ Pluginsフォルダ
 	minipane.dll    ミニパネル minipane.fcpを同じ場所に置けば設定画面も拡張される Win9x/Meや公式で使わない場合minipaneu.fgpを推奨
 	taskvol.dll     タスクバー上ホイールで音量を変える 強制終了時にエクスプローラごと落ちる問題に対処
 	xdelfile.dll    ファイル削除機能無効化
-	seekrev.dll     反転
+	seekrev.dll     シークバー上のホイール操作を反転する
 
 追加した専用書庫プラグイン
 	cue.fap         cueシート対応 Ansi版専用 cueシート注釈によるreplaygain対応 要test14以降
@@ -114,7 +114,7 @@ Pluginsフォルダ
 
 実験履歴
 	test38/test38u
-
+		書庫内のタグ情報をリスト表示しない設定を追加
 
 	test37/test37u
 		ボリュームバーとシークバーでの右クリックで正常なメニューが表示されていなかった問題に対処
