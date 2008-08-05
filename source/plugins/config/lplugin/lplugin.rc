@@ -100,7 +100,7 @@ BEGIN
                     LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
     COMBOBOX        IDC_COMBO1,75,165,120,103,CBS_DROPDOWNLIST | WS_VSCROLL | 
                     WS_TABSTOP
-    CONTROL         "書庫内のファイルのタグ情報の読み込みを禁止する",
+    CONTROL         "書庫内のファイルのタグ情報のリスト表示を禁止する",
                     IDC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_GROUP | 
                     WS_TABSTOP,10,185,165,11
     LTEXT           "ソート方法",IDC_STATIC,10,165,55,10
