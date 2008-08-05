@@ -90,8 +90,9 @@ static void SaveState(HWND);
 static void ApplyConfig(HWND hWnd);
 // コントロール関係
 static void StatusBarDisplayTime();
-static void SelectFolderItem(LPTSTR lpszPath);
 static void SelectListItem(struct LISTTAB *pList, LPTSTR lpszPath);
+static void SelectFolderItem(LPTSTR lpszPath);
+static BOOL GetTabName(LPTSTR szTabName);
 static void DoTrayClickAction(int);
 static void PopupTrayMenu();
 static void PopupPlayModeMenu(HWND, NMTOOLBAR *);
@@ -1538,7 +1539,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				case IDM_LIST_NEW:	// 新規プレイリスト
 					{
 						lstrcpy(szLabel, TEXT("Default"));
-						if(DialogBoxParam(m_hInst, TEXT("TAB_NAME_DIALOG"), hWnd, TabNameDlgProc, (LPARAM)szLabel)){
+						if(GetTabName(szLabel)){
 							MakeNewTab(m_hTab, szLabel, -1);
 							SendToPlaylist(GetSelListTab(), GetListTab(m_hTab, TabGetListCount()-1));
 							TabSetListFocus(TabGetListCount()-1);
@@ -1642,7 +1643,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						// ".m3u"を削除
 						PathRemoveExtension(szLabel);
 					}
-					if(DialogBoxParam(m_hInst, TEXT("TAB_NAME_DIALOG"), hWnd, TabNameDlgProc, (LPARAM)szLabel)){
+					if(GetTabName(szLabel)){
 						struct LISTTAB *pNew = MakeNewTab(m_hTab, szLabel, -1);
 						SearchFiles(&(pNew->pRoot), szNowDir, TRUE);
 						TraverseList(pNew);
@@ -1670,7 +1671,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 				case IDM_TAB_NEW:
 					lstrcpy(szLabel, TEXT("Default"));
-					if(DialogBoxParam(m_hInst, TEXT("TAB_NAME_DIALOG"), hWnd, TabNameDlgProc, (LPARAM)szLabel)){
+					if(GetTabName(szLabel)){
 						MakeNewTab(m_hTab, szLabel, -1);
 						TabSetListFocus(TabGetListCount()-1);
 					}
@@ -1678,7 +1679,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 				case IDM_TAB_RENAME:
 					lstrcpyn(szLabel, GetListTab(m_hTab, s_nHitTab)->szTitle, MAX_FITTLE_PATH);
-					if(DialogBoxParam(m_hInst, TEXT("TAB_NAME_DIALOG"), hWnd, TabNameDlgProc, (LPARAM)szLabel)){
+					if(GetTabName(szLabel)){
 						RenameListTab(m_hTab, s_nHitTab, szLabel);
 						InvalidateRect(m_hTab, NULL, FALSE);
 					}
@@ -2376,6 +2377,11 @@ static void SelectListItem(struct LISTTAB *pList, LPTSTR lpszPath) {
 static void SelectFolderItem(LPTSTR lpszPath) {
 	SelectListItem(GetFolderListTab(), lpszPath);
 }
+
+static BOOL GetTabName(LPTSTR szTabName){
+	return DialogBoxParam(m_hInst, TEXT("TAB_NAME_DIALOG"), m_hMainWnd, TabNameDlgProc, (LPARAM)szTabName) != 0;
+}
+
 
 static void DoTrayClickAction(int nKind){
 	switch(g_cfg.nTrayClick[nKind]){
