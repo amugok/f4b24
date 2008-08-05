@@ -173,6 +173,8 @@ int TabGetListFocus();
 void TabSetListFocus(int nIndex);
 int TabGetListCount();
 void TabAdjustRect(LPRECT pRect);
+LRESULT SendF4b24Message(WPARAM wp, LPARAM lp);
+
 
 LPVOID CALLBACK LXLoadMusic(LPVOID lpszPath);
 BOOL CALLBACK LXGetTag(LPVOID pMusic, LPVOID pTagInfo);

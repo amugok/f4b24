@@ -280,7 +280,7 @@ static LRESULT SendFittleMessage(UINT uMsg, WPARAM wp, LPARAM lp){
 	return SendMessage(m_hMainWnd, uMsg, wp, lp);
 }
 
-static LRESULT SendF4b24Message(WPARAM wp, LPARAM lp){
+LRESULT SendF4b24Message(WPARAM wp, LPARAM lp){
 	return SendFittleMessage(WM_F4B24_IPC, wp, lp);
 }
 

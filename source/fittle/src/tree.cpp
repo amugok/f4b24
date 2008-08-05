@@ -60,7 +60,7 @@ int SetDrivesToCombo(HWND hCB){
 	}
 	HFree(szBuff);
 
-	SendMessage(GetParent(hCB), WM_F4B24_IPC, (WPARAM)WM_F4B24_HOOK_UPDATE_DRIVELISTE, (LPARAM)hCB);
+	SendF4b24Message((WPARAM)WM_F4B24_HOOK_UPDATE_DRIVELISTE, (LPARAM)hCB);
 
 //	SendMessage(hCB, CB_SETCURSEL, 
 //		(WPARAM)SendMessage(hCB, CB_FINDSTRINGEXACT, (WPARAM)-1, (LPARAM)(LPTSTR)TEXT("C:\\")), 0);
@@ -292,7 +292,7 @@ HTREEITEM MakeTreeFromPath(HWND hTV, HWND hCB, LPCTSTR pszFolderPath){
 	hwndWork = CreateWindow(TEXT("STATIC"),TEXT(""),0,0,0,0,0,NULL,NULL,GetModuleHandle(NULL),NULL);
 	if (hwndWork){
 		SendMessage(hwndWork, WM_SETTEXT, (WPARAM)0, (LPARAM)szSetPath);
-		if (SendMessage(GetParent(hTV), WM_F4B24_IPC, (WPARAM)WM_F4B24_HOOK_GET_TREE_ROOT, (LPARAM)hwndWork)){
+		if (SendF4b24Message((WPARAM)WM_F4B24_HOOK_GET_TREE_ROOT, (LPARAM)hwndWork)){
 			// ÉãÅ[ÉgÇ…Ç»ÇÈÇµÇ®ÇËÇ™ë∂ç›Ç∑ÇÈ
 			SendMessage(hwndWork, WM_GETTEXT, (WPARAM)MAX_FITTLE_PATH, (LPARAM)szDriveName);
 		}
