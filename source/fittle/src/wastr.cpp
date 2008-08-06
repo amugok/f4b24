@@ -468,3 +468,11 @@ void WAShellExecute(HWND hWnd, LPCWASTR pFile, LPCWASTR pPara){
 		ShellExecuteA(hWnd, NULL, pFile->A, pPara ? pPara->A : NULL, NULL, SW_SHOWNORMAL);
 }
 
+HWND WACreateStaticWindow(HMODULE hmod){
+	if (m_WAIsUnicode)
+		return CreateWindowW(L"STATIC",L"",0,0,0,0,0,NULL,NULL,hmod,NULL);
+	else
+		return CreateWindowA("STATIC","",0,0,0,0,0,NULL,NULL,hmod,NULL);
+}
+
+

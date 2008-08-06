@@ -182,12 +182,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 	return TRUE;
 }
 
-static HWND CreateWorkWindow(void){
-	return CreateWindow(TEXT("STATIC"),TEXT(""),0,0,0,0,0,NULL,NULL,m_hinstDLL,NULL);
-}
-
 static void GetCurPath(HWND hWnd, LPWASTR lpszBuf) {
-	HWND hwndWork = CreateWorkWindow();
+	HWND hwndWork = WACreateStaticWindow(m_hinstDLL);
 	if (hwndWork){
 		SendMessage(hWnd, WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_GET_CURPATH, (LPARAM)hwndWork);
 		WAGetWindowText(hwndWork, lpszBuf);
@@ -196,7 +192,7 @@ static void GetCurPath(HWND hWnd, LPWASTR lpszBuf) {
 }
 
 static void SetCurPath(HWND hWnd, LPCWASTR lpszPath) {
-	HWND hwndWork = CreateWorkWindow();
+	HWND hwndWork = WACreateStaticWindow(m_hinstDLL);
 	if (hwndWork){
 		WASetWindowText(hwndWork, lpszPath);
 		SendMessage(hWnd, WM_F4B24_IPC, (WPARAM)WM_F4B24_IPC_SET_CURPATH, (LPARAM)hwndWork);

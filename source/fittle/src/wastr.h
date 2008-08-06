@@ -52,4 +52,6 @@ extern HANDLE WAOpenFile(LPCWASTR pPath);
 extern HANDLE WACreateFile(LPCWASTR pPath);
 extern void WADeleteFile(LPCWASTR pPath);
 extern void WAShellExecute(HWND hWnd, LPCWASTR pFile, LPCWASTR pPara);
+extern HWND WACreateStaticWindow(HMODULE hmod);
+
 #endif
