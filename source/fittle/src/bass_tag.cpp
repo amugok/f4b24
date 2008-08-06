@@ -26,6 +26,30 @@ static BOOL Riff_ReadTag(DWORD handle, TAGINFO *pTagInfo){
 	return FALSE;
 }
 
+/*
+
+test40Œv‰æ
+LPVOID LXGetTag(LPVOID pTagInfo, LPCSTR tagtype);
+TAGINFOA@fittle.c ->  TAGINFOOLD
+TAGINFO : has STRINGMAP : has STRINGLIT*2
+
+tagtype  V1 V22 V23  V24  RIFF WMA            Vorbis
+Title    *  TT2 TIT2 TIT2 INAM Title          Title
+Artist   *  TP1 TPE1 TPE1 IART Author         Artist
+Album    *  TAL TALB TALB IPRD WM/AlbumTitle  Album
+Track    *  TRK TRCK           WM/TrackNumber TrackNumber
+GenreID  *                     (WM/GenreID)
+Genre           TCON TCON IGNR WM/Genre       Genre
+Comment  *  COM COMM COMM ICMT Description    Comment
+Year     *  TYE TYER           WM/Year
+Date            TDAT TDRC ICRD                Date
+Composer    TCM TCOM TCOM      WM/Composer    Composer
+Lyricist    TXT TEXT TEXT
+Length   -
+
+*/
+
+
 static BOOL ID3V2_ReadTag(DWORD handle, TAGINFO *pTagInfo){
 	LPBYTE p = (LPBYTE)ChannelGetTags(handle, BASS_TAG_ID3V2);
 	if(p && p[0] == 'I' && p[1] == 'D' && p[2] == '3'){
