@@ -39,7 +39,7 @@ Title    *  TT2 TIT2 TIT2 INAM Title       Title   Title
 Artist   *  TP1 TPE1 TPE1 IART Artist      Artist  Author         
 Album    *  TAL TALB TALB IPRD Album       Album   WM/AlbumTitle  
 Track    *  TRK TRCK TRCK      TrackNumber Track   WM/TrackNumber 
-GenreID  *                                         (WM/GenreID)
+GenreID  *                                         WM/GenreID
 Genre       TCO TCON TCON IGNR Genre       Genre   WM/Genre       
 Comment  *  COM COMM COMM ICMT Comment     Comment Description    
 Year     *  TYE TYER                               WM/Year

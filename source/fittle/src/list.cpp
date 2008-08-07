@@ -27,7 +27,7 @@ static int CALLBACK LXStrCmp(LPCVOID pStrLeft, LPCVOID pStrRight);
 
 static F4B24LX_INTERFACE m_lxif = {
 	1,
-	39,
+	40,
 #ifdef UNICODE
 	1,
 #else

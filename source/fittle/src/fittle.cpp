@@ -45,12 +45,12 @@
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test39u")
+#define F4B24_VERSION_STRING TEXT("test40u")
 #else
-#define F4B24_VERSION_STRING TEXT("test39")
+#define F4B24_VERSION_STRING TEXT("test40")
 #endif
-#define F4B24_VERSION 39
-#define F4B24_IF_VERSION 39
+#define F4B24_VERSION 40
+#define F4B24_IF_VERSION 40
 #ifndef _DEBUG
 #define FITTLE_TITLE TEXT("Fittle - f4b24 ") F4B24_VERSION_STRING
 #else
@@ -149,14 +149,15 @@ static TCHAR m_szTreePath[MAX_FITTLE_PATH];	// ツリーのパス
 static BOOL m_bFloat = FALSE;
 
 static TAGINFO m_taginfo = {0};
-#ifdef UNICODE
 typedef struct{
 	CHAR szTitle[256];
 	CHAR szArtist[256];
 	CHAR szAlbum[256];
 	CHAR szTrack[10];
-}TAGINFOA;
-static TAGINFOA m_taginfoA;
+}TAGINFOOLD;
+static TAGINFOOLD m_taginfoold;
+
+#ifdef UNICODE
 static CHAR m_szTreePathA[MAX_FITTLE_PATH];	// ツリーのパス
 static CHAR m_szFilePathA[MAX_FITTLE_PATH];	// ツリーのパス
 #endif
@@ -2138,18 +2139,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 		case WM_FITTLE:	// プラグインインターフェイス
 			switch(wp){
 				case GET_TITLE:
-#ifdef UNICODE
-					return (LRESULT)&m_taginfoA;
-#else
-					return (LRESULT)&m_taginfo;
-#endif
+					return (LRESULT)m_taginfoold.szTitle;
 
 				case GET_ARTIST:
-#ifdef UNICODE
-					return (LRESULT)m_taginfoA.szArtist;
-#else
-					return (LRESULT)m_taginfo.szArtist;
-#endif
+					return (LRESULT)m_taginfoold.szArtist;
 
 				case GET_PLAYING_PATH:
 #ifdef UNICODE
@@ -2879,7 +2872,10 @@ void CALLBACK LXFreeMusic(LPVOID pMusic){
 
 BOOL CALLBACK LXGetTag(LPVOID pMusic, LPVOID pTagInfo){
 	CHANNELINFO *pCh = (CHANNELINFO *)pMusic;
-	return pCh? GetTagInfo(pCh, (TAGINFO *)pTagInfo) : FALSE;
+	TAGINFO *pTag = (TAGINFO *)pTagInfo;
+	if (!pCh) return FALSE;
+	pTag->dwLength = ChPosToSec(pCh->hChan, pCh->qDuration);
+	return GetTagInfo(pCh, pTag);
 }
 
 
@@ -3001,7 +2997,7 @@ static void OnChangeTrack(){
 
 
 	// タグを
-	if(GetTagInfo(pCh, &m_taginfo)){
+	if(LXGetTagInfo(pCh, &m_taginfo)){
 		if(!g_cfg.nTagReverse){
 			wsprintf(m_szTag, TEXT("%s / %s"), m_taginfo.szTitle, m_taginfo.szArtist);
 		}else{
@@ -3011,12 +3007,10 @@ static void OnChangeTrack(){
 		lstrcpyn(m_szTag, GetFileName(pCh->szFilePath), MAX_FITTLE_PATH);
 		lstrcpyn(m_taginfo.szTitle, m_szTag, 256);
 	}
-#ifdef UNICODE
-	lstrcpyntA(m_taginfoA.szTitle, m_taginfo.szTitle, 256);
-	lstrcpyntA(m_taginfoA.szArtist, m_taginfo.szArtist, 256);
-	lstrcpyntA(m_taginfoA.szAlbum, m_taginfo.szAlbum, 256);
-	lstrcpyntA(m_taginfoA.szTrack, m_taginfo.szTrack, 10);
-#endif
+	lstrcpyntA(m_taginfoold.szTitle, m_taginfo.szTitle, 256);
+	lstrcpyntA(m_taginfoold.szArtist, m_taginfo.szArtist, 256);
+	lstrcpyntA(m_taginfoold.szAlbum, m_taginfo.szAlbum, 256);
+	lstrcpyntA(m_taginfoold.szTrack, m_taginfo.szTrack, 10);
 
 	//タイトルバーの処理
 	wsprintf(szTitleCap, TEXT("%s - %s"), m_szTag, FITTLE_TITLE);
@@ -3252,7 +3246,7 @@ static BOOL SeekToPos(BOOL fFadeOut, QWORD qPos){
 static BOOL _BASS_ChannelSetPosition(DWORD handle, int nPos){
 	QWORD qPos;
 
-	qPos = g_cInfo[g_bNow].qDuration * nPos / 1000;
+	qPos = g_cInfo[g_bNow].qDuration * nPos / SLIDER_DIVIDED;
 	if (qPos >= g_cInfo[g_bNow].qDuration) qPos = g_cInfo[g_bNow].qDuration - 1;
 
 	return SeekToPos(TRUE, qPos);

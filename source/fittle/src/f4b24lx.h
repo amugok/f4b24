@@ -13,6 +13,11 @@ typedef struct {
 	LPVOID (CALLBACK *LoadMusic)(LPVOID lpszPath);
 	void (CALLBACK *FreeMusic)(LPVOID pMusic);
 	BOOL (CALLBACK *GetTag)(LPVOID pMusic, LPVOID pTagInfo);
+
+	int (CALLBACK *TagFind)(LPVOID pTagInfo, LPCSTR pKey);
+	LPCSTR (CALLBACK *TagGetKey)(LPVOID pTagInfo, int nIndex);
+	LPVOID (CALLBACK *TagGetValue)(LPVOID pTagInfo, int nIndex);
+
 	void (CALLBACK *AddColumn)(HWND hList, int nColumn, LPVOID pLabel, int nWidth, int nFmt);
 	LPVOID (CALLBACK *GetFileName)(LPVOID pFileInfo);
 	BOOL (CALLBACK *CheckPath)(LPVOID pFileInfo, int nCheck);
