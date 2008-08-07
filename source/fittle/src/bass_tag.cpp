@@ -33,18 +33,19 @@ LPVOID LXGetTag(LPVOID pTagInfo, LPCSTR tagtype);
 TAGINFOA@fittle.c ->  TAGINFOOLD
 TAGINFO : has STRINGMAP : has STRINGLIT*2
 
-tagtype  V1 V22 V23  V24  RIFF WMA            Vorbis
-Title    *  TT2 TIT2 TIT2 INAM Title          Title
-Artist   *  TP1 TPE1 TPE1 IART Author         Artist
-Album    *  TAL TALB TALB IPRD WM/AlbumTitle  Album
-Track    *  TRK TRCK           WM/TrackNumber TrackNumber
-GenreID  *                     (WM/GenreID)
-Genre           TCON TCON IGNR WM/Genre       Genre
-Comment  *  COM COMM COMM ICMT Description    Comment
-Year     *  TYE TYER           WM/Year
-Date            TDAT TDRC ICRD                Date
-Composer    TCM TCOM TCOM      WM/Composer    Composer
-Lyricist    TXT TEXT TEXT
+tagtype  V1 V22 V23  V24  RIFF Vorbis      MP4     WMA
+
+Title    *  TT2 TIT2 TIT2 INAM Title       Title   Title
+Artist   *  TP1 TPE1 TPE1 IART Artist      Artist  Author         
+Album    *  TAL TALB TALB IPRD Album       Album   WM/AlbumTitle  
+Track    *  TRK TRCK TRCK      TrackNumber Track   WM/TrackNumber 
+GenreID  *                                         (WM/GenreID)
+Genre       TCO TCON TCON IGNR Genre       Genre   WM/Genre       
+Comment  *  COM COMM COMM ICMT Comment     Comment Description    
+Year     *  TYE TYER                               WM/Year
+Date        TDA TDAT TDRC ICRD Date        Date    ReleaseDate    
+Composer    TCM TCOM TCOM      Composer    Writer  WM/Composer    
+Disc        TPA TPOS TPOS      Disc        Disc    WM/ContentGroupDescription
 Length   -
 
 */
@@ -162,7 +163,7 @@ static BOOL ReadTagSub(LPBYTE p, TAGINFO *pTagInfo){
 		Vorbis_ReadFrame(p, "ARTIST=", pTagInfo->szArtist, 256);
 		Vorbis_ReadFrame(p, "ALBUM=", pTagInfo->szAlbum, 256);
 		Vorbis_ReadFrame(p, "TRACKNUMBER=", pTagInfo->szTrack, 10);
-		Vorbis_ReadFrame(p, "TRACKN=", pTagInfo->szTrack, 10);
+		Vorbis_ReadFrame(p, "TRACK=", pTagInfo->szTrack, 10);
 		p += lstrlenA((LPCSTR)p) + 1;
 	}
 	if(*pTagInfo->szTitle || *pTagInfo->szArtist) return TRUE;
