@@ -2848,6 +2848,7 @@ static BOOL OpenSoundFile(CHANNELINFO *pCh, LPTSTR lpszOpenSoundPath, BOOL fOpen
 }
 
 static BOOL GetTagInfo(CHANNELINFO *pCh, TAGINFO *pTagInfo){
+	pTagInfo->dwLength = (DWORD)ChPosToSec(pCh->hChan, pCh->qDuration);
 	return GetArchiveTagInfo(pCh->szFilePath, pTagInfo) || BASS_TAG_Read(pCh->hChan, pTagInfo);
 }
 
@@ -2873,9 +2874,7 @@ void CALLBACK LXFreeMusic(LPVOID pMusic){
 BOOL CALLBACK LXGetTag(LPVOID pMusic, LPVOID pTagInfo){
 	CHANNELINFO *pCh = (CHANNELINFO *)pMusic;
 	TAGINFO *pTag = (TAGINFO *)pTagInfo;
-	if (!pCh) return FALSE;
-	pTag->dwLength = ChPosToSec(pCh->hChan, pCh->qDuration);
-	return GetTagInfo(pCh, pTag);
+	return pCh ? GetTagInfo(pCh, pTag) : FALSE;
 }
 
 
@@ -2997,7 +2996,7 @@ static void OnChangeTrack(){
 
 
 	// ƒ^ƒO‚ð
-	if(LXGetTagInfo(pCh, &m_taginfo)){
+	if(GetTagInfo(pCh, &m_taginfo)){
 		if(!g_cfg.nTagReverse){
 			wsprintf(m_szTag, TEXT("%s / %s"), m_taginfo.szTitle, m_taginfo.szArtist);
 		}else{

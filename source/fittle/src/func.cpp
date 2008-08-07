@@ -529,7 +529,7 @@ void SendSupportList(HWND hWnd){
 	--- ‰‰‘tŽžŠÔŠÖŒW ---
 
 */
-float ChPosToSec(DWORC hCh, QWORD qPos) {
+float ChPosToSec(DWORD hCh, QWORD qPos) {
 	return (float)BASS_ChannelBytes2Seconds(hCh, qPos);
 }
 
