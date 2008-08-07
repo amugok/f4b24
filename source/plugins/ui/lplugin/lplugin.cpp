@@ -219,7 +219,7 @@ static BOOL CALLBACK RegisterPlugin(HMODULE hPlugin, LPVOID user){
 			pNewNode->pInfo = ((GetLXPluginInfoFunc)lpfnProc)();
 			pNewNode->pNext = NULL;
 			pNewNode->hDll = hPlugin;
-			if (pNewNode->pInfo && pNewNode->pInfo->nLPDKVer >= LPDK_VER){
+			if (pNewNode->pInfo && pNewNode->pInfo->nLPDKVer == LPDK_VER){
 				LX_PLUGIN_INFO *pInfo = pNewNode->pInfo;
 				pInfo->hWndMain = m_hWndMain;
 				pInfo->hmodPlugin = hPlugin;
@@ -272,7 +272,7 @@ static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode) {
 
 		m_hWndMain = hWnd;
 		m_plxif = (F4B24LX_INTERFACE *)SendMessage(hWnd, WM_F4B24_IPC, WM_F4B24_IPC_GET_LX_IF, 0);
-		if (!m_plxif || m_plxif->nVersion != 38) return FALSE;
+		if (!m_plxif || m_plxif->nVersion != 39) return FALSE;
 
 		nAccessRight = InterlockedExchange(&m_plxif->nAccessRight, 0);
 		if (!nAccessRight) return FALSE;

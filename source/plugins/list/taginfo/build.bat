@@ -51,7 +51,7 @@ goto exitcmd
 
 set PREFIX=..\..\..\..\bin\Plugins\flp\
 set CFLAGS=/GF /Gy /Ox /Os /MD
-set VER_STR=0808052_
+set VER_STR=0808070_
 
 call %0 taginfo flp
 

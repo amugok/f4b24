@@ -41,10 +41,12 @@
 #define  WM_F4B24_IPC_GET_CAPABLE_RET_SUPPORTED 0x202
 #define  WM_F4B24_IPC_GET_CAPABLE_RET_NOT_SUPPORTED 0x101
 #define WM_F4B24_IPC_INVOKE_WADSP_SETUP 302		/* wadsp */
+#define WM_F4B24_IPC_GET_COLUMN_TYPE 303		/* test39 or later */
 
 /* WPARAM:function code LPARAM:HWND */
 #define WM_F4B24_HOOK_UPDATE_DRIVELISTE 400		/* test18 or later */
 #define WM_F4B24_HOOK_GET_TREE_ROOT 401			/* test18 or later */
+#define WM_F4B24_HOOK_LIST_CREATED 402			/* test39 or later */
 
 /* WPARAM:function code LPARAM:BASS stream handle */
 #define WM_F4B24_HOOK_CREATE_STREAM 500			/* test25 or later */

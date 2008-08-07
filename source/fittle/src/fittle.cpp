@@ -50,7 +50,7 @@
 #define F4B24_VERSION_STRING TEXT("test39")
 #endif
 #define F4B24_VERSION 39
-#define F4B24_IF_VERSION 38
+#define F4B24_IF_VERSION 39
 #ifndef _DEBUG
 #define FITTLE_TITLE TEXT("Fittle - f4b24 ") F4B24_VERSION_STRING
 #else
@@ -2320,7 +2320,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					return OPIsSupportFloatOutput() ? WM_F4B24_IPC_GET_CAPABLE_RET_SUPPORTED : WM_F4B24_IPC_GET_CAPABLE_RET_NOT_SUPPORTED;
 				}
 				break;
-			
+
+			case WM_F4B24_IPC_GET_COLUMN_TYPE:
+				return GetColumnType(lp);
+				
 			case WM_F4B24_IPC_GET_CURPATH:
 				SendMessage((HWND)lp, WM_SETTEXT, 0, (LPARAM)m_szTreePath);
 				break;

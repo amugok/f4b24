@@ -14,6 +14,7 @@
 #include "func.h"
 #include "bass_tag.h"
 #include "archive.h"
+#include "f4b24.h"
 
 // 新しいタブもろもろを作成
 struct LISTTAB *MakeNewTab(HWND hTab, LPTSTR szTabName, int nItem){
@@ -71,6 +72,8 @@ struct LISTTAB *MakeNewTab(HWND hTab, LPTSTR szTabName, int nItem){
 
 	// カラー
 	SetListColor(hList);
+
+	SendF4b24Message(WM_F4B24_HOOK_LIST_CREATED, (LPARAM)hList);
 	return pNew;
 }
 

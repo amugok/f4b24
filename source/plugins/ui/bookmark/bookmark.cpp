@@ -218,7 +218,10 @@ static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg) {
 			break;
 
 		case IDM_BM_ORG:
-			DialogBox(m_hinstDLL, TEXT("BOOKMARK_DIALOG"), pMsg->hWnd, (DLGPROC)BookMarkDlgProc);
+			if (m_bIsUnicode)
+				DialogBoxW(m_hinstDLL, L"BOOKMARK_DIALOG", pMsg->hWnd, (DLGPROC)BookMarkDlgProc);
+			else
+				DialogBoxA(m_hinstDLL, "BOOKMARK_DIALOG", pMsg->hWnd, (DLGPROC)BookMarkDlgProc);
 			DrawBookMark(GetSubMenu(GetMenu(pMsg->hWnd), GetMenuPosFromString(GetMenu(pMsg->hWnd), TEXT("‚µ‚¨‚è(&B)"))));
 			UpdateDriveList(pMsg->hWnd);
 			break;
