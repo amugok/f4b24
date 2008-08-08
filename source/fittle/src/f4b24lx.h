@@ -1,5 +1,6 @@
 /* f4b24“à•”Šg’£IF */
 
+#define F4B24LX_INTERFACE_VERSION 40
 enum {
 	F4B24LX_CHECK_URL = 0,
 	F4B24LX_CHECK_CUE = 1,

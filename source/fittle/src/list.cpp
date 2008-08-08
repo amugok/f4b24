@@ -18,6 +18,7 @@
 // ÉçÅ[ÉJÉãä÷êî
 static void Merge(struct FILEINFO **, struct FILEINFO **);
 static int CompareNode(struct FILEINFO *, struct FILEINFO *, int);
+
 static void CALLBACK LXAddColumn(HWND hList, int nColumn, LPVOID pLabel, int nWidth, int nFmt);
 static LPVOID CALLBACK LXGetFileName(LPVOID pFileInfo);
 static BOOL CALLBACK LXCheckPath(LPVOID pFileInfo, int nCheck);
@@ -27,7 +28,7 @@ static int CALLBACK LXStrCmp(LPCVOID pStrLeft, LPCVOID pStrRight);
 
 static F4B24LX_INTERFACE m_lxif = {
 	1,
-	40,
+	F4B24LX_INTERFACE_VERSION,
 #ifdef UNICODE
 	1,
 #else
