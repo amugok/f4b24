@@ -33,19 +33,21 @@ LPVOID LXGetTag(LPVOID pTagInfo, LPCSTR tagtype);
 TAGINFOA@fittle.c ->  TAGINFOOLD
 TAGINFO : has STRINGMAP : has STRINGLIT*2
 
-tagtype  V1 V22 V23  V24  RIFF Vorbis      MP4     WMA
+tagtype    V1 V22 V23  V24  RIFF Vorbis      MP4     WMA
 
-Title    *  TT2 TIT2 TIT2 INAM Title       Title   Title
-Artist   *  TP1 TPE1 TPE1 IART Artist      Artist  Author         
-Album    *  TAL TALB TALB IPRD Album       Album   WM/AlbumTitle  
-Track    *  TRK TRCK TRCK      TrackNumber Track   WM/TrackNumber 
-GenreID  *                                         WM/GenreID
-Genre       TCO TCON TCON IGNR Genre       Genre   WM/Genre       
-Comment  *  COM COMM COMM ICMT Comment     Comment Description    
-Year     *  TYE TYER                               WM/Year
-Date        TDA TDAT TDRC ICRD Date        Date    ReleaseDate    
-Composer    TCM TCOM TCOM      Composer    Writer  WM/Composer    
-Disc        TPA TPOS TPOS      Disc        Disc    WM/ContentGroupDescription
+Title       * TT2 TIT2 TIT2 INAM Title       Title   Title
+Artist      * TP1 TPE1 TPE1 IART Artist      Artist  Author         
+Band          TP2 TPE2 TPE2
+AlbumArtist   txx txxx txxx                          WM/AlbumArtist
+Album       * TAL TALB TALB IPRD Album       Album   WM/AlbumTitle  
+Track       * TRK TRCK TRCK      TrackNumber Track   WM/TrackNumber 
+GenreID     *                                        WM/GenreID
+Genre         TCO TCON TCON IGNR Genre       Genre   WM/Genre       
+Comment     * COM COMM COMM ICMT Comment     Comment Description    
+Year        * TYE TYER                               WM/Year
+Date          TDA TDAT TDRC ICRD Date        Date    ReleaseDate    
+Composer      TCM TCOM TCOM      Composer    Writer  WM/Composer    
+Disc          TPA TPOS TPOS      Disc        Disc    WM/ContentGroupDescription
 Length   -
 
 */
