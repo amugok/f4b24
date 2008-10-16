@@ -316,7 +316,10 @@ static BOOL CALLBACK EnumArchive2(LPTSTR pszFilePath, LPFNADDLISTPROC lpfnAddLis
 			// 対応形式であるかチェック
 			GetWord(p, szToken, MAX_FITTLE_PATH);
 			PathUnquoteSpaces(szToken);
-			if(!lpfnCheckProc(szToken)) return -1;
+			if(!lpfnCheckProc(szToken)){
+				CloseHandle(hFile);
+				return -1;
+			}
 			lstrcpyn(szAudioPath, szToken, MAX_FITTLE_PATH);
 		}else if(!lstrcmp(szToken, TEXT("TRACK"))){
 			if (szAddPath[0]){
