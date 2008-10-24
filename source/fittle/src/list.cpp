@@ -523,7 +523,7 @@ int LinkCheck(struct FILEINFO **ppRoot){
 	int i=0;
 
 	for(pTmp = *ppRoot;pTmp;){
-		if(!FILE_EXIST(pTmp->szFilePath) && !IsArchivePath(pTmp->szFilePath) && !IsURLPath(pTmp->szFilePath)){
+		if(!FILE_EXIST(pTmp->szFilePath) && !IsArchivePathExist(pTmp->szFilePath, TRUE) && !IsURLPath(pTmp->szFilePath)){
 			pDel = pTmp;
 			pTmp = pTmp->pNext;
 			DeleteAList(pDel, ppRoot);

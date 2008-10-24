@@ -148,7 +148,7 @@ BEGIN
     POPUP "ListMenu"
     BEGIN
         MENUITEM "再生(&P)\tZ",                 IDM_PLAY
-        MENUITEM "停止(&S)\tC",                 40047
+        MENUITEM "停止(&S)\tC",                 IDM_STOP
         MENUITEM SEPARATOR
         MENUITEM "一番上に移動(&T)",            IDM_LIST_MOVETOP
         MENUITEM "一番下に移動(&B)",            IDM_LIST_MOVEBOTTOM
@@ -156,7 +156,7 @@ BEGIN
         MENUITEM SEPARATOR
         POPUP "プレイリストに送る(&S)"
         BEGIN
-            MENUITEM "新規プレイリスト(&N)",        40123
+            MENUITEM "新規プレイリスト(&N)",        IDM_LIST_NEW
             MENUITEM SEPARATOR
         END
         MENUITEM SEPARATOR
@@ -165,7 +165,7 @@ BEGIN
         MENUITEM SEPARATOR
         MENUITEM "すべて選択(&A)\tCtrl+A",      IDM_LIST_ALL
         MENUITEM SEPARATOR
-        MENUITEM "プロパティ(&R)\tAlt+Enter",   40121
+        MENUITEM "プロパティ(&R)\tAlt+Enter",   IDM_LIST_PROP
     END
 END
 
@@ -186,10 +186,10 @@ BEGIN
             MENUITEM "ランダム(&R)",                IDM_PM_RANDOM
             MENUITEM "シングル(&S)",                IDM_PM_SINGLE
             MENUITEM SEPARATOR
-            MENUITEM "リピート(&P)",                40102
+            MENUITEM "リピート(&P)",                IDM_PM_REPEAT
         END
         MENUITEM SEPARATOR
-        MENUITEM "ウィンドウ表示/非表示(&W)",   40149
+        MENUITEM "ウィンドウ表示/非表示(&W)",   IDM_TRAY_WINVIEW
         MENUITEM "終了(&X)",                    IDM_END
     END
 END
@@ -201,13 +201,13 @@ BEGIN
         MENUITEM "プレイリストを追加(&A)",      IDM_TAB_NEW
         MENUITEM "名前を変更(&N)",              IDM_TAB_RENAME
         MENUITEM "プレイリストを削除(&D)",      IDM_TAB_DEL
-        MENUITEM "プレイリストを保存(&S)",      40153
+        MENUITEM "プレイリストを保存(&S)",      IDM_TAB_SAVE
         MENUITEM SEPARATOR
         MENUITEM "左へ移動(&L)",                IDM_TAB_LEFT
         MENUITEM "右へ移動(&R)",                IDM_TAB_RIGHT
         MENUITEM SEPARATOR
-        MENUITEM "フルパスでソートする(&F)",    40176
-        MENUITEM "リンク切れを削除する(&E)",    40177
+        MENUITEM "フルパスでソートする(&F)",    IDM_TAB_SORT
+        MENUITEM "リンク切れを削除する(&E)",    IDM_TAB_NOEXIST
     END
 END
 
@@ -216,7 +216,7 @@ BEGIN
     POPUP "TreeMenu"
     BEGIN
         MENUITEM "上へ(&U)\tBS",                IDM_TREE_UP
-        MENUITEM "再生中のフォルダ(&P)",        40145
+        MENUITEM "再生中のフォルダ(&P)",        IDM_BM_PLAYING
         MENUITEM SEPARATOR
         MENUITEM "サブフォルダを検索(&S)",      IDM_TREE_SUB
         MENUITEM SEPARATOR
