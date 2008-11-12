@@ -529,9 +529,12 @@ void SendSupportList(HWND hWnd){
 	--- ‰‰‘tŽžŠÔŠÖŒW ---
 
 */
+float ChPosToSec(DWORD hCh, QWORD qPos) {
+	return (float)BASS_ChannelBytes2Seconds(hCh, qPos);
+}
 
 float TrackPosToSec(QWORD qPos) {
-	return (float)BASS_ChannelBytes2Seconds(g_cInfo[g_bNow].hChan, qPos);
+	return ChPosToSec(g_cInfo[g_bNow].hChan, qPos);
 }
 
 QWORD TrackGetPos(){

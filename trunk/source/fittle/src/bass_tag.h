@@ -24,6 +24,7 @@ typedef struct{
 	TCHAR szArtist[256];
 	TCHAR szAlbum[256];
 	TCHAR szTrack[10];
+	DWORD dwLength;
 }TAGINFO;
 
 BOOL BASS_TAG_Read(DWORD, TAGINFO *);

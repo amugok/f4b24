@@ -92,11 +92,15 @@ static LPTSTR CheckArchivePath(LPTSTR pszFilePath){
 	return 0;
 }
 
-/* アーカイブパスか判断 */
-BOOL IsArchivePath(LPTSTR pszFilePath){
+BOOL IsArchivePathExist(LPTSTR pszFilePath, BOOL fCheckExist){
 	TCHAR szArchivePath[MAX_PATH];
 	LPTSTR p = CheckArchivePath(pszFilePath);
-	return p && GetArchivePath(szArchivePath, pszFilePath, MAX_PATH);// && FILE_EXIST(szArchivePath);
+	return p && GetArchivePath(szArchivePath, pszFilePath, MAX_PATH) && ((!fCheckExist) || FILE_EXIST(szArchivePath));
+}
+
+/* アーカイブパスか判断 */
+BOOL IsArchivePath(LPTSTR pszFilePath){
+	return IsArchivePathExist(pszFilePath, FALSE);
 }
 
 typedef struct {

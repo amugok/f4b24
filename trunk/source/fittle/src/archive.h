@@ -16,6 +16,8 @@ BOOL AnalyzeArchivePath(CHANNELINFO *, LPTSTR, LPTSTR, LPTSTR);
 BOOL IsArchive(LPTSTR);
 BOOL IsArchiveFast(LPTSTR);
 BOOL IsArchivePath(LPTSTR);
+BOOL IsArchivePathExist(LPTSTR pszFilePath, BOOL fCheckExist);
+
 BOOL GetArchiveTagInfo(LPTSTR, TAGINFO *);
 HICON GetArchiveItemIcon(LPTSTR);
 int GetArchiveIconIndex(LPTSTR);

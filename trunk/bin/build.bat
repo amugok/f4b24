@@ -6,5 +6,5 @@ if exist "%ProgramFiles%\Microsoft Visual Studio\VC98\Bin\VCVARS32.BAT" CALL "%P
 
 :skipsetup
 
-perb /v "0808070A" fittle.exe
+perb /v "0811120A" fittle.exe
 editbin /release fittle.exe

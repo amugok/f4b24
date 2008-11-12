@@ -56,6 +56,7 @@ LPTSTR GetTypelist(int nIndex);
 void AddTypes(LPCSTR lpszTypes);
 void SendSupportList(HWND hWnd);
 
+float ChPosToSec(DWORD hCh, QWORD qPos);
 float TrackPosToSec(QWORD qPos);
 QWORD TrackGetPos();
 BOOL TrackSetPos(QWORD qPos);

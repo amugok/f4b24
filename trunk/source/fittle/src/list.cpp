@@ -18,6 +18,7 @@
 // ƒ[ƒJƒ‹ŠÖ”
 static void Merge(struct FILEINFO **, struct FILEINFO **);
 static int CompareNode(struct FILEINFO *, struct FILEINFO *, int);
+
 static void CALLBACK LXAddColumn(HWND hList, int nColumn, LPVOID pLabel, int nWidth, int nFmt);
 static LPVOID CALLBACK LXGetFileName(LPVOID pFileInfo);
 static BOOL CALLBACK LXCheckPath(LPVOID pFileInfo, int nCheck);
@@ -27,7 +28,7 @@ static int CALLBACK LXStrCmp(LPCVOID pStrLeft, LPCVOID pStrRight);
 
 static F4B24LX_INTERFACE m_lxif = {
 	1,
-	39,
+	F4B24LX_INTERFACE_VERSION,
 #ifdef UNICODE
 	1,
 #else
@@ -519,7 +520,7 @@ int LinkCheck(struct FILEINFO **ppRoot){
 	int i=0;
 
 	for(pTmp = *ppRoot;pTmp;){
-		if(!FILE_EXIST(pTmp->szFilePath) && !IsArchivePath(pTmp->szFilePath) && !IsURLPath(pTmp->szFilePath)){
+		if(!FILE_EXIST(pTmp->szFilePath) && !IsArchivePathExist(pTmp->szFilePath, TRUE) && !IsURLPath(pTmp->szFilePath)){
 			pDel = pTmp;
 			pTmp = pTmp->pNext;
 			DeleteAList(pDel, ppRoot);

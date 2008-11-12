@@ -71,9 +71,9 @@ set VER_STR=0807190U
 call %0 taru fap
 call %0 zipu fap
 
-set VER_STR=0808040A
+set VER_STR=0811120A
 call %0 cue fap
-set VER_STR=0808040U
+set VER_STR=0811120U
 call %0 cueu fap
 
 set CFLAGS=%CFLAGSBASE%
