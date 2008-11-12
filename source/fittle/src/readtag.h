@@ -137,9 +137,11 @@ static BOOL ID3_ReadFrameText(BYTE bType, LPBYTE pTextRaw, int nTextRawSize, LPT
 					pa[i * 2 + 0] = pTextRaw[i * 2 + 1];
 					pa[i * 2 + 1] = pTextRaw[i * 2 + 0];
 				}
-				ID3_ReadFrameText(bType, pa, nTextRawSize, pszBuf, nBufSize);
+				ID3_ReadFrameText(1, pa, nTextRawSize, pszBuf, nBufSize);
 				HFree(pa);
+				return TRUE;
 			}
+			return FALSE;
 		}
 	#ifdef UNICODE
 		CopyMemory(pszBuf, pTextRaw, XMIN(nTextRawSize >> 1, nBufSize) * sizeof(WCHAR));
