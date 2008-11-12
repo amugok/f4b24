@@ -1,0 +1,417 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#if defined(_MSC_VER) && (_MSC_VER < 1400)
+# include <winres.h>
+#else
+# include <WinResrc.h>
+#endif
+#ifndef IDC_STATIC
+# define IDC_STATIC -1
+#endif
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// 日本語 resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_JPN)
+#ifdef _WIN32
+LANGUAGE LANG_JAPANESE, SUBLANG_DEFAULT
+#pragma code_page(932)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE MOVEABLE PURE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE MOVEABLE PURE 
+BEGIN
+    "#if defined(_MSC_VER) && (_MSC_VER < 1400)\r\n"
+    "# include <winres.h>\r\n"
+    "#else\r\n"
+    "# include <WinResrc.h>\r\n"
+    "#endif\r\n"
+    "#ifndef IDC_STATIC\r\n"
+    "# define IDC_STATIC -1\r\n"
+    "#endif\0"
+END
+
+3 TEXTINCLUDE MOVEABLE PURE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+MYICON                  ICON    DISCARDABLE     "Fittle.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+MAINMENU MENU DISCARDABLE 
+BEGIN
+    POPUP "ファイル(&F)"
+    BEGIN
+        MENUITEM "最新の情報に更新(&R)\tF5",    IDM_REVIEW
+        MENUITEM "ファイルのみ更新(&F)\tShift+F5", IDM_FILEREVIEW
+        MENUITEM SEPARATOR
+        MENUITEM "エクスプローラで開く(&E)\tCtrl+E", IDM_EXPLORE
+        MENUITEM "プレイリストに保存(&S)...\tCtrl+S", IDM_SAVE
+        MENUITEM SEPARATOR
+        MENUITEM "終了(&X)",                    IDM_END
+    END
+    POPUP "演奏(&P)"
+    BEGIN
+        MENUITEM "再生(&P)\tZ",                 IDM_PLAY
+        MENUITEM "再生/一時停止(&E)\tSpace",    IDM_PLAYPAUSE
+        MENUITEM "一時停止(&A)\tX",             IDM_PAUSE
+        MENUITEM "停止(&S)\tC",                 IDM_STOP
+        MENUITEM "前の曲(&B)\tV",               IDM_PREV
+        MENUITEM "次の曲(&N)\tB",               IDM_NEXT
+        MENUITEM SEPARATOR
+        MENUITEM "進む(&R)\tAlt+Right",         IDM_SEEKFRONT
+        MENUITEM "戻る(&L)\tAlt+Left",          IDM_SEEKBACK
+        MENUITEM SEPARATOR
+        MENUITEM "音量を上げる(&U)\tAlt+Up",    IDM_VOLUP
+        MENUITEM "音量を下げる(&D)\tAlt+Down",  IDM_VOLDOWN
+    END
+    POPUP "オプション(&O)"
+    BEGIN
+        MENUITEM "リスト(&L)",                  IDM_PM_LIST
+        MENUITEM "ランダム(&R)",                IDM_PM_RANDOM
+        MENUITEM "シングル(&S)",                IDM_PM_SINGLE
+        MENUITEM "プレイモード切替(&T)\tCtrl+T", IDM_PM_TOGGLE
+        MENUITEM SEPARATOR
+        MENUITEM "リピート(&P)\tCtrl+R",        IDM_PM_REPEAT
+        MENUITEM SEPARATOR
+        MENUITEM "サブフォルダを検索(&F)\tCtrl+Shift+S", IDM_SUB
+        MENUITEM "リストから検索(L)\tCtrl+F",   IDM_FIND
+        MENUITEM SEPARATOR
+        MENUITEM "ミニパネル(&C)\tCtrl+C",      IDM_MINIPANEL, GRAYED
+        MENUITEM "メニューを非表示(&M)\tCtrl+M", IDM_TOGGLEMENU
+        POPUP "ツールバー(&B)"
+        BEGIN
+            MENUITEM "メインツールバー(&M)",        IDM_SHOWMAIN
+            MENUITEM "ボリュームバー(&V)",          IDM_SHOWVOL
+            MENUITEM "シークバー(&S)",              IDM_SHOWSEEK
+            MENUITEM "ステータスバー(&T)",          IDM_SHOWSTATUS
+            MENUITEM SEPARATOR
+            MENUITEM "ツールバーを固定する(&F)",    IDM_FIXBAR
+        END
+        MENUITEM "フォルダツリー(&L)\tCtrl+L",  IDM_TOGGLETREE
+        MENUITEM SEPARATOR
+        MENUITEM "設定(&O)...\tCtrl+O",         IDM_SETTING
+    END
+    POPUP "しおり(&B)"
+    BEGIN
+        MENUITEM "しおりに追加(&A)",            IDM_BM_ADD, GRAYED
+        MENUITEM "しおりの整理(&O)...",         IDM_BM_ORG, GRAYED
+        MENUITEM SEPARATOR
+        MENUITEM "再生中のフォルダ(&P)\tCtrl+P", IDM_BM_PLAYING
+        MENUITEM SEPARATOR
+    END
+    POPUP "ヘルプ(&H)"
+    BEGIN
+        MENUITEM "&Readme.txtを表示\tF1",       IDM_README
+        MENUITEM SEPARATOR
+        MENUITEM "バージョン情報(&A)\tCtrl+V",  IDM_VER
+    END
+END
+
+LISTMENU MENU DISCARDABLE 
+BEGIN
+    POPUP "ListMenu"
+    BEGIN
+        MENUITEM "再生(&P)\tZ",                 IDM_PLAY
+        MENUITEM "停止(&S)\tC",                 40047
+        MENUITEM SEPARATOR
+        MENUITEM "一番上に移動(&T)",            IDM_LIST_MOVETOP
+        MENUITEM "一番下に移動(&B)",            IDM_LIST_MOVEBOTTOM
+        MENUITEM "リストから削除(&D)\tDel",     IDM_LIST_DEL
+        MENUITEM SEPARATOR
+        POPUP "プレイリストに送る(&S)"
+        BEGIN
+            MENUITEM "新規プレイリスト(&N)",        40123
+            MENUITEM SEPARATOR
+        END
+        MENUITEM SEPARATOR
+        MENUITEM "外部ツール(&X)",              IDM_LIST_TOOL
+        MENUITEM "ファイルを削除(&E)\tShift+Del", IDM_LIST_DELFILE
+        MENUITEM SEPARATOR
+        MENUITEM "すべて選択(&A)\tCtrl+A",      IDM_LIST_ALL
+        MENUITEM SEPARATOR
+        MENUITEM "プロパティ(&R)\tAlt+Enter",   40121
+    END
+END
+
+TRAYMENU MENU DISCARDABLE 
+BEGIN
+    POPUP "TrayMenu"
+    BEGIN
+        MENUITEM "再生(&P)",                    IDM_PLAY
+        MENUITEM "再生/一時停止(&E)",           IDM_PLAYPAUSE
+        MENUITEM "一時停止(&A)",                IDM_PAUSE
+        MENUITEM "停止(&S)",                    IDM_STOP
+        MENUITEM "前の曲(&B)",                  IDM_PREV
+        MENUITEM "次の曲(&N)",                  IDM_NEXT
+        MENUITEM SEPARATOR
+        POPUP "プレイモード(&M)"
+        BEGIN
+            MENUITEM "リスト(&L)",                  IDM_PM_LIST
+            MENUITEM "ランダム(&R)",                IDM_PM_RANDOM
+            MENUITEM "シングル(&S)",                IDM_PM_SINGLE
+            MENUITEM SEPARATOR
+            MENUITEM "リピート(&P)",                40102
+        END
+        MENUITEM SEPARATOR
+        MENUITEM "ウィンドウ表示/非表示(&W)",   40149
+        MENUITEM "終了(&X)",                    IDM_END
+    END
+END
+
+TABMENU MENU DISCARDABLE 
+BEGIN
+    POPUP "TabMenu"
+    BEGIN
+        MENUITEM "プレイリストを追加(&A)",      IDM_TAB_NEW
+        MENUITEM "名前を変更(&N)",              IDM_TAB_RENAME
+        MENUITEM "プレイリストを削除(&D)",      IDM_TAB_DEL
+        MENUITEM "プレイリストを保存(&S)",      40153
+        MENUITEM SEPARATOR
+        MENUITEM "左へ移動(&L)",                IDM_TAB_LEFT
+        MENUITEM "右へ移動(&R)",                IDM_TAB_RIGHT
+        MENUITEM SEPARATOR
+        MENUITEM "フルパスでソートする(&F)",    40176
+        MENUITEM "リンク切れを削除する(&E)",    40177
+    END
+END
+
+TREEMENU MENU DISCARDABLE 
+BEGIN
+    POPUP "TreeMenu"
+    BEGIN
+        MENUITEM "上へ(&U)\tBS",                IDM_TREE_UP
+        MENUITEM "再生中のフォルダ(&P)",        40145
+        MENUITEM SEPARATOR
+        MENUITEM "サブフォルダを検索(&S)",      IDM_TREE_SUB
+        MENUITEM SEPARATOR
+        MENUITEM "新規プレイリストを作成(&N)",  IDM_TREE_NEW
+        MENUITEM "現在のプレイリストに追加(&A)", IDM_TREE_ADD
+        MENUITEM SEPARATOR
+        MENUITEM "エクスプローラで開く(&E)",    IDM_TREE_EXPLORE
+        MENUITEM "最新の情報に更新(&R)\tF5",    IDM_REVIEW
+    END
+END
+
+
+#ifndef _MAC
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 2,2,2,0
+ PRODUCTVERSION 2,2,2,0
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x40004L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "041104b0"
+        BEGIN
+            VALUE "Comments", "Fittle\0"
+            VALUE "CompanyName", "Mallow Software\0"
+            VALUE "FileDescription", "Fittle\0"
+            VALUE "FileVersion", "2, 2, 2, 0\0"
+            VALUE "InternalName", "Fittle\0"
+            VALUE "LegalCopyright", "Copyright (C) 2004-2006 by Mallow\0"
+            VALUE "OriginalFilename", "Fittle.exe\0"
+            VALUE "ProductName", "Fittle\0"
+            VALUE "ProductVersion", "2, 2, 2, 0\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x411, 1200
+    END
+END
+
+#endif    // !_MAC
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+
+MYACCEL ACCELERATORS MOVEABLE PURE 
+BEGIN
+    "P",            IDM_BM_PLAYING,         VIRTKEY, CONTROL, NOINVERT
+    "E",            IDM_EXPLORE,            VIRTKEY, CONTROL, NOINVERT
+    VK_F5,          IDM_FILEREVIEW,         VIRTKEY, SHIFT, NOINVERT
+    "F",            IDM_FIND,               VIRTKEY, CONTROL, NOINVERT
+    "A",            IDM_LIST_ALL,           VIRTKEY, CONTROL, NOINVERT
+    VK_DELETE,      IDM_LIST_DEL,           VIRTKEY, NOINVERT
+    VK_DELETE,      IDM_LIST_DELFILE,       VIRTKEY, SHIFT, NOINVERT
+    VK_RETURN,      IDM_LIST_PROP,          VIRTKEY, ALT, NOINVERT
+    "U",            IDM_LIST_URL,           VIRTKEY, CONTROL, NOINVERT
+    "C",            IDM_MINIPANEL,          VIRTKEY, CONTROL, NOINVERT
+    "B",            IDM_NEXT,               VIRTKEY, NOINVERT
+    "X",            IDM_PAUSE,              VIRTKEY, NOINVERT
+    "Z",            IDM_PLAY,               VIRTKEY, NOINVERT
+    "R",            IDM_PM_REPEAT,          VIRTKEY, CONTROL, NOINVERT
+    "T",            IDM_PM_TOGGLE,          VIRTKEY, CONTROL, NOINVERT
+    "V",            IDM_PREV,               VIRTKEY, NOINVERT
+    VK_F1,          IDM_README,             VIRTKEY, NOINVERT
+    VK_F5,          IDM_REVIEW,             VIRTKEY, NOINVERT
+    "S",            IDM_SAVE,               VIRTKEY, CONTROL, NOINVERT
+    VK_LEFT,        IDM_SEEKBACK,           VIRTKEY, ALT, NOINVERT
+    VK_RIGHT,       IDM_SEEKFRONT,          VIRTKEY, ALT, NOINVERT
+    "O",            IDM_SETTING,            VIRTKEY, CONTROL, NOINVERT
+    "C",            IDM_STOP,               VIRTKEY, NOINVERT
+    "S",            IDM_SUB,                VIRTKEY, SHIFT, CONTROL, 
+                                                    NOINVERT
+    VK_TAB,         IDM_TAB_FOR_LEFT,       VIRTKEY, SHIFT, CONTROL, 
+                                                    NOINVERT
+    VK_TAB,         IDM_TAB_FOR_RIGHT,      VIRTKEY, CONTROL, NOINVERT
+    "K",            IDM_TOGGLEFOCUS,        VIRTKEY, CONTROL, NOINVERT
+    "M",            IDM_TOGGLEMENU,         VIRTKEY, CONTROL, NOINVERT
+    "L",            IDM_TOGGLETREE,         VIRTKEY, CONTROL, NOINVERT
+    VK_BACK,        IDM_TREE_UP,            VIRTKEY, NOINVERT
+    "V",            IDM_VER,                VIRTKEY, CONTROL, NOINVERT
+    VK_DOWN,        IDM_VOLDOWN,            VIRTKEY, ALT, NOINVERT
+    VK_UP,          IDM_VOLUP,              VIRTKEY, ALT, NOINVERT
+    VK_SPACE,       IDM_PLAYPAUSE,          VIRTKEY, NOINVERT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Toolbar
+//
+
+IDR_TOOLBAR1 TOOLBAR MOVEABLE PURE  16, 16
+BEGIN
+    BUTTON      IDM_PLAY
+    BUTTON      IDM_PAUSE
+    BUTTON      IDM_STOP
+    BUTTON      IDM_PREV
+    BUTTON      IDM_NEXT
+    SEPARATOR
+    BUTTON      IDM_PM_TOGGLE
+    BUTTON      IDM_PM_REPEAT
+    BUTTON      IDM_PM_REPEAT
+    BUTTON      IDM_PM_REPEAT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDR_TOOLBAR1            BITMAP  MOVEABLE PURE   "toolbar1.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO MOVEABLE PURE 
+BEGIN
+    "FIND_DIALOG", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 203
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 166
+    END
+
+    "TAB_NAME_DIALOG", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 224
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 40
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+FIND_DIALOG DIALOGEX 0, 0, 210, 173
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION
+CAPTION "リストから検索"
+FONT 9, "MS UI Gothic", 400, 0, 0x80
+BEGIN
+    EDITTEXT        IDC_EDIT1,7,7,196,12,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,34,152,50,14
+    PUSHBUTTON      "プレイリスト",IDPLAYLIST,93,152,50,14
+    PUSHBUTTON      "キャンセル",IDCANCEL,153,152,50,14
+    LISTBOX         IDC_LIST1,7,22,196,126,LBS_NOINTEGRALHEIGHT | WS_VSCROLL | 
+                    WS_TABSTOP
+END
+
+TAB_NAME_DIALOG DIALOGEX 0, 0, 231, 47
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION
+CAPTION "新しい名前の入力"
+FONT 9, "MS UI Gothic", 400, 0, 0x80
+BEGIN
+    EDITTEXT        IDC_EDIT1,7,7,217,14,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,118,26,50,14
+    PUSHBUTTON      "キャンセル",IDCANCEL,174,26,50,14
+END
+
+#endif    // 日本語 resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

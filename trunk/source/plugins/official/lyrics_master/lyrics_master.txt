@@ -1,0 +1,48 @@
+■プラグイン名
+	lyrics_master.dll
+
+■更新日時
+	2006/05/06
+
+■説明
+	Lyrics MasterをFittleから呼び出すプラグインです。
+
+■Lyrics Masterについて
+	Lyrics Master
+	http://www.kenichimaehashi.com/kmsoftlab/lyricsmaster/
+
+■使い方
+	1.Lyrics Masterをインストールしてください。
+	2.Lyrics Masterを起動し、「ファイル」→「iTunesの設定」から
+	  「外部ソフトウェアからの検索時」のチェックを外して下さい。
+	3.lyrics_master.dllとlyrics_master.iniをFittle.exeと同じフォルダに
+	  コピーしてください。
+	4.lyrics_master.iniファイルの中のパスをLyrics Masterに同根されている
+	　ExtSupport.exeのパスに書き換えて下さい。
+	5.Fittleを起動し、再生中に「ファイル」→「Lyrics Master」を選ぶと
+	  Lyrics Masterが起動し、歌詞を検索します。
+
+	メニューを非表示にしている人は未対応です。ごめんなさい。
+
+■作者情報
+	Mallow
+	mallow@archer.livedoor.com
+	http://hp.vector.co.jp/authors/VA039869/
+
+■著作権
+	このプラグインに関する著作権は作者であるMallowに帰属します。
+	ただし、付属のソースコードは作者に無断で自由に利用してかまいません。
+
+■免責
+	このプラグインを使用して生じたいかなる損害に関しても
+	作者は責任を負いません。
+
+■注意事項
+	このプラグインに関する質問をLyrics Masterの作者さんにしないで下さい。
+	どちらの問題かわからない場合は、必ず私に質問してください。
+
+■更新履歴
+
+	2006/05/06
+　　　　　・とりあえず公開した。
+

@@ -1,0 +1,233 @@
+□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
+
+              Fittle Ver.2.2.2 Preview 3
+              for BASS 2.4 test39
+
+□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
+
+Copyright (c) 2004-2008 Mallow <mallow at livedoor.com>
+All rights reserved.
+
+このソフトはオープンソース化されたfittleを基にした非公式で実験的なバージョンです
+
+注意
+	リストカラム拡張プラグインの仕様は確定していないためバージョンの組み合わせによって正常に動作しません
+	test40でも全て入れ替える予定です
+
+改変の方針
+	改変点も含めソースを公開します
+	基本的には本体に機能を追加しません
+	本体から分離可能な機能があれば削除します
+	削除した機能は何らかの方法で補います
+
+主な変更点
+	bass 2.4専用
+	zip書庫機能、ミニパネル、設定、URLを追加、CUEシート読み込み機能、しおり、WinampDSPプラグイン対応機能、音声出力機能を削除
+
+Pluginsフォルダ
+	test29からプラグインはPluginsフォルダ内のサブフォルダから読み込むようにしました
+	これは整理などのためではなく起動時に発生する無駄なdll読み込みによる速度低下の回避を目的としたものです
+
+	Plugins\bass\
+		bass.dllやbassasio.dll その他bassアドオンを入れる
+
+	Plugins\fap\
+		拡張子fapのプラグインを入れる アーカイバDLL等はここに入れてもよい
+
+	Plugins\fcp\
+		拡張子fcpのプラグインを入れる
+
+	Plugins\fgp\
+		拡張子fgpのプラグインを入れる
+
+	Plugins\Fittle\
+		公式Fittle用プラグインを入れる
+
+	Plugins\flp\
+		拡張子flpのプラグインを入れる
+
+	Plugins\fop\
+		拡張子fopのプラグインを入れる
+
+	Plugins\wadsp\
+		Winamp用dspプラグインを入れる
+
+追加したプログラム
+	fconfig.exe     設定画面 fcpプラグインが提供する設定画面の表示 標準で同梱
+
+追加したFittleプラグイン(公式でも利用可能)
+	minipane.dll    ミニパネル minipane.fcpを同じ場所に置けば設定画面も拡張される Win9x/Meや公式で使わない場合minipaneu.fgpを推奨
+	taskvol.dll     タスクバー上ホイールで音量を変える 強制終了時にエクスプローラごと落ちる問題に対処
+	xdelfile.dll    ファイル削除機能無効化
+	seekrev.dll     シークバー上のホイール操作を反転する
+
+追加した専用書庫プラグイン
+	cue.fap         cueシート対応 Ansi版専用 cueシート注釈によるreplaygain対応 要test14以降
+	arj.fap         arj書庫対応 Ansi版専用 要統合アーカイバプロジェクト版unarj32j.dll
+	cab.fap         cab書庫対応 Ansi版専用 要IE5以降(cabinet.dll又はfdi.dll)
+	gca.fap         gca書庫対応 Ansi版専用
+	lha.fap         lzh書庫対応 Ansi版専用 要統合アーカイバプロジェクト版unlha32.dll
+	rar.fap         rar書庫対応 Ansi版専用 要RARLABオフィシャル版unrar.dll
+	tar.fap         tar書庫対応 Ansi版専用 要統合アーカイバプロジェクト版tar32.dll
+	zip.fap         zip書庫対応 Ansi版専用 要統合アーカイバプロジェクト版unzip32.dll
+	cueu.fap        cueシート対応 Unicode版専用 cueシート注釈によるreplaygain対応
+	arju.fap        arj書庫対応 Unicode版専用 要統合アーカイバプロジェクト版unarj32j.dll
+	cabu.fap        cab書庫対応 Unicode版専用 要IE5以降(cabinet.dll又はfdi.dll)
+	gcau.fap        gca書庫対応 Unicode版専用 ただしUnicode非対応
+	lhau.fap        lzh書庫対応 Unicode版専用 要統合アーカイバプロジェクト版unlha32.dll
+	raru.fap        rar書庫対応 Unicode版専用 要RARLABオフィシャル版unrar.dll
+	taru.fap        tar書庫対応 Unicode版専用 ただしUnicode非対応 要統合アーカイバプロジェクト版tar32.dll
+	zipu.fap        zip書庫対応 Unicode版専用 ただしUnicode非対応 要統合アーカイバプロジェクト版unzip32.dll
+
+追加した専用設定プラグイン (要fconfig.exe もしくは fconfig.fgp)
+	fittle.fcp      fittle.exe 設定 標準で同梱
+	lplugin.fcp     lplugin.fgp 設定
+	minipane.fcp    minipane.dll/minipaneu.fgp 設定
+	output.fcp      bass.fop bassasio.fop replaygain.fgp cue.fap cueu.fap 設定
+	wadsp.fcp       wadsp.fgp 設定
+
+追加した専用一般プラグイン
+	addurl.fgp      URLを追加 Ansi/Unicode両対応 要test29以降
+	bookmark.fgp    しおり Ansi/Unicode両対応 要test30以降
+	fconfig.fgp     fconfig.exeとほぼ同等機能 simalistの設定画面を使わない場合不要 Ansi/Unicode両対応 要test29以降
+	lplugin.fgp     リストカラム拡張 要test36以降
+	minipaneu.fgp   ミニパネル Unicode対応 要test29以降 Win9x/Me非対応
+	replaygain.fgp  ReplayGain Ansi/Unicode両対応 要test29以降
+	wadsp.fgp       WinampDSPプラグイン対応 Ansi/Unicode両対応 要test32以降 要bass_wadsp.dll
+
+追加したリストカラム拡張プラグイン (要lplugin.fgp)
+	filename.flp    ファイル名(拡張子無し) 要test36以降
+	taginfo.flp     Title/Album/Artist/Track 要test36以降
+
+追加した専用出力プラグイン
+	bass.fop        bass.dllによる音声出力 要test28以降 標準で同梱
+	bassasio.fop    bassasio.dllによる音声出力 要test28以降 要bassasio.dll
+
+廃止した専用プラグイン
+	addurl.dll      -> addurl.fgp
+	addurlu.dll     -> addurl.fgp
+	bookmark.dll    -> bookmark.fgp
+	bookmarku.dll   -> bookmark.fgp
+	bookmarku.fgp   -> bookmark.fgp
+	fconfig.dll     -> fconfig.fgp
+	fconfigu.dll    -> fconfig.fgp
+	minipaneu.dll   -> minipaneu.fgp
+	replaygain.dll  -> replaygain.fgp
+	replaygainu.dll -> replaygain.fgp
+	wadsp.dll       -> wadsp.fgp
+
+実験履歴
+	test39/test39u
+		フルパスでソートする時にソート方法の設定が反映されていなかった問題に対処
+		ヘッダのドラッグ&ドロップでリストカラムを一時的に入れ替え(入れ替え結果は保存しない)
+
+	test38/test38u
+		書庫内のタグ情報をリスト表示しない設定を追加
+
+	test37/test37u
+		ボリュームバーとシークバーでの右クリックで正常なメニューが表示されていなかった問題に対処
+
+	test36/test36u
+		ドライブ一覧でのTabキー入力が検出できていなかった問題に対処
+		ランダム再生時に前の曲に戻った時に前の曲がリストから削除されていると不正なメモリアクセスが発生していた問題に対処
+		複数のFILE行を持つCUEシートに対応
+
+	test35/test35u
+		CUE再生時にシークバーでトラックの末尾にシークすると次のトラック部分を再生してしまう場合があった問題に対処
+		ボリュームバーが負の値に設定される場合がある問題に対処
+
+	test34/test34u
+		zip内の次曲に移行時などに再生が止まる環境があるらしい問題に勘でさらに対処
+
+	test33/test33u
+		zip内の次曲に移行時などに再生が止まる環境があるらしい問題に勘で対処
+		しおりに手動登録しなくてもネットワークパス(非推奨)をある程度利用できるように変更
+
+	test32/test32u
+		前回最後に再生したファイルがみつからない場合リストが全選択される問題に対処
+		wadsp.fgpの安定性向上のためのbass.fopの変更
+
+	test31/test31u
+		fgpの終了時にアクセス違反が発生する可能性があったらしい問題に対処
+
+	test30/test30u
+		test29のfgp仕様ではしおりの初期化が間に合っていなかった問題に対処
+
+	test29/test29u
+		設定の適用時に強制的にフォルダタブが選択されていた問題に対処
+		BASS初期化時のサンプリングレート指定を追加
+		プラグインフォルダを変更
+		ファイルヘッダにバージョンコードを埋め込んだ
+
+	test28/test28u
+		音声出力機能を削除してみた
+
+	test27/test27u
+		Ansi版でもWindows98で起動できなかった問題に対処
+
+	test26/test26u
+		BASSが音量増幅機能を持たないため無音になる場合があった問題に対処
+
+	test25/test25u
+		BASSWMA2.4の仕様変更に対応
+		WinampDSPプラグイン対応機能を削除してみた
+
+	test24/test24u
+		ID3V2の非同期化フラグなどに対応
+
+	test23/test23u
+		タイトル文字化け改善(test22の問題にさらに対処)
+
+	test22/test22u
+		一部のUnicode非対応プラグインによってタイトルにユニコード文字が表示できなくなる可能性があった問題に対処
+		ID3V2.4の非同期化フレームなどに対応
+
+	test21/test21u
+		次に再生する予定の曲をリストから削除するとアクセス違反が発生する可能性があった問題に対処
+
+	test20/test20u
+		ファイル削除処理完了後に余計な処理をしていた問題に対処
+
+	test19/test19u
+		ツリーアイコン非表示時に無駄なアイコン取得が発生し起動速度が低下していた問題に対処
+
+	test18/test18u
+		終端文字の無いID3V2.2から取得されたメタデータの末尾にゴミが付いていた問題に対処
+		しおり機能を削除してみた
+
+	test17/test17u
+		TAR32.DLLがGetPluginInfoをエクスポートしている問題に対処
+		Unicode版のプラグインインタフェースの互換性向上
+
+	test16/test16u
+		Unicode版
+		m3u8対応
+
+	test15
+		メニュー項目を削除したのが原因でtest13からプレイリストへ送るが正常動作しなかった問題に対処
+
+	test14
+		CUEシート読み込み機能を削除してみた
+
+	test13
+		「URLを追加」を削除してみた
+
+	test12
+		設定を削除してみた
+
+	test11
+		次曲へ移る処理の安定性向上(test8の問題にさらに対処)
+
+	test10
+		ミニパネルを削除してみた
+
+	test9
+		mkimg.dllを利用している場合終了時にアクセス違反が発生する可能性があった問題に対処
+
+	test8
+		次曲へ移る処理時にアクセス違反やデッドロックが発生する可能性があった問題に対処
+
+	test7
+		書庫関連付け対策
+		巨大プレイリスト保存時に必要以上に時間がかかる可能性があった問題に対処
+

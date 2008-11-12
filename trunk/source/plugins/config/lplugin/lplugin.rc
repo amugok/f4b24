@@ -1,0 +1,123 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "lplugin.rh"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#if defined(_MSC_VER) && (_MSC_VER < 1400)
+# include <winres.h>
+#else
+# include <WinResrc.h>
+#endif
+#ifndef IDC_STATIC
+# define IDC_STATIC -1
+#endif
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// 日本語 resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_JPN)
+#ifdef _WIN32
+LANGUAGE LANG_JAPANESE, SUBLANG_DEFAULT
+#pragma code_page(932)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE MOVEABLE PURE 
+BEGIN
+    "lplugin.rh\0"
+END
+
+2 TEXTINCLUDE MOVEABLE PURE 
+BEGIN
+    "#if defined(_MSC_VER) && (_MSC_VER < 1400)\r\n"
+    "# include <winres.h>\r\n"
+    "#else\r\n"
+    "# include <WinResrc.h>\r\n"
+    "#endif\r\n"
+    "#ifndef IDC_STATIC\r\n"
+    "# define IDC_STATIC -1\r\n"
+    "#endif\0"
+END
+
+3 TEXTINCLUDE MOVEABLE PURE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO MOVEABLE PURE 
+BEGIN
+    "LX_SHEET", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 200
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 212
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+LX_SHEET DIALOG DISCARDABLE  0, 0, 207, 223
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "リストビュー"
+FONT 9, "MS UI Gothic"
+BEGIN
+    LTEXT           "表示する列(要再起動)",IDC_STATIC,14,7,70,10
+    LISTBOX         IDC_LIST1,7,23,83,132,LBS_MULTIPLESEL | 
+                    LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "↑",IDC_BUTTON1,98,37,15,22,NOT WS_TABSTOP
+    PUSHBUTTON      "＜",IDC_BUTTON2,98,69,15,22,NOT WS_TABSTOP
+    PUSHBUTTON      "＞",IDC_BUTTON3,98,101,15,22,NOT WS_TABSTOP
+    PUSHBUTTON      "↓",IDC_BUTTON4,98,133,15,22,NOT WS_TABSTOP
+    LTEXT           "表示可能な列",IDC_STATIC,122,7,78,12
+    LISTBOX         IDC_LIST4,117,24,83,136,LBS_MULTIPLESEL | 
+                    LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_COMBO1,75,165,120,103,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    CONTROL         "書庫内のファイルのタグ情報のリスト表示を禁止する",
+                    IDC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_GROUP | 
+                    WS_TABSTOP,10,185,165,11
+    LTEXT           "ソート方法",IDC_STATIC,10,165,55,10
+END
+
+#endif    // 日本語 resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
