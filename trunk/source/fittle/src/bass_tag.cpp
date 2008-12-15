@@ -63,7 +63,7 @@ static BOOL ID3V2_ReadTag(DWORD handle, TAGINFO *pTagInfo){
 		unsigned nVersion = *(p + 3);
 		unsigned nFlag = *(p + 5);
 		LPBYTE pUnsync = NULL;
-		if (nFlag & 0x80)
+		if ((nFlag & 0x80) && (nVersion < 4))
 			p = pUnsync = Unsync(p + 10, 0, nTagSize, &nTagSize);
 		else
 			p += 10;
@@ -95,7 +95,7 @@ static BOOL ID3V2_ReadTag(DWORD handle, TAGINFO *pTagInfo){
 				}
 				if(nLenID !=4) break;
 				if (nVersion == 4)
-					nFrameFlag = p[nTotal+9] & 3;
+					nFrameFlag = (p[nTotal + 9] & 3) | ((nFlag & 0x80) ? 2 : 0);
 				if(!lstrcmpA(szFrameID, "TIT2"))
 					ID3V23_ReadFrame(nFrameFlag, p + nTotal + 10, nFrameSize, pTagInfo->szTitle, 256);
 				else if(!lstrcmpA(szFrameID, "TPE1"))
