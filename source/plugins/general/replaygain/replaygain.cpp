@@ -220,7 +220,7 @@ static BOOL ID3V2_ReadGain(DWORD handle, LPGAININFO pgi){
 		unsigned nVersion = *(p + 3);
 		unsigned nFlag = *(p + 5);
 		LPBYTE pUnsync = NULL;
-		if (nFlag & 0x80)
+		if ((nFlag & 0x80) && (nVersion < 4))
 			p = pUnsync = Unsync(p + 10, 0, nTagSize, &nTagSize);
 		else
 			p += 10;
@@ -252,7 +252,7 @@ static BOOL ID3V2_ReadGain(DWORD handle, LPGAININFO pgi){
 				}
 				if(nLenID !=4) break;
 				if (nVersion == 4)
-					nFrameFlag = p[nTotal+9] & 3;
+					nFrameFlag = (p[nTotal + 9] & 3) | ((nFlag & 0x80) ? 2 : 0);
 				if(!lstrcmpA(szFrameID, "TXXX") && ID3V23_ReadFrame(nFrameFlag, p + nTotal + 10, nFrameSize, szExt, 256)){
 					ReadGainID3Ext(szExt, pgi);
 				}
