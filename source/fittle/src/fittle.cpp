@@ -2431,7 +2431,7 @@ static void PopupTrayMenu(){
 	GetCursorPos(&pt);
 	SetForegroundWindow(m_hMainWnd);
 	TrackPopupMenu(m_hTrayMenu, TPM_RIGHTALIGN | TPM_BOTTOMALIGN, pt.x, pt.y, 0, m_hMainWnd, NULL);
-	PostMessage(m_hMainWnd, WM_NULL, 0, 0);
+	PostMessage(m_hMainWnd, WM_NULL, 0, 0);	/* KB944343 */
 	return;
 }
 
