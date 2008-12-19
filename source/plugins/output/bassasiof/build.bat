@@ -49,10 +49,10 @@ goto exitcmd
 :buildall
 
 
-set PREFIX=..\..\..\..\bin\Plugins\fgp\
-set CFLAGS=/GF /Gy /Ox /Os /MD
-set VER_STR=0812190_
+set PREFIX=..\..\..\..\bin\Plugins\fop\
+set CFLAGS=/Gy /Ox /Os /MD
+set VER_STR=0811120_
 
-call %0 replaygain fgp
+call %0 bassasiof fop
 
 :exitcmd

@@ -49,10 +49,10 @@ goto exitcmd
 :buildall
 
 
-set PREFIX=..\..\..\..\bin\Plugins\fgp\
+set PREFIX=..\..\..\..\bin\Plugins\Fittle\
 set CFLAGS=/GF /Gy /Ox /Os /MD
-set VER_STR=0812190_
+set VER_STR=0812150_
 
-call %0 replaygain fgp
+call %0 lyrics dll
 
 :exitcmd

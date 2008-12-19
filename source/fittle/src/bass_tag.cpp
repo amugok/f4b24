@@ -35,19 +35,19 @@ TAGINFO : has STRINGMAP : has STRINGLIT*2
 
 tagtype    V1 V22 V23  V24  RIFF Vorbis      MP4     WMA
 
-Title       * TT2 TIT2 TIT2 INAM Title       Title   Title
-Artist      * TP1 TPE1 TPE1 IART Artist      Artist  Author         
+Title       * TT2 TIT2 TIT2 INAM Title       Title    Title
+Artist      * TP1 TPE1 TPE1 IART Artist      Artist   Author         
 Band          TP2 TPE2 TPE2
-AlbumArtist   txx txxx txxx                          WM/AlbumArtist
-Album       * TAL TALB TALB IPRD Album       Album   WM/AlbumTitle  
-Track       * TRK TRCK TRCK      TrackNumber Track   WM/TrackNumber 
-GenreID     *                                        WM/GenreID
-Genre         TCO TCON TCON IGNR Genre       Genre   WM/Genre       
-Comment     * COM COMM COMM ICMT Comment     Comment Description    
-Year        * TYE TYER                               WM/Year
-Date          TDA TDAT TDRC ICRD Date        Date    ReleaseDate    
-Composer      TCM TCOM TCOM      Composer    Writer  WM/Composer    
-Disc          TPA TPOS TPOS      Disc        Disc    WM/ContentGroupDescription
+AlbumArtist   txx txxx txxx                           WM/AlbumArtist
+Album       * TAL TALB TALB IPRD Album       Album    WM/AlbumTitle  
+Track       * TRK TRCK TRCK      TrackNumber Track    WM/TrackNumber 
+GenreID     *                                         WM/GenreID
+Genre         TCO TCON TCON IGNR Genre       Genre    WM/Genre       
+Comment     * COM COMM COMM ICMT Comment     Comment  Description    
+Year        * TYE TYER                       Year     WM/Year
+Date          TDA TDAT TDRL ICRD Date                 ReleaseDate    
+Composer      TCM TCOM TCOM      Composer    Composer WM/Composer    
+Disc          TPA TPOS TPOS      Disc        Disc     WM/ContentGroupDescription
 Length   -
 
 */
@@ -60,27 +60,27 @@ static BOOL ID3V2_ReadTag(DWORD handle, TAGINFO *pTagInfo){
 		unsigned nFrameSize;
 		unsigned nTotal = 0;	// ヘッダサイズを足しておく
 		unsigned nTagSize = GetSyncSafeInt(p + 6);
-		unsigned nVersion = *(p + 3);
+		unsigned nVersion = ((*(p + 3)) << 8) | (*(p + 4));
 		unsigned nFlag = *(p + 5);
 		LPBYTE pUnsync = NULL;
-		if (nFlag & 0x80)
+		if ((nFlag & 0x80) && (nVersion <= 0x300))
 			p = pUnsync = Unsync(p + 10, 0, nTagSize, &nTagSize);
 		else
 			p += 10;
 		if (!p) return FALSE;
 
 		// フレームを前から順に取得
-		if(nVersion >=3){	// バージョンの取得
+		if(nVersion >= 0x300){	// バージョンの取得
 			if (nFlag & 0x40) {
 				/* 拡張ヘッダ */
-				nTotal += (nVersion == 3) ? (4 + GetNonSyncSafeInt23(p + nTotal)) : GetSyncSafeInt(p + nTotal);
+				nTotal += (nVersion == 0x300) ? (4 + GetNonSyncSafeInt23(p + nTotal)) : GetSyncSafeInt(p + nTotal);
 			}
 			while(nTotal<nTagSize){
 				int nFrameFlag = 0;
 				int nLenID;
 				// Ver.2.3以上
 				lstrcpynA(szFrameID, (LPCSTR)(p + nTotal), 5); // フレームIDの取得
-				if (nVersion == 3)
+				if (nVersion == 0x300)
 					nFrameSize = GetNonSyncSafeInt23(p + nTotal + 4); // フレームサイズの取得
 				else
 					nFrameSize = GetSyncSafeInt(p + nTotal + 4); // フレームサイズの取得
@@ -93,9 +93,9 @@ static BOOL ID3V2_ReadTag(DWORD handle, TAGINFO *pTagInfo){
 						continue;
 					}
 				}
-				if(nLenID !=4) break;
-				if (nVersion == 4)
-					nFrameFlag = p[nTotal+9] & 3;
+				if(nLenID != 4) break;
+				if (nVersion != 0x300)
+					nFrameFlag = (p[nTotal + 9] & 3) | ((nFlag & 0x80) ? 2 : 0);
 				if(!lstrcmpA(szFrameID, "TIT2"))
 					ID3V23_ReadFrame(nFrameFlag, p + nTotal + 10, nFrameSize, pTagInfo->szTitle, 256);
 				else if(!lstrcmpA(szFrameID, "TPE1"))

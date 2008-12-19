@@ -45,12 +45,12 @@
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test40u")
+#define F4B24_VERSION_STRING TEXT("test42u")
 #else
-#define F4B24_VERSION_STRING TEXT("test40")
+#define F4B24_VERSION_STRING TEXT("test42")
 #endif
-#define F4B24_VERSION 40
-#define F4B24_IF_VERSION 40
+#define F4B24_VERSION 42
+#define F4B24_IF_VERSION 39
 #ifndef _DEBUG
 #define FITTLE_TITLE TEXT("Fittle - f4b24 ") F4B24_VERSION_STRING
 #else
@@ -1572,6 +1572,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 								LPTSTR pszFiles = MallocAndConcatPath(pCurList);
 								if (pszFiles) {
 									WAstrcpyt(szLastPath, &g_cfg.szToolPath, MAX_FITTLE_PATH);
+									PathQuoteSpaces(szLastPath);
 									MyShellExecute(hWnd, szLastPath, pszFiles, TRUE);
 									HFree(pszFiles);
 								}
@@ -1672,6 +1673,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 					// エクスプローラに投げる処理
 					WAstrcpyt(szLastPath, &g_cfg.szFilerPath, MAX_FITTLE_PATH);
+					PathQuoteSpaces(szLastPath);
 					MyShellExecute(hWnd, (szLastPath[0]?szLastPath:TEXT("explorer.exe")), szNowDir, FALSE);
 					m_hHitTree = NULL;
 					break;
@@ -2429,7 +2431,7 @@ static void PopupTrayMenu(){
 	GetCursorPos(&pt);
 	SetForegroundWindow(m_hMainWnd);
 	TrackPopupMenu(m_hTrayMenu, TPM_RIGHTALIGN | TPM_BOTTOMALIGN, pt.x, pt.y, 0, m_hMainWnd, NULL);
-	PostMessage(m_hMainWnd, WM_NULL, 0, 0);
+	PostMessage(m_hMainWnd, WM_NULL, 0, 0);	/* KB944343 */
 	return;
 }
 

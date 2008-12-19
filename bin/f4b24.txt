@@ -1,7 +1,7 @@
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test39
+              for BASS 2.4 test42
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
@@ -12,7 +12,7 @@ All rights reserved.
 
 注意
 	リストカラム拡張プラグインの仕様は確定していないためバージョンの組み合わせによって正常に動作しません
-	test40でも全て入れ替える予定です
+	全て入れ替える予定です
 
 改変の方針
 	改変点も含めソースを公開します
@@ -96,8 +96,8 @@ Pluginsフォルダ
 	wadsp.fgp       WinampDSPプラグイン対応 Ansi/Unicode両対応 要test32以降 要bass_wadsp.dll
 
 追加したリストカラム拡張プラグイン (要lplugin.fgp)
-	filename.flp    ファイル名(拡張子無し) 要test36以降
-	taginfo.flp     Title/Album/Artist/Track 要test36以降
+	filename.flp    ファイル名(拡張子無し) test36～test41専用 新仕様に切替予定
+	taginfo.flp     Title/Album/Artist/Track test36～test41専用 新仕様に切替予定
 
 追加した専用出力プラグイン
 	bass.fop        bass.dllによる音声出力 要test28以降 標準で同梱
@@ -117,6 +117,20 @@ Pluginsフォルダ
 	wadsp.dll       -> wadsp.fgp
 
 実験履歴
+	test42/test42u
+		ID3V2.4ヘッダの非同期化フラグの解釈を変更
+		ID3V2.4の開発中バージョンをID3V2.4と同等と仮定して扱うように変更
+
+	test41/test41u
+		一部のタグ形式で本来読めるはずのTrack情報が得られなかった問題に対処
+		ネットワークフォルダのアクセスを高速化するために省略したチェックを一箇所復活
+		空白を含むパスの外部ツールやファイラが起動しなかった問題に対処
+		UTF16(BE)のID3V2が読めなくなっていた問題に対処(fittle.exe/replaygain.fgp)
+		cueシートに対応しない拡張子のFILEが指定されていた場合にファイルをクローズし忘れていた問題に対処(cue.fap)
+
+	test40/test40u
+		test40で予定していた変更は一時保留
+
 	test39/test39u
 		フルパスでソートする時にソート方法の設定が反映されていなかった問題に対処
 		ヘッダのドラッグ&ドロップでリストカラムを一時的に入れ替え(入れ替え結果は保存しない)

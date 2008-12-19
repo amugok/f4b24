@@ -1,6 +1,6 @@
 /* f4b24“à•”Šg’£IF */
 
-#define F4B24LX_INTERFACE_VERSION 40
+#define F4B24LX_INTERFACE_VERSION 39
 enum {
 	F4B24LX_CHECK_URL = 0,
 	F4B24LX_CHECK_CUE = 1,
@@ -14,11 +14,6 @@ typedef struct {
 	LPVOID (CALLBACK *LoadMusic)(LPVOID lpszPath);
 	void (CALLBACK *FreeMusic)(LPVOID pMusic);
 	BOOL (CALLBACK *GetTag)(LPVOID pMusic, LPVOID pTagInfo);
-
-	int (CALLBACK *TagFind)(LPVOID pTagInfo, LPCSTR pKey);
-	LPCSTR (CALLBACK *TagGetKey)(LPVOID pTagInfo, int nIndex);
-	LPVOID (CALLBACK *TagGetValue)(LPVOID pTagInfo, int nIndex);
-
 	void (CALLBACK *AddColumn)(HWND hList, int nColumn, LPVOID pLabel, int nWidth, int nFmt);
 	LPVOID (CALLBACK *GetFileName)(LPVOID pFileInfo);
 	BOOL (CALLBACK *CheckPath)(LPVOID pFileInfo, int nCheck);
