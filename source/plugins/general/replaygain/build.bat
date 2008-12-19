@@ -51,7 +51,7 @@ goto exitcmd
 
 set PREFIX=..\..\..\..\bin\Plugins\fgp\
 set CFLAGS=/GF /Gy /Ox /Os /MD
-set VER_STR=0811120_
+set VER_STR=0812190_
 
 call %0 replaygain fgp
 
