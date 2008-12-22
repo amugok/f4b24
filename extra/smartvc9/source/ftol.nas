@@ -8,7 +8,7 @@
 __ftol:
 	push	ebp
 	mov	ebp,esp
-	add	esp,0fffffff4h
+	sub	esp,0ch
 	wait
 	fstcw	[ebp - 2]
 	wait
