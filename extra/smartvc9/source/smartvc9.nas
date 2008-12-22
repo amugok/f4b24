@@ -16,15 +16,17 @@ _memset:
 	cld
 	push	edi
 	mov	edi,[esp + 4 + 4]
-	mov	eax,[esp + 8 + 4]
+	movzx	eax,byte [esp + 8 + 4]
 	mov	ecx,[esp + 0ch + 4]
 	cmp     ecx,12
 	jb	.skipdword
 
-	mov	edx,eax
-	shl	edx,8
-	or	eax,edx
-	;mov	ah,al
+	; - i386/486 Pentium/wMMX/M(Dothan or later)/4 Core/2/i7
+	mov	ah,al
+	; avoiding for partial register stall - PentiumPro/2/3/M(Tualatin or before)
+	;mov	edx,eax
+	;shl	edx,8
+	;or	eax,edx
 
 	mov	edx,eax
 	shl	edx,16
