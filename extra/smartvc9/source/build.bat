@@ -13,7 +13,9 @@ nasm -f win32 lldiv.nas
 nasm -f win32 ulldiv.nas
 nasm -f win32 smartvc9.nas
 
-cl /c /MD /Ogsy /Gs /Gy startup.cpp
+cl /nologo /c /Zl /Ogsy /Gs /Gy startup.cpp
 
-lib smartvc9.obj startup.obj ftol.obj ftol2.obj chkstk.obj llmul.obj lldiv.obj ulldiv.obj
+lib /NOLOGO /OUT:..\smartvc9.lib smartvc9.obj startup.obj ftol.obj ftol2.obj chkstk.obj llmul.obj lldiv.obj ulldiv.obj
+
+del *.obj
 
