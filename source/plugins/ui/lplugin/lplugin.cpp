@@ -152,6 +152,7 @@ static void CALLBACK OnFree(LPVOID pFileInfo){
 		HFree(pList);
 		pList = pNext;
 	}
+	SetTopNode(pFileInfo, 0);
 }
 static BOOL CALLBACK InitColumnOrder(int nColumn, int nType){
 	struct LX_PLUGIN_NODE *pList = pTop;

@@ -572,18 +572,26 @@ void HFree(LPVOID pPtr){
 }
 #elif (ALTYPE == 2)
 /* 開放ポインタアクセスチェック */
-typedef struct {
+typedef struct{
+	DWORD dwPage;
 	DWORD dwSize;
 } HW;
 LPVOID HAlloc(DWORD dwSize){
-	HW *p = (HW *)VirtualAlloc(0, sizeof(HW) + dwSize, MEM_COMMIT, PAGE_READWRITE);
+	DWORD dwPage = (sizeof(HW) + dwSize + 0xfff) >> 12;
+	HW *p = (HW *)VirtualAlloc(0,  dwPage << 12, MEM_COMMIT, PAGE_READWRITE);
 	if (!p) return NULL;
+	p->dwPage = dwPage;
 	p->dwSize = dwSize;
 	ZeroMemory(p + 1, dwSize);
 	return p + 1;
 }
 LPVOID HZAlloc(DWORD dwSize){
 	return HAlloc(dwSize);
+}
+void HFree(LPVOID pPtr){
+	DWORD dwOldProtect;
+	HW *o = ((HW *)pPtr) - 1;
+	VirtualProtect(o, o->dwPage << 12, PAGE_NOACCESS, &dwOldProtect);
 }
 LPVOID HRealloc(LPVOID pPtr, DWORD dwSize){
 	HW *o = ((HW *)pPtr) - 1;
@@ -593,11 +601,6 @@ LPVOID HRealloc(LPVOID pPtr, DWORD dwSize){
 		HFree(pPtr);
 	}
 	return n;
-}
-void HFree(LPVOID pPtr){
-	DWORD dwOldProtect;
-	HW *o = ((HW *)pPtr) - 1;
-	VirtualProtect(o, o->dwSize, PAGE_NOACCESS, &dwOldProtect);
 }
 #else
 void *HAlloc(DWORD dwSize){

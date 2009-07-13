@@ -69,8 +69,11 @@ struct FILEINFO **AddList(struct FILEINFO **ptr, LPTSTR szFileName, LPTSTR pszFi
 }
 
 static void FreeListNode(FILEINFO *pDel){
-	if (m_lxif.HookOnFree) m_lxif.HookOnFree(pDel);
-	HFree(pDel);
+	if (pDel != NULL){
+		if (pDel == g_pNextFile) g_pNextFile = NULL;
+		if (m_lxif.HookOnFree) m_lxif.HookOnFree(pDel);
+		HFree(pDel);
+	}
 }
 
 // ˆê‚Â‚ÌƒZƒ‹‚ðíœ
@@ -79,7 +82,6 @@ int DeleteAList(struct FILEINFO *pDel, struct FILEINFO **pRoot){
 
 	for(pTmp = pRoot;*pTmp!=NULL;pTmp=&(*pTmp)->pNext){
 		if(*pTmp==pDel){
-			if (pDel == g_pNextFile) g_pNextFile = NULL;
 			*pTmp = pDel->pNext; // íœƒZƒ‹‚ð”ò‚Î‚µ‚Ä˜AŒ‹
 			FreeListNode(pDel);
 			break;
@@ -95,7 +97,6 @@ int DeleteAllList(struct FILEINFO **pRoot){
 
 	pTmp = *pRoot;
 	while(pTmp){
-		if (pTmp == g_pNextFile) g_pNextFile = NULL;
 		pNxt = pTmp->pNext;
 		FreeListNode(pTmp);
 		pTmp = pNxt;
