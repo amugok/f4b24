@@ -25,8 +25,11 @@
 #define COLUMN_TYPE_ID 8
 #define COLUMN_TYPE_NUM 5
 
-// {C3FC1E93-09A1-497b-BC58-1CAECD93AF78}
-static const GUID ID_TAGINFO = { 0xc3fc1e93, 0x9a1, 0x497b, { 0xbc, 0x58, 0x1c, 0xae, 0xcd, 0x93, 0xaf, 0x78 } };
+// {84932C2D-68B8-48f7-A56C-B7CAA5EF155B}
+static const GUID ID_TAGINFOA = { 0x84932c2d, 0x68b8, 0x48f7, { 0xa5, 0x6c, 0xb7, 0xca, 0xa5, 0xef, 0x15, 0x5b } };
+// {3333E0FA-10C2-48b3-9117-8FE4D5C291DA}
+static const GUID ID_TAGINFOW = { 0x3333e0fa, 0x10c2, 0x48b3, { 0x91, 0x17, 0x8f, 0xe4, 0xd5, 0xc2, 0x91, 0xda } };
+
 
 int CALLBACK GetTypeNum();
 int CALLBACK GetTypeCode(int nIndex);
@@ -62,6 +65,40 @@ static HMODULE m_hDLL = 0;
 
 int (CALLBACK *pStrCmpLogicalW)(LPCWSTR psz1, LPCWSTR psz2) = 0;
  
+#define ALTYPE 0
+#if (ALTYPE == 2)
+/* 開放ポインタアクセスチェック */
+typedef struct{
+	DWORD dwPage;
+	DWORD dwSize;
+} HW;
+LPVOID HAlloc(DWORD dwSize){
+	DWORD dwPage = (sizeof(HW) + dwSize + 0xfff) >> 12;
+	HW *p = (HW *)VirtualAlloc(0,  dwPage << 12, MEM_COMMIT, PAGE_READWRITE);
+	if (!p) return NULL;
+	p->dwPage = dwPage;
+	p->dwSize = dwSize;
+	ZeroMemory(p + 1, dwSize);
+	return p + 1;
+}
+LPVOID HZAlloc(DWORD dwSize){
+	return HAlloc(dwSize);
+}
+void HFree(LPVOID pPtr){
+	DWORD dwOldProtect;
+	HW *o = ((HW *)pPtr) - 1;
+	VirtualProtect(o, o->dwPage << 12, PAGE_NO_ACCESS, &dwOldProtect);
+}
+LPVOID HRealloc(LPVOID pPtr, DWORD dwSize){
+	HW *o = ((HW *)pPtr) - 1;
+	LPVOID n = HAlloc(dwSize);
+	if (n) {
+		CopyMemory(n, pPtr, o->dwSize);
+		HFree(pPtr);
+	}
+	return n;
+}
+#else
 void *HZAlloc(DWORD dwSize){
 	return HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwSize);
 }
@@ -69,6 +106,7 @@ void *HZAlloc(DWORD dwSize){
 void HFree(LPVOID pPtr){
 	HeapFree(GetProcessHeap(), 0, pPtr);
 }
+#endif
 
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
@@ -145,7 +183,7 @@ static BOOL CheckPath(LPVOID pFileInfo){
 }
 
 static TAGINFOW *GetTagInfoW(LPVOID pFileInfo){
-	TAGINFOW *pTagInfo = (TAGINFOW *)lxpinfo.GetUserData(pFileInfo, (LPVOID)&ID_TAGINFO);
+	TAGINFOW *pTagInfo = (TAGINFOW *)lxpinfo.GetUserData(pFileInfo, (LPVOID)&ID_TAGINFOW);
 	if (!pTagInfo) {
 		pTagInfo = (TAGINFOW *)HZAlloc(sizeof(TAGINFOW));
 		if (pTagInfo) {
@@ -156,14 +194,14 @@ static TAGINFOW *GetTagInfoW(LPVOID pFileInfo){
 					lxpinfo.plxif->FreeMusic(pMusic);
 				}
 			}
-			lxpinfo.SetUserData(pFileInfo, (LPVOID)&ID_TAGINFO, pTagInfo, FreeTagInfo);
+			lxpinfo.SetUserData(pFileInfo, (LPVOID)&ID_TAGINFOW, pTagInfo, FreeTagInfo);
 		}
 	}
 	return pTagInfo;
 }
 
 static TAGINFOA *GetTagInfoA(LPVOID pFileInfo){
-	TAGINFOA *pTagInfo = (TAGINFOA *)lxpinfo.GetUserData(pFileInfo, (LPVOID)&ID_TAGINFO);
+	TAGINFOA *pTagInfo = (TAGINFOA *)lxpinfo.GetUserData(pFileInfo, (LPVOID)&ID_TAGINFOA);
 	if (!pTagInfo) {
 		pTagInfo = (TAGINFOA *)HZAlloc(sizeof(TAGINFOA));
 		if (pTagInfo) {
@@ -174,7 +212,7 @@ static TAGINFOA *GetTagInfoA(LPVOID pFileInfo){
 					lxpinfo.plxif->FreeMusic(pMusic);
 				}
 			}
-			lxpinfo.SetUserData(pFileInfo, (LPVOID)&ID_TAGINFO, pTagInfo, FreeTagInfo);
+			lxpinfo.SetUserData(pFileInfo, (LPVOID)&ID_TAGINFOA, pTagInfo, FreeTagInfo);
 		}
 	}
 	return pTagInfo;

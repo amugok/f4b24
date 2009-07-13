@@ -68,6 +68,7 @@ typedef struct{
 	CHAR szArtist[256];
 	CHAR szAlbum[256];
 	CHAR szTrack[10];
+	DWORD dwLength;
 }TAGINFOA;
 
 typedef struct{
@@ -75,6 +76,7 @@ typedef struct{
 	WCHAR szArtist[256];
 	WCHAR szAlbum[256];
 	WCHAR szTrack[10];
+	DWORD dwLength;
 }TAGINFOW;
 
 
