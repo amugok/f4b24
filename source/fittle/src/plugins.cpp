@@ -17,8 +17,8 @@ static struct GENERAL_PLUGIN_NODE {
 	int nType;
 	union {
 		LPVOID lpvoid;
-		FITTLE_PLUGIN_INFO *pFittle;	/* nTyope == 0 */
-		GENERAL_PLUGIN_INFO *pGeneral;	/* nTyope == 1 */
+		FITTLE_PLUGIN_INFO *pFittle;	/* nType == 0 */
+		GENERAL_PLUGIN_INFO *pGeneral;	/* nType == 1 */
 	} info;
 	HMODULE hDll;
 } *m_pGeneralPluginList = NULL;

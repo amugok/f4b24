@@ -44,13 +44,13 @@
 
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
-#ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test42u")
-#else
-#define F4B24_VERSION_STRING TEXT("test42")
-#endif
-#define F4B24_VERSION 42
 #define F4B24_IF_VERSION 39
+#define F4B24_VERSION 43
+#ifdef UNICODE
+#define F4B24_VERSION_STRING TEXT("test43u")
+#else
+#define F4B24_VERSION_STRING TEXT("test43")
+#endif
 #ifndef _DEBUG
 #define FITTLE_TITLE TEXT("Fittle - f4b24 ") F4B24_VERSION_STRING
 #else
@@ -70,7 +70,7 @@ enum {
 };
 // --列挙型の宣言--
 enum {PM_LIST=0, PM_RANDOM, PM_SINGLE};	// プレイモード
-enum {GS_NOEND=0, GS_OK, GS_FAILED, GS_NEWFREQ};	// EventSyncの戻り値みたいな
+enum {GS_NOEND=0, GS_OK, GS_FAILED, GS_NEWFREQ, GS_END};	// EventSyncの戻り値みたいな
 enum {TREE_UNSHOWN=0, TREE_SHOW, TREE_HIDE};	// ツリーの表示状態
 
 //--関数のプロトタイプ宣言--
@@ -2231,9 +2231,9 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				break;
 			case WM_F4B24_INTERNAL_PREPARE_NEXT_MUSIC:
 				g_pNextFile = SelectNextFile(TRUE);
-				m_nGaplessState = GS_OK;
 
 				if(g_pNextFile){
+					m_nGaplessState = GS_OK;
 					// オープン
 					if(!SetChannelInfo(!g_bNow, g_pNextFile)){
 						m_nGaplessState = GS_FAILED;
@@ -2248,6 +2248,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 							m_nGaplessState = GS_OK;
 						}
 					}
+				}else{
+					m_nGaplessState = GS_END;
 				}
 				break;
 			case WM_F4B24_INTERNAL_RESTORE_POSITION:
@@ -2943,7 +2945,7 @@ static void OnChangeTrack(){
 	m_bCueEnd = FALSE;
 
 	// 99％までいかなかった場合
-	if(m_nGaplessState==GS_NOEND || !g_pNextFile){
+	if(m_nGaplessState != GS_END && (m_nGaplessState==GS_NOEND || !g_pNextFile)){
 		g_pNextFile = SelectNextFile(TRUE);
 		if(g_pNextFile){
 			SetChannelInfo(g_bNow, g_pNextFile);
