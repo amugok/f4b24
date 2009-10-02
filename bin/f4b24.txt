@@ -1,7 +1,7 @@
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test43
+              for BASS 2.4 test44
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
@@ -117,6 +117,9 @@ Pluginsフォルダ
 	wadsp.dll       -> wadsp.fgp
 
 実験履歴
+	test44/test44u
+		コンパイラ(VisualC++2008EE)のバグでtest42から関連ソースを何ら変更していないのにメタデータの末尾にゴミが付く場合があったtest43の問題に対処
+
 	test43/test43u
 		ランダム再生時に常にリピートしていた問題に対処
 
