@@ -49,7 +49,7 @@ goto exitcmd
 :buildall
 
 set CFLAGS=/GF /O1 /MD
-set VER_STR=0807070_
+set VER_STR=091210_
 
 call %0 perb exe
 

@@ -88,8 +88,7 @@ static void clearres(unsigned char *rdir, unsigned long rofs){
 	int d;
 	int nd = getwordle(rdir + rofs + 14);
 	setdwordle(rdir + rofs + 4, 0);	/* time stamp */
-	for (d = 0; d < nd; d++)
-	{
+	for (d = 0; d < nd; d++){
 		unsigned long sofs = getdwordle(rdir + rofs + 16 + 8 * d + 4);
 		if (sofs & 0x80000000) clearres(rdir, sofs & 0x7fffffff);
 	}
@@ -118,14 +117,14 @@ static int perb(const char *path, int s, int dctmin, const char *v){
 	unsigned long rrva = 0;
 
 	rbf = readfile(path, &rsz);
-	if (!rbf) {
+	if (!rbf){
 		fprintf(stderr, "ファイルを読み込めません(%s)\n", path);
 		return 1;
 	}
 
 	wsz = rsz * 2;
 	wbf = (unsigned char *)malloc(wsz);
-	if (!wbf) {
+	if (!wbf){
 		fprintf(stderr, "メモリが不足しています\n");
 		free(rbf);
 		return 2;
@@ -154,8 +153,7 @@ static int perb(const char *path, int s, int dctmin, const char *v){
 		woptsz = roptsz;
 		wdctnum = rdctnum;
 	}else{
-		for (wdctnum = rdctnum; wdctnum > 0; wdctnum--)
-		{
+		for (wdctnum = rdctnum; wdctnum > 0; wdctnum--){
 			unsigned long rva = getdwordle(rbf + roptofs + 96 + (wdctnum - 1) * 8);
 			unsigned long size = getdwordle(rbf + roptofs + 96 + (wdctnum - 1) * 8 + 4);
 			if (rva != 0 || size != 0) break;
@@ -165,6 +163,10 @@ static int perb(const char *path, int s, int dctmin, const char *v){
 	}
 
 	memcpy(wbf + woptofs, rbf + roptofs, woptsz);
+	if (woptsz >= 44){
+		setwordle(wbf + woptofs + 40, 4); /* MajorOperatingSystemVersion */
+		setwordle(wbf + woptofs + 42, 0); /* MinorOperatingSystemVersion */
+	}
 	if (wdctnum < dctmin) wdctnum = dctmin;	/* 16より小さいとアイコンを読めない場合がある */
 	woptsz = 96 + wdctnum * 8;
 
@@ -200,12 +202,12 @@ static int perb(const char *path, int s, int dctmin, const char *v){
 		memcpy(wbf + wsecofs + rsec * 40, rbf + rsecofs + rsec * 40, 40);
 		setdwordle(wbf + wsecofs + rsec * 40 + 20, wdofs);
 
-		while (wdsz >= (1 << s)) {
+		while (wdsz >= (1 << s)){
 			int c = 0;
 			unsigned long csz = realign(wdsz - (1 << s), s);
 			unsigned long o;
 			for (o = 0; o < (1 << s); o++){
-				if (rbf[rdofs + csz + o] != 0) {
+				if (rbf[rdofs + csz + o] != 0){
 					c = 1;
 					break;
 				}
@@ -215,7 +217,7 @@ static int perb(const char *path, int s, int dctmin, const char *v){
 			setdwordle(wbf + wsecofs + rsec * 40 + 16, wdsz);
 		}
 
-		if (wsz < wdofs + wdsz) {
+		if (wsz < wdofs + wdsz){
 			size_t nwsz = wdofs + wdsz;
 			unsigned char *nwbf = (unsigned char *)realloc(wbf, nwsz); 
 			if (!nwbf){
@@ -259,19 +261,19 @@ int main(int argc, char **argv){
 	int s = 9;
 	int d = 16;
 	const char *v = 0;
-	for (; i < argc; i++) {
+	for (; i < argc; i++){
 		if (strcmpi(argv[i], "/s") == 0 && i + 1 < argc){
 			s = atoi(argv[++i]);
 			if (!s) s = 9;
 			continue;
-		} else if (strcmpi(argv[i], "/d") == 0 && i + 1 < argc){
+		}else if (strcmpi(argv[i], "/d") == 0 && i + 1 < argc){
 			d = atoi(argv[++i]);
 			if (!d) d = 16;
 			continue;
-		} else if (strcmpi(argv[i], "/v") == 0 && i + 1 < argc){
+		}else if (strcmpi(argv[i], "/v") == 0 && i + 1 < argc){
 			v = argv[++i];
 			continue;
-		} else {
+		}else{
 			perb(argv[i], s, d, v);
 		}
 	}
