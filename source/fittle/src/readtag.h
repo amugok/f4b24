@@ -144,18 +144,7 @@ static BOOL ID3_ReadFrameText(BYTE bType, LPBYTE pTextRaw, int nTextRawSize, LPT
 			return FALSE;
 		}
 #ifdef UNICODE
-#if 1
-		int l = XMIN((nTextRawSize >> 1), nBufSize);
-		for (int i = 0; i < l; i++)
-			pszBuf[i] = (pTextRaw[i * 2 + 1] << 8) | pTextRaw[i * 2 + 0];
-#elif 0
-		int l = XMIN((nTextRawSize >> 1), nBufSize) * sizeof(WCHAR);
-		for (int i = 0; i < l; i++)
-			((LPBYTE)pszBuf)[i] = pTextRaw[i];
-#else
-		/* 何故か余計にコピーされる(コンパイラのバグ?) */
 		CopyMemory(pszBuf, pTextRaw, XMIN((nTextRawSize >> 1), nBufSize) * sizeof(WCHAR));
-#endif
 #else
 		WideCharToMultiByte(CP_ACP, 0, (LPCWSTR)pTextRaw, nTextRawSize >> 1, pszBuf, nBufSize, NULL, NULL);
 #endif

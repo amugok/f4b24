@@ -60,12 +60,12 @@ _memcpy:
 	rep movsd
 
 	test	dl,2
-	js	.skipword
+	jz	.skipword
 	movsw
 .skipword:
 
 	test	dl,1
-	js	.skipbyte
+	jz	.skipbyte
 	movsb
 .skipbyte:
 

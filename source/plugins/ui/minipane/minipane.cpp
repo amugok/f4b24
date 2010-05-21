@@ -929,6 +929,7 @@ static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg) {
 			}
 			break;
 		}
+		break;
 	case WM_FITTLE:
 		if (pMsg->wp == GET_MINIPANEL) {
 			pMsg->lMsgResult = (m_hMiniPanel && IsWindow(m_hMiniPanel)) ? (LRESULT)m_hMiniPanel : (LRESULT)0;

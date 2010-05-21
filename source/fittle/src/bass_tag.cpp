@@ -187,9 +187,6 @@ BOOL BASS_TAG_Read(DWORD handle, TAGINFO *pTagInfo){
 		case BASS_CTYPE_STREAM_WAV_MP3: /* removed in BASS 2.4 */
 			return Riff_ReadTag(handle, pTagInfo);
 
-		case BASS_CTYPE_STREAM_MP1:
-		case BASS_CTYPE_STREAM_MP2:
-		case BASS_CTYPE_STREAM_MP3:
 		case BASS_CTYPE_STREAM_APE:
 		case BASS_CTYPE_STREAM_MPC:
 		case BASS_CTYPE_STREAM_TTA:
@@ -201,6 +198,9 @@ BOOL BASS_TAG_Read(DWORD handle, TAGINFO *pTagInfo){
 		case BASS_CTYPE_STREAM_TAK:
 			/* bass_ape.dll‚ð“ü‚ê‚Ä‚à“Ç‚ñ‚Å‚­‚ê‚È‚¢ */
 			if (ReadTagSub((LPBYTE)ChannelGetTags(handle, BASS_TAG_APE), pTagInfo)) return TRUE;
+		case BASS_CTYPE_STREAM_MP1:
+		case BASS_CTYPE_STREAM_MP2:
+		case BASS_CTYPE_STREAM_MP3:
 			if (ID3V2_ReadTag(handle, pTagInfo)) return TRUE;
 			return ID3V1_ReadTag(handle, pTagInfo);
 
