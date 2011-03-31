@@ -43,6 +43,11 @@ typedef long LONG_PTR;
 #define WM_MOUSEWHEEL	0x020A
 #endif
 
+// トラックバー
+#ifndef TBS_TRANSPARENTBKGND
+#define TBS_TRANSPARENTBKGND 0x1000L
+#endif
+
 // 定数定義
 #define ID_COMBO	101
 #define ID_TREE		102
@@ -82,7 +87,7 @@ struct FILEINFO{
 	LPVOID userdata;
 };
 
-typedef struct {
+typedef struct{
 	DWORD hChan;				// ストリームハンドル
 	TCHAR szFilePath[MAX_FITTLE_PATH];	// フルパス
 	QWORD qStart;				// 再生開始位置

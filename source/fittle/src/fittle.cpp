@@ -35,7 +35,7 @@
 #pragma comment(linker,"/MERGE:.rdata=.text")
 #if (_MSC_VER >= 1200) && (_MSC_VER < 1500)
 #pragma comment(linker, "/OPT:NOWIN98")
-#elif (_MSC_VER >= 1500) && (_MSC_VER < 1600)
+#elif (_MSC_VER >= 1500) && (_MSC_VER < 1700)
 #pragma comment(lib, "../../extra/smartvc9/smartvc9.lib")
 #pragma comment(linker,"/NODEFAULTLIB:msvcrt.lib")
 #pragma comment(linker,"/ENTRY:SmartStartup")
@@ -47,9 +47,9 @@
 #define F4B24_IF_VERSION 39
 #define F4B24_VERSION 44
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test44u")
+#define F4B24_VERSION_STRING TEXT("test45u")
 #else
-#define F4B24_VERSION_STRING TEXT("test44")
+#define F4B24_VERSION_STRING TEXT("test45")
 #endif
 #ifndef _DEBUG
 #define FITTLE_TITLE TEXT("Fittle - f4b24 ") F4B24_VERSION_STRING
@@ -398,6 +398,14 @@ static HWND Initialze(HINSTANCE hCurInst, int nCmdShow){
 		return 0;
 	}
 
+	// コモンコントロールの初期化
+	INITCOMMONCONTROLSEX ic;
+	ic.dwSize = sizeof(INITCOMMONCONTROLSEX);
+	ic.dwICC = ICC_USEREX_CLASSES | ICC_TREEVIEW_CLASSES
+			 | ICC_LISTVIEW_CLASSES | ICC_BAR_CLASSES
+			 | ICC_COOL_CLASSES | ICC_TAB_CLASSES;
+	InitCommonControlsEx(&ic);
+
 	// ウィンドウ・クラスの登録
 	wc.cbSize = sizeof(WNDCLASSEX);
 	wc.style = CS_DBLCLKS; //CS_HREDRAW | CS_VREDRAW;
@@ -628,14 +636,6 @@ static void OnCreate(HWND hWnd){
 
 	TIMECHECK("メニューハンドルを保存")
 
-	// コントロールを作成
-	INITCOMMONCONTROLSEX ic;
-	ic.dwSize = sizeof(INITCOMMONCONTROLSEX);
-	ic.dwICC = ICC_USEREX_CLASSES | ICC_TREEVIEW_CLASSES
-			 | ICC_LISTVIEW_CLASSES | ICC_BAR_CLASSES
-			 | ICC_COOL_CLASSES | ICC_TAB_CLASSES;
-	InitCommonControlsEx(&ic);
-
 	TIMECHECK("InitCommonControlsEx")
 
 	// ステータスバー作成
@@ -740,11 +740,11 @@ static void OnCreate(HWND hWnd){
 	TIMECHECK("ツールバー作成")
 
 	//ボリュームバーの作成
-	m_hVolume = CreateTrackBar(ID_VOLUME, WS_CHILD | WS_VISIBLE | TBS_NOTICKS | TBS_BOTH | TBS_TOOLTIPS | TBS_FIXEDLENGTH | WS_CLIPSIBLINGS);
+	m_hVolume = CreateTrackBar(ID_VOLUME, WS_CHILD | WS_VISIBLE | TBS_NOTICKS | TBS_BOTH | TBS_TOOLTIPS | TBS_FIXEDLENGTH | TBS_TRANSPARENTBKGND);
 	TIMECHECK("ボリュームバー作成")
 
 	//シークバーの作成
-	m_hSeek = CreateTrackBar(TD_SEEKBAR, WS_CHILD | WS_VISIBLE | TBS_NOTICKS | TBS_BOTTOM | WS_DISABLED | TBS_FIXEDLENGTH | WS_CLIPSIBLINGS);
+	m_hSeek = CreateTrackBar(TD_SEEKBAR, WS_CHILD | WS_VISIBLE | TBS_NOTICKS | TBS_BOTTOM | WS_DISABLED | TBS_FIXEDLENGTH | TBS_TRANSPARENTBKGND);
 	TIMECHECK("シークバー作成")
 
 	// レバーコントロールの復元
@@ -1013,6 +1013,16 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			OnChangeTrack();
 			OPResetOnPlayNextBySystem();
 			break;
+
+		//case WM_SYSCOLORCHANGE:
+
+		//	SendMessage(m_hSeek, msg, wp, lp);
+		//	SendMessage(m_hVolume, msg, wp, lp);
+		//	SendMessage(m_hTab, msg, wp, lp);
+		//	SendMessage(m_hTree, msg, wp, lp);
+		//	SendMessage(m_hSplitter, msg, wp, lp);
+
+		//	break;
 
 		case WM_CREATE:
 
@@ -3702,6 +3712,7 @@ static LRESULT CALLBACK NewSliderProc(HWND hSB, UINT msg, WPARAM wp, LPARAM lp){
 
 	switch(msg)
 	{
+
 		case WM_LBUTTONUP: // 左アップだったらシーク適用
 			if(GetCapture()==m_hSeek){
 				_BASS_ChannelSetPosition(g_cInfo[g_bNow].hChan, SendMessage(hSB, TBM_GETPOS, 0, 0));

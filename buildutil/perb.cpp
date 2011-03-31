@@ -167,6 +167,10 @@ static int perb(const char *path, int s, int dctmin, const char *v){
 		setwordle(wbf + woptofs + 40, 4); /* MajorOperatingSystemVersion */
 		setwordle(wbf + woptofs + 42, 0); /* MinorOperatingSystemVersion */
 	}
+	if (woptsz >= 52){
+		setwordle(wbf + woptofs + 48, 4); /* MajorSubsystemVersion */
+		setwordle(wbf + woptofs + 50, 0); /* MinorSubsystemVersion */
+	}
 	if (wdctnum < dctmin) wdctnum = dctmin;	/* 16‚æ‚è¬‚³‚¢‚ÆƒAƒCƒRƒ“‚ð“Ç‚ß‚È‚¢ê‡‚ª‚ ‚é */
 	woptsz = 96 + wdctnum * 8;
 
