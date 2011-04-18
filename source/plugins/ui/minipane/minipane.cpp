@@ -27,7 +27,10 @@
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/ENTRY:DllMain")
 #pragma comment(linker,"/MERGE:.rdata=.text")
-#pragma comment(linker,"/OPT:NOWIN98")
+#if (_MSC_VER >= 1200) && (_MSC_VER < 1500)
+#pragma comment(linker, "/OPT:NOWIN98")
+#elif (_MSC_VER >= 1500) && (_MSC_VER < 1700)
+#endif
 #endif
 
 // ウィンドウをサブクラス化、プロシージャハンドルをウィンドウに関連付ける
@@ -61,11 +64,11 @@ static HWND m_hwndMain = NULL;
 
 #else
 
-static BOOL OnInit();
-static void OnQuit();
-static void OnTrackChange();
-static void OnStatusChange();
-static void OnConfig();
+static BOOL __cdecl OnInit();
+static void __cdecl OnQuit();
+static void __cdecl OnTrackChange();
+static void __cdecl OnStatusChange();
+static void __cdecl OnConfig();
 
 static FITTLE_PLUGIN_INFO fpi = {
 	PDK_VER,
@@ -117,8 +120,8 @@ static int m_nMiniHeight = 30;
 static int m_nTimeWidth = 70;
 
 static int m_nTitleDisplayPos = 1;
-static CHAR m_szTime[100];			// 再生時間
-static TCHAR m_szTag[MAX_FITTLE_PATH];	// タグ
+static CHAR m_szTime[100] = { 0 };				// 再生時間
+static TCHAR m_szTag[MAX_FITTLE_PATH] = { 0 };	// タグ
 
 /*設定関係*/
 static struct {
@@ -131,7 +134,7 @@ static struct {
 	WASTR szFontName;
 	int nFontHeight;
 	int nFontStyle;
-} m_cfg;
+} m_cfg = { 0 };
 
 /*状態保存関係*/
 static struct {
@@ -139,7 +142,7 @@ static struct {
 	int nMiniPanel_y;
 	int nMiniPanelEnd;
 	int nMiniWidth;
-} m_sta;
+} m_sta = { 0 };
 
 // 終了状態を読込
 static void LoadState(){
@@ -544,7 +547,7 @@ static void UpdateFont(HWND hDlg){
 	lf.lfCharSet = DEFAULT_CHARSET;
 	lf.lfHeight = -nHeight;
 	m_hFont = CreateFontIndirect(&lf);
-	m_nMiniHeight = 6 + nHeight + 12;
+	m_nMiniHeight = ((GetSystemMetrics(SM_CYSIZEFRAME) + GetSystemMetrics(SM_CYEDGE)) << 1) + (nHeight > 16 ? nHeight : 16) + 1;
 	hOldFont = SelectObject(hDC, (HGDIOBJ)m_hFont);
 	GetTextExtentPoint32(hDC, szTime, lstrlen(szTime), &size);
 	SelectObject(hDC, hOldFont);
@@ -603,7 +606,7 @@ static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 
 		case WM_SIZE:
 			m_sta.nMiniWidth = LOWORD(lp) + GetSystemMetrics(SM_CXDLGFRAME)*2;
-			MoveWindow(m_hMiniTool, m_sta.nMiniWidth - s_nToolWidth, 1, 240, 36, TRUE);
+			MoveWindow(m_hMiniTool, m_sta.nMiniWidth - s_nToolWidth, 1, 240, m_nMiniHeight, TRUE);
 			return FALSE;
 
 		case WM_GETMINMAXINFO:
@@ -847,7 +850,7 @@ static void OnInitSub(){
 }
 
 /* 終了時に一度だけ呼ばれます */
-static void OnQuit(){
+static void __cdecl OnQuit(){
 	SaveState();
 	FreeImageList();
 	FreeMiniMenu();
@@ -855,7 +858,7 @@ static void OnQuit(){
 }
 
 /* 曲が変わる時に呼ばれます */
-static void OnTrackChange(){
+static void __cdecl OnTrackChange(){
 	m_nTitleDisplayPos = 1;	// 表示位置リセット
 	UpdatePanelTitle();
 	UpdatePanelTime();
@@ -863,7 +866,7 @@ static void OnTrackChange(){
 }
 
 /* 再生状態が変わる時に呼ばれます */
-static void OnStatusChange(){
+static void __cdecl  OnStatusChange(){
 	if (m_hMiniPanel)
 	{
 		switch (FittlePluginInterface(GET_STATUS)){
@@ -888,7 +891,7 @@ static void OnStatusChange(){
 }
 
 /* 設定画面を呼び出します（未実装）*/
-static void OnConfig(){
+static void __cdecl OnConfig(){
 }
 
 static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg) {
@@ -982,7 +985,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 }
 
 /* 起動時に一度だけ呼ばれます */
-static BOOL OnInit(){
+static BOOL __cdecl OnInit(){
 	WAIsUnicode();
 	m_hOldProc = (WNDPROC)SetWindowLong(m_hwndMain, GWL_WNDPROC, (LONG)WndProc);
 	OnInitSub();

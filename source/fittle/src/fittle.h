@@ -48,6 +48,11 @@ typedef long LONG_PTR;
 #define TBS_TRANSPARENTBKGND 0x1000L
 #endif
 
+// ツールバー
+#ifndef TBSTYLE_TRANSPARENT
+#define TBSTYLE_TRANSPARENT 0x8000L
+#endif
+
 // 定数定義
 #define ID_COMBO	101
 #define ID_TREE		102
