@@ -1,7 +1,7 @@
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test44
+              for BASS 2.4 test46
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
@@ -96,8 +96,8 @@ Pluginsフォルダ
 	wadsp.fgp       WinampDSPプラグイン対応 Ansi/Unicode両対応 要test32以降 要bass_wadsp.dll
 
 追加したリストカラム拡張プラグイン (要lplugin.fgp)
-	filename.flp    ファイル名(拡張子無し) test36～test41専用 新仕様に切替予定
-	taginfo.flp     Title/Album/Artist/Track test36～test41専用 新仕様に切替予定
+	filename.flp    ファイル名(拡張子無し) test36～test??専用 新仕様に切替予定は保留
+	taginfo.flp     Title/Album/Artist/Track test36～test??専用 新仕様に切替予定保留
 
 追加した専用出力プラグイン
 	bass.fop        bass.dllによる音声出力 要test28以降 標準で同梱
@@ -118,11 +118,14 @@ Pluginsフォルダ
 
 実験履歴
 
-	(test45/)test45u
+	(test46/)test46u
+		test44uの修正がtest45uに適切に反映されなかった問題に対処
+
+	test45/test45u
 		Windows7/Vistaでシークバーと音量の背景にテーマが適用されなかった問題に対処
 
 	(test44/)test44u
-		コンパイラ(VisualC++2008EE)のバグでtest42から関連ソースを何ら変更していないのにメタデータの末尾にゴミが付く場合があったtest43uの問題に対処
+		コンパイラのバグ(ではなく実際にはライブラリの問題)でtest42から関連ソースを何ら変更していないのにメタデータの末尾にゴミが付く場合があったtest43uの問題に対処
 
 	test43/test43u
 		ランダム再生時に常にリピートしていた問題に対処
