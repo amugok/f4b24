@@ -1,16 +1,8 @@
 	bits	32
 
-	section	.data
-
-	global	__fltused
-
-__fltused:
-	dd	1
-
 	section	.text
 
 	global	_memset
-	global	_memcpy
 
 _memset:
 	cld
@@ -45,30 +37,4 @@ _memset:
 	mov	eax,[esp + 4 + 4]
 	pop	edi
 
-	ret
-
-_memcpy:
-	cld
-	push	edi
-	push	esi
-	mov	edi,[esp + 4 + 8]
-	mov	esi,[esp + 8 + 8]
-	mov	ecx,[esp + 0ch + 8]
-	mov	edx,ecx
-	mov	eax,edi
-	shr	ecx,2
-	rep movsd
-
-	test	dl,2
-	jz	.skipword
-	movsw
-.skipword:
-
-	test	dl,1
-	jz	.skipbyte
-	movsb
-.skipbyte:
-
-	pop	esi
-	pop	edi
 	ret

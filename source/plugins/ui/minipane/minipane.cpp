@@ -27,9 +27,16 @@
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/ENTRY:DllMain")
 #pragma comment(linker,"/MERGE:.rdata=.text")
-#if (_MSC_VER >= 1200) && (_MSC_VER < 1500)
+#if (_MSC_VER >= 1200) && (_MSC_VER < 1300)
 #pragma comment(linker, "/OPT:NOWIN98")
+#elif (_MSC_VER >= 1300) && (_MSC_VER < 1500)
+static void *memset(void *dest, int c, size_t count){
+	char *d = (char *)dest;
+	while (count--) *(d++) = c;
+	return dest;
+}
 #elif (_MSC_VER >= 1500) && (_MSC_VER < 1700)
+#pragma comment(lib,"..\\..\\..\\..\\extra\\smartvc9\\smartvc9.lib")
 #endif
 #endif
 
