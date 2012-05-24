@@ -28,6 +28,8 @@
 
 #define BASSDEF(f) (WINAPI * f)
 #define BASS_DATA_FLOAT		0x40000000
+#define BASS_ASIO_THREAD	1
+#define BASS_ASIO_JOINORDER	2
 
 typedef struct {
 	DWORD freq;
@@ -67,7 +69,7 @@ BOOL BASSASIODEF(BASS_ASIO_ChannelSetVolume)(BOOL input, int channel, float volu
 BOOL BASSASIODEF(BASS_ASIO_ControlPanel)();
 BOOL BASSASIODEF(BASS_ASIO_Free)();
 BOOL BASSASIODEF(BASS_ASIO_GetDeviceInfo)(DWORD device, BASS_ASIO_DEVICEINFO *info);
-BOOL BASSASIODEF(BASS_ASIO_Init)(DWORD device);
+BOOL BASSASIODEF(BASS_ASIO_Init)(DWORD device, DWORD flags);
 BOOL BASSASIODEF(BASS_ASIO_SetRate)(double rate);
 BOOL BASSASIODEF(BASS_ASIO_Start)(DWORD buflen);
 BOOL BASSASIODEF(BASS_ASIO_Stop)();
@@ -311,7 +313,7 @@ static void CALLBACK Start(void *pchinfo, float sVolume, BOOL fFloat){
 	BASS_CHANNELINFO *info = (BASS_CHANNELINFO *)pchinfo;
 	End();
 
-	if (BASS_ASIO_Init(m_nDevice)) {
+	if (BASS_ASIO_Init(m_nDevice, 0)) {
 		int i;
 		int ch = m_nChShift;
 		BASS_ASIO_ChannelEnable(FALSE, ch, &AsioProc, (void*)NULL);
@@ -347,7 +349,7 @@ static void CALLBACK Play(void){
 	if (m_nChanOut >= 0) {
 		BASS_ASIO_Start(0);
 	} else if (m_nPause) {
-		if (BASS_ASIO_Init(m_nDevice)) {
+		if (BASS_ASIO_Init(m_nDevice, 0)) {
 			int i;
 			int ch = m_nChShift;
 			BASS_ASIO_ChannelEnable(FALSE, ch, &AsioProc, (void*)NULL);
