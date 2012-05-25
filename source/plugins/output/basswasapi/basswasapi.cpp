@@ -28,8 +28,6 @@
 
 #define BASSDEF(f) (WINAPI * f)
 #define BASS_DATA_FLOAT		0x40000000
-#define BASS_ASIO_THREAD	1
-#define BASS_ASIO_JOINORDER	2
 
 typedef struct {
 	DWORD freq;
@@ -45,38 +43,62 @@ typedef struct {
 DWORD BASSDEF(BASS_ChannelGetData)(DWORD handle, void *buffer, DWORD length);
 DWORD BASSDEF(BASS_ChannelIsActive)(DWORD handle);
 
-#define BASSASIODEF(f) (WINAPI * f)
+#define BASSWASAPIDEF(f) (WINAPI * f)
 
-#define BASS_ASIO_FORMAT_FLOAT  19 // 32-bit floating-point
-#define BASS_ASIO_RESET_PAUSE	4 // unpause channel
-#define BASS_ASIO_ACTIVE_DISABLED	0
-#define BASS_ASIO_ACTIVE_ENABLED	1
-#define BASS_ASIO_ACTIVE_PAUSED		2
 typedef struct {
-	const char *name;	// description
-	const char *driver;	// driver
-} BASS_ASIO_DEVICEINFO;
-typedef DWORD (CALLBACK ASIOPROC)(BOOL input, DWORD channel, void *buffer, DWORD length, void *user);
+	const char *name;
+	const char *id;
+	DWORD type;
+	DWORD flags;
+	float minperiod;
+	float defperiod;
+	DWORD mixfreq;
+	DWORD mixchans;
+} BASS_WASAPI_DEVICEINFO;
 
-BOOL BASSASIODEF(BASS_ASIO_ChannelEnable)(BOOL input, DWORD channel, ASIOPROC *proc, void *user);
-DWORD BASSASIODEF(BASS_ASIO_ChannelIsActive)(BOOL input, DWORD channel);
-BOOL BASSASIODEF(BASS_ASIO_ChannelJoin)(BOOL input, DWORD channel, int channel2);
-BOOL BASSASIODEF(BASS_ASIO_ChannelPause)(BOOL input, DWORD channel);
-BOOL BASSASIODEF(BASS_ASIO_ChannelReset)(BOOL input, int channel, DWORD flags);
-BOOL BASSASIODEF(BASS_ASIO_ChannelSetFormat)(BOOL input, DWORD channel, DWORD format);
-BOOL BASSASIODEF(BASS_ASIO_ChannelSetRate)(BOOL input, DWORD channel, double rate);
-BOOL BASSASIODEF(BASS_ASIO_ChannelSetVolume)(BOOL input, int channel, float volume);
-BOOL BASSASIODEF(BASS_ASIO_ControlPanel)();
-BOOL BASSASIODEF(BASS_ASIO_Free)();
-BOOL BASSASIODEF(BASS_ASIO_GetDeviceInfo)(DWORD device, BASS_ASIO_DEVICEINFO *info);
-BOOL BASSASIODEF(BASS_ASIO_Init)(DWORD device, DWORD flags);
-BOOL BASSASIODEF(BASS_ASIO_SetRate)(double rate);
-BOOL BASSASIODEF(BASS_ASIO_Start)(DWORD buflen);
-BOOL BASSASIODEF(BASS_ASIO_Stop)();
+typedef struct {
+	DWORD initflags;
+	DWORD freq;
+	DWORD chans;
+	DWORD format;
+	DWORD buflen;
+	float volmax;
+	float volmin;
+	float volstep;
+} BASS_WASAPI_INFO;
+
+#define BASS_DEVICE_ENABLED		1
+#define BASS_DEVICE_DEFAULT		2
+#define BASS_DEVICE_INIT		4
+#define BASS_DEVICE_LOOPBACK	8
+#define BASS_DEVICE_INPUT		16
+#define BASS_DEVICE_UNPLUGGED	32
+#define BASS_DEVICE_DISABLED	64
+
+#define BASS_WASAPI_EXCLUSIVE	1
+#define BASS_WASAPI_AUTOFORMAT	2
+#define BASS_WASAPI_BUFFER		4
+#define BASS_WASAPI_SESSIONVOL	8
+
+#define BASS_WASAPI_FORMAT_FLOAT	0
+#define BASS_WASAPI_FORMAT_8BIT		1
+#define BASS_WASAPI_FORMAT_16BIT	2
+#define BASS_WASAPI_FORMAT_24BIT	3
+#define BASS_WASAPI_FORMAT_32BIT	4
+
+typedef DWORD (CALLBACK WASAPIPROC)(void *buffer, DWORD length, void *user);
+
+BOOL BASSWASAPIDEF(BASS_WASAPI_GetDeviceInfo)(DWORD device, BASS_WASAPI_DEVICEINFO *info);
+BOOL BASSWASAPIDEF(BASS_WASAPI_Init)(int device, DWORD freq, DWORD chans, DWORD flags, float buffer, float period, WASAPIPROC *proc, void *user);
+BOOL BASSWASAPIDEF(BASS_WASAPI_Free)();
+BOOL BASSWASAPIDEF(BASS_WASAPI_Start)();
+BOOL BASSWASAPIDEF(BASS_WASAPI_Stop)(BOOL reset);
+BOOL BASSWASAPIDEF(BASS_WASAPI_IsStarted)();
+BOOL BASSWASAPIDEF(BASS_WASAPI_SetVolume)(BOOL linear, float volume);
 
 
-static LPCSTR szFuncBase[2] = { "BASS_", "BASS_ASIO_" };
-static LPCSTR szDllNameA[2] = { "bass.dll", "bassasio.dll" };
+static LPCSTR szFuncBase[2] = { "BASS_", "BASS_WASAPI_" };
+static LPCSTR szDllNameA[2] = { "bass.dll", "basswasapi.dll" };
 typedef struct IMPORT_FUNC_TABLE {
 	LPCSTR lpszFuncName;
 	FARPROC * ppFunc;
@@ -88,21 +110,13 @@ static const IMPORT_FUNC_TABLE functbl0[] = {
 	{ 0, (FARPROC *)0 }
 };
 static const IMPORT_FUNC_TABLE functbl1[] = {
-	{ "ChannelEnable", (FARPROC *)&BASS_ASIO_ChannelEnable },
-	{ "ChannelIsActive", (FARPROC *)&BASS_ASIO_ChannelIsActive },
-	{ "ChannelJoin", (FARPROC *)&BASS_ASIO_ChannelJoin },
-	{ "ChannelPause", (FARPROC *)&BASS_ASIO_ChannelPause },
-	{ "ChannelReset", (FARPROC *)&BASS_ASIO_ChannelReset },
-	{ "ChannelSetFormat", (FARPROC *)&BASS_ASIO_ChannelSetFormat },
-	{ "ChannelSetRate", (FARPROC *)&BASS_ASIO_ChannelSetRate },
-	{ "ChannelSetVolume", (FARPROC *)&BASS_ASIO_ChannelSetVolume },
-	{ "ControlPanel", (FARPROC *)&BASS_ASIO_ControlPanel },
-	{ "Free", (FARPROC *)&BASS_ASIO_Free },
-	{ "GetDeviceInfo", (FARPROC *)&BASS_ASIO_GetDeviceInfo },
-	{ "Init", (FARPROC *)&BASS_ASIO_Init },
-	{ "SetRate", (FARPROC *)&BASS_ASIO_SetRate },
-	{ "Start", (FARPROC *)&BASS_ASIO_Start },
-	{ "Stop", (FARPROC *)&BASS_ASIO_Stop },
+	{ "GetDeviceInfo", (FARPROC *)&BASS_WASAPI_GetDeviceInfo },
+	{ "Init", (FARPROC *)&BASS_WASAPI_Init },
+	{ "Free", (FARPROC *)&BASS_WASAPI_Free },
+	{ "Start", (FARPROC *)&BASS_WASAPI_Start },
+	{ "Stop", (FARPROC *)&BASS_WASAPI_Stop },
+	{ "IsStarted", (FARPROC *)&BASS_WASAPI_IsStarted },
+	{ "SetVolume", (FARPROC *)&BASS_WASAPI_SetVolume },
 	{ 0, (FARPROC *)0 }
 };
 static const LPCIMPORT_FUNC_TABLE functbl[2] = { functbl0, functbl1 };
@@ -116,7 +130,7 @@ static int m_nDevice = 0;
 
 static int m_nChShift = 0;
 
-#define OUTPUT_PLUGIN_ID_BASE (0x30000)
+#define OUTPUT_PLUGIN_ID_BASE (0x40000)
 
 static int CALLBACK GetDeviceCount(void);
 static DWORD CALLBACK GetDefaultDeviceID(void);
@@ -160,10 +174,9 @@ static OUTPUT_PLUGIN_INFO opinfo = {
 
 static void LoadConfig(void){
 	WASetIniFile(NULL, "Fittle.ini");
-	m_nChShift = WAGetIniInt("BASSASIO", "ChannelShift", 0);
 }
 
-static BOOL LoadBASSASIO(void){
+static BOOL LoadBASSWASAPI(void){
 	int i;
 	HMODULE h[2];
 	for (i = 0; i < 2; i++){
@@ -205,7 +218,7 @@ extern "C"
 #endif
 OUTPUT_PLUGIN_INFO * CALLBACK GetOPluginInfo(void){
 	WAIsUnicode();
-	return LoadBASSASIO() ? &opinfo : 0;
+	return LoadBASSWASAPI() ? &opinfo : 0;
 }
 
 
@@ -219,30 +232,65 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 }
 
 static int CALLBACK GetDeviceCount(void){
-	int i = 0;
-	BASS_ASIO_DEVICEINFO info;
-	while (BASS_ASIO_GetDeviceInfo(i, &info)) i++;
-	return i > 0xFFF ? 0xFFF : i;
+	int c = 0;
+	BASS_WASAPI_DEVICEINFO info;
+	for (int i = 0; BASS_WASAPI_GetDeviceInfo(i, &info); i++){
+		if (!(info.flags & BASS_DEVICE_INPUT))
+		{
+			c += 2;
+		}
+	}
+	return c > 0xFFF ? 0xFFF : c;
 }
 static DWORD CALLBACK GetDefaultDeviceID(void){
+	int c = 0;
+	BASS_WASAPI_DEVICEINFO info;
+	for (int i = 0; BASS_WASAPI_GetDeviceInfo(i, &info); i++){
+		if (!(info.flags & BASS_DEVICE_INPUT))
+		{
+			if ((info.flags & BASS_DEVICE_DEFAULT) && i <= 0xFFF)
+			{
+				return OUTPUT_PLUGIN_ID_BASE + (i & 0xFFF);
+			}
+			c += 2;
+		}
+	}
 	return OUTPUT_PLUGIN_ID_BASE + 0;
 }
 static DWORD CALLBACK GetDeviceID(int nIndex){
-	return OUTPUT_PLUGIN_ID_BASE + (nIndex & 0xFFF);
+	int c = 0;
+	BASS_WASAPI_DEVICEINFO info;
+	for (int i = 0; BASS_WASAPI_GetDeviceInfo(i, &info); i++){
+		if (!(info.flags & BASS_DEVICE_INPUT))
+		{
+			if ((nIndex & 0xFFE) == c)
+			{
+				if (nIndex & 1)
+					return OUTPUT_PLUGIN_ID_BASE + (i & 0xFFF) + 0x8000;
+				else
+					return OUTPUT_PLUGIN_ID_BASE + (i & 0xFFF);
+			}
+			c += 2;
+		}
+	}
+	return OUTPUT_PLUGIN_ID_BASE + 0;
 }
 static BOOL CALLBACK GetDeviceNameA(DWORD dwID, LPSTR szBuf, int nBufSize){
 	if ((dwID & 0xF0000) == OUTPUT_PLUGIN_ID_BASE) {
-		BASS_ASIO_DEVICEINFO info;
-		if (BASS_ASIO_GetDeviceInfo(dwID & 0xFFF, &info)) {
-			lstrcpynA(szBuf, "ASIO(F) : ", nBufSize);
-			if (nBufSize > 10) lstrcpynA(szBuf + 10, info.name, nBufSize - 10);
+		BASS_WASAPI_DEVICEINFO info;
+		if (BASS_WASAPI_GetDeviceInfo(dwID & 0xFFF, &info)) {
+			if (dwID & 0x8000)
+				lstrcpynA(szBuf, "WASAPI(E) : ", nBufSize);
+			else
+				lstrcpynA(szBuf, "WASAPI(S) : ", nBufSize);
+			if (nBufSize > 12) lstrcpynA(szBuf + 12, info.name, nBufSize - 12);
 			return TRUE;
 		}
 	}
 	return FALSE;
 }
 static int CALLBACK Init(DWORD dwID){
-	m_nDevice = dwID & 0xFFF;
+	m_nDevice = dwID & 0x8FFF;
 	return 0;
 }
 
@@ -250,7 +298,7 @@ static void CALLBACK Term(void){
 }
 
 static BOOL CALLBACK Setup(HWND hWnd){
-	return BASS_ASIO_ControlPanel();
+	return FALSE;
 }
 
 
@@ -265,18 +313,11 @@ static int m_nPause = 0;
 static float m_sVolume = 1; 
 
 static int CALLBACK GetStatus(void){
-	if (m_nChanOut >= 0) {
-		int nActive = BASS_ASIO_ChannelIsActive(FALSE, m_nChanOut);
-		switch (nActive) {
-		case BASS_ASIO_ACTIVE_PAUSED:
-			return OUTPUT_PLUGIN_STATUS_PAUSE;
-		case BASS_ASIO_ACTIVE_ENABLED:
-			return OUTPUT_PLUGIN_STATUS_PLAY;
-		case BASS_ASIO_ACTIVE_DISABLED:
-			break;
-		}
-	}
 	if (m_nPause) return OUTPUT_PLUGIN_STATUS_PAUSE;
+	if (BASS_WASAPI_IsStarted())
+	{
+		return OUTPUT_PLUGIN_STATUS_PLAY;
+	}
 	return OUTPUT_PLUGIN_STATUS_STOP;
 }
 
@@ -290,7 +331,7 @@ static void CheckStartDecodeStream(DWORD hChan) {
 	}
 }
 
-static DWORD CALLBACK AsioProc(BOOL input, DWORD channel, void *buffer, DWORD length, void *user)
+static DWORD CALLBACK WasapiProc(void *buffer, DWORD length, void *user)
 {
 	DWORD r = 0;
 	BASS_CHANNELINFO bci;
@@ -309,20 +350,22 @@ static DWORD CALLBACK AsioProc(BOOL input, DWORD channel, void *buffer, DWORD le
 	return r;
 }
 
+static BOOL WASAPI_Init(int freq, int ch){
+	if ((m_nDevice & 0x8000) && BASS_WASAPI_Init(m_nDevice & 0xFFF, freq, ch, BASS_WASAPI_EXCLUSIVE, 0, 0, WasapiProc, 0)) {
+		return TRUE;
+	}
+	if (BASS_WASAPI_Init(m_nDevice & 0xFFF, freq, ch, BASS_WASAPI_SESSIONVOL, 0, 0, WasapiProc, 0)) {
+		return TRUE;
+	}
+	return FALSE;
+}
+
 static void CALLBACK Start(void *pchinfo, float sVolume, BOOL fFloat){
 	BASS_CHANNELINFO *info = (BASS_CHANNELINFO *)pchinfo;
 	End();
 
-	if (BASS_ASIO_Init(m_nDevice, 0)) {
-		int i;
-		int ch = m_nChShift;
-		BASS_ASIO_ChannelEnable(FALSE, ch, &AsioProc, (void*)NULL);
-		for (i = 1; i< info->chans ; i++)
-			BASS_ASIO_ChannelJoin(FALSE, ch + i, ch);
-		BASS_ASIO_ChannelSetFormat(FALSE, ch, BASS_ASIO_FORMAT_FLOAT);
-		BASS_ASIO_SetRate(info->freq);
-		BASS_ASIO_ChannelSetRate(FALSE, ch, info->freq);
-		m_nChanOut = ch;
+	if (WASAPI_Init(info->freq, info->chans)) {
+		m_nChanOut = 0;
 		m_nChanNum = info->chans;
 		m_nChanFreq = info->freq;
 		if (m_nChanOut){
@@ -338,8 +381,8 @@ static void CALLBACK End(void){
 	if (m_nChanOut >= 0) {
 		SendMessage(opinfo.hWnd, WM_F4B24_IPC, WM_F4B24_HOOK_FREE_ASIO_STREAM, (LPARAM)m_nChanOut);
 		SendMessage(opinfo.hWnd, WM_F4B24_IPC, WM_F4B24_HOOK_FREE_STREAM, (LPARAM)0);
-		BASS_ASIO_Stop();
-		BASS_ASIO_Free();
+		BASS_WASAPI_Stop(FALSE);
+		BASS_WASAPI_Free();
 		m_nChanOut = -1;
 	}
 }
@@ -347,20 +390,15 @@ static void CALLBACK End(void){
 
 static void CALLBACK Play(void){
 	if (m_nChanOut >= 0) {
-		BASS_ASIO_Start(0);
+		SetVolume(m_sVolume);
+		BASS_WASAPI_Start();
+		SetVolume(m_sVolume);
 	} else if (m_nPause) {
-		if (BASS_ASIO_Init(m_nDevice, 0)) {
-			int i;
-			int ch = m_nChShift;
-			BASS_ASIO_ChannelEnable(FALSE, ch, &AsioProc, (void*)NULL);
-			for (i = 1; i< m_nChanNum ; i++)
-				BASS_ASIO_ChannelJoin(FALSE, ch + i, ch);
-			BASS_ASIO_ChannelSetFormat(FALSE, ch, BASS_ASIO_FORMAT_FLOAT);
-			BASS_ASIO_SetRate(m_nChanFreq);
-			BASS_ASIO_ChannelSetRate(FALSE, ch, m_nChanFreq);
-			m_nChanOut = ch;
+		if (WASAPI_Init(m_nChanFreq, m_nChanNum)) {
+			m_nChanOut = 0;
 			SetVolume(m_sVolume);
-			BASS_ASIO_Start(0);
+			BASS_WASAPI_Start();
+			SetVolume(m_sVolume);
 		}
 	}
 	m_nPause = 0;
@@ -371,8 +409,8 @@ static void CALLBACK Pause(void){
 		if (GetStatus() == OUTPUT_PLUGIN_STATUS_PLAY)
 		{
 			m_nPause = 1; 
-			BASS_ASIO_Stop();
-			BASS_ASIO_Free();
+			BASS_WASAPI_Stop(FALSE);
+			BASS_WASAPI_Free();
 			m_nChanOut = -1;
 		}
 		//BASS_ASIO_ChannelPause(FALSE, m_nChanOut);
@@ -381,16 +419,14 @@ static void CALLBACK Pause(void){
 
 static void CALLBACK Stop(void){
 	if (m_nChanOut >= 0) {
-		BASS_ASIO_Stop();
+		BASS_WASAPI_Stop(FALSE);
 	}
 	m_nPause = 0;
 }
 
 static void SetVolumeRaw(float sVolume){
 	if (m_nChanOut >= 0) {
-		int i;
-		for (i = 0; i < m_nChanNum; i++)
-			BASS_ASIO_ChannelSetVolume(FALSE, m_nChanOut + i, sVolume);
+		BASS_WASAPI_SetVolume(TRUE, sVolume);
 	}
 }
 
