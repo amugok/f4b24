@@ -28,6 +28,10 @@
 
 #define BASSDEF(f) (WINAPI * f)
 #define BASS_DATA_FLOAT		0x40000000
+#define BASS_ATTRIB_FREQ	1
+#define BASS_ATTRIB_VOL		2
+#define BASS_SAMPLE_FLOAT	256
+#define BASS_STREAM_DECODE	0x200000
 
 typedef struct {
 	DWORD freq;
@@ -42,6 +46,9 @@ typedef struct {
 
 DWORD BASSDEF(BASS_ChannelGetData)(DWORD handle, void *buffer, DWORD length);
 DWORD BASSDEF(BASS_ChannelIsActive)(DWORD handle);
+BOOL BASSDEF(BASS_ChannelGetInfo)(DWORD handle, BASS_CHANNELINFO *info);
+BOOL BASSDEF(BASS_ChannelSetAttribute)(DWORD handle, DWORD attrib, float value);
+BOOL BASSDEF(BASS_StreamFree)(DWORD handle);
 
 #define BASSWASAPIDEF(f) (WINAPI * f)
 
@@ -88,6 +95,7 @@ typedef struct {
 
 typedef DWORD (CALLBACK WASAPIPROC)(void *buffer, DWORD length, void *user);
 
+BOOL BASSWASAPIDEF(BASS_WASAPI_GetInfo)(BASS_WASAPI_INFO *info);
 BOOL BASSWASAPIDEF(BASS_WASAPI_GetDeviceInfo)(DWORD device, BASS_WASAPI_DEVICEINFO *info);
 BOOL BASSWASAPIDEF(BASS_WASAPI_Init)(int device, DWORD freq, DWORD chans, DWORD flags, float buffer, float period, WASAPIPROC *proc, void *user);
 BOOL BASSWASAPIDEF(BASS_WASAPI_Free)();
@@ -96,9 +104,23 @@ BOOL BASSWASAPIDEF(BASS_WASAPI_Stop)(BOOL reset);
 BOOL BASSWASAPIDEF(BASS_WASAPI_IsStarted)();
 BOOL BASSWASAPIDEF(BASS_WASAPI_SetVolume)(BOOL linear, float volume);
 
+#define BASSMIXDEF(f) (WINAPI * f)
+#define BASS_MIXER_ENV_VOL 2
 
-static LPCSTR szFuncBase[2] = { "BASS_", "BASS_WASAPI_" };
-static LPCSTR szDllNameA[2] = { "bass.dll", "basswasapi.dll" };
+typedef struct {
+	DWORD posl;
+	DWORD posh;
+	float value;
+	DWORD pad1;
+} BASS_MIXER_NODE;
+
+DWORD BASSMIXDEF(BASS_Mixer_StreamCreate)(DWORD freq, DWORD chans, DWORD flags);
+BOOL BASSMIXDEF(BASS_Mixer_StreamAddChannel)(DWORD handle, DWORD channel, DWORD flags);
+BOOL BASSMIXDEF(BASS_Mixer_ChannelRemove)(DWORD handle);
+/* BOOL BASSMIXDEF(BASS_Mixer_ChannelSetEnvelope)(DWORD handle, DWORD type, const BASS_MIXER_NODE *nodes, DWORD count); */
+
+static LPCSTR szFuncBase[3] = { "BASS_", "BASS_WASAPI_", "BASS_Mixer_" };
+static LPCSTR szDllNameA[3] = { "bass.dll", "basswasapi.dll", "bassmix.dll" };
 typedef struct IMPORT_FUNC_TABLE {
 	LPCSTR lpszFuncName;
 	FARPROC * ppFunc;
@@ -107,9 +129,13 @@ typedef const IMPORT_FUNC_TABLE *LPCIMPORT_FUNC_TABLE;
 static const IMPORT_FUNC_TABLE functbl0[] = {
 	{ "ChannelGetData", (FARPROC *)&BASS_ChannelGetData },
 	{ "ChannelIsActive", (FARPROC *)&BASS_ChannelIsActive },
+	{ "ChannelGetInfo", (FARPROC *)&BASS_ChannelGetInfo },
+	{ "ChannelSetAttribute", (FARPROC *)&BASS_ChannelSetAttribute },
+	{ "StreamFree", (FARPROC *)&BASS_StreamFree },
 	{ 0, (FARPROC *)0 }
 };
 static const IMPORT_FUNC_TABLE functbl1[] = {
+	{ "GetInfo", (FARPROC *)&BASS_WASAPI_GetInfo },
 	{ "GetDeviceInfo", (FARPROC *)&BASS_WASAPI_GetDeviceInfo },
 	{ "Init", (FARPROC *)&BASS_WASAPI_Init },
 	{ "Free", (FARPROC *)&BASS_WASAPI_Free },
@@ -119,7 +145,14 @@ static const IMPORT_FUNC_TABLE functbl1[] = {
 	{ "SetVolume", (FARPROC *)&BASS_WASAPI_SetVolume },
 	{ 0, (FARPROC *)0 }
 };
-static const LPCIMPORT_FUNC_TABLE functbl[2] = { functbl0, functbl1 };
+static const IMPORT_FUNC_TABLE functbl2[] = {
+	{ "StreamCreate", (FARPROC *)&BASS_Mixer_StreamCreate },
+	{ "StreamAddChannel", (FARPROC *)&BASS_Mixer_StreamAddChannel },
+	{ "ChannelRemove", (FARPROC *)&BASS_Mixer_ChannelRemove },
+/*	{ "ChannelSetEnvelope", (FARPROC *)&BASS_Mixer_ChannelSetEnvelope },*/
+	{ 0, (FARPROC *)0 }
+};
+static const LPCIMPORT_FUNC_TABLE functbl[3] = { functbl0, functbl1, functbl2 };
 
 
 static HMODULE m_hDLL = 0;
@@ -176,10 +209,23 @@ static void LoadConfig(void){
 	WASetIniFile(NULL, "Fittle.ini");
 }
 
+static HMODULE m_hBassModule[3] = { 0 };
+
+static void FreeBASSWASAPI(void){
+	int i;
+	for (i = 2; i >= 0; i--) {
+		if (m_hBassModule[i]) {
+			FreeLibrary(m_hBassModule[i]);
+			m_hBassModule[i] = 0;
+		}
+	}
+}
+
 static BOOL LoadBASSWASAPI(void){
 	int i;
-	HMODULE h[2];
-	for (i = 0; i < 2; i++){
+	if (m_hBassModule[0]) return TRUE;
+
+	for (i = 0; i <= 2; i++) {
 		LPCIMPORT_FUNC_TABLE pft;
 		CHAR funcname[32];
 		WASTR szPath;
@@ -188,10 +234,12 @@ static BOOL LoadBASSWASAPI(void){
 		WAGetModuleParentDir(NULL, &szPath);
 		WAstrcatA(&szPath, "Plugins\\BASS\\");
 		WAstrcatA(&szPath, szDllNameA[i]);
-		h[i] = WALoadLibrary(&szPath);
-		if(!h[i])
-		{
-			if (i > 0) FreeLibrary(h[0]);
+		m_hBassModule[i] = WALoadLibrary(&szPath);
+		if(!m_hBassModule[i]) {
+			/* bassmix.dll‚ÍƒIƒvƒVƒ‡ƒ“ */
+			if (i == 2) {
+				continue;
+			}
 			return FALSE;
 		}
 
@@ -200,15 +248,14 @@ static BOOL LoadBASSWASAPI(void){
 
 		for (pft = functbl[i]; pft->lpszFuncName; pft++){
 			lstrcpynA(funcname + l, pft->lpszFuncName, 32 - l);
-			FARPROC fp = GetProcAddress(h[i], funcname);
+			FARPROC fp = GetProcAddress(m_hBassModule[i], funcname);
 			if (!fp){
-				if (i > 0) FreeLibrary(h[1]);
-				FreeLibrary(h[0]);
 				return FALSE;
 			}
 			*pft->ppFunc = fp;
 		}
 	}
+
 	LoadConfig();
 	return TRUE;
 }
@@ -218,7 +265,11 @@ extern "C"
 #endif
 OUTPUT_PLUGIN_INFO * CALLBACK GetOPluginInfo(void){
 	WAIsUnicode();
-	return LoadBASSWASAPI() ? &opinfo : 0;
+	if (LoadBASSWASAPI()) {
+		return &opinfo;
+	}
+	FreeBASSWASAPI();
+	return 0;
 }
 
 
@@ -235,9 +286,12 @@ static int CALLBACK GetDeviceCount(void){
 	int c = 0;
 	BASS_WASAPI_DEVICEINFO info;
 	for (int i = 0; BASS_WASAPI_GetDeviceInfo(i, &info); i++){
-		if (!(info.flags & BASS_DEVICE_INPUT))
-		{
-			c += 2;
+		if (!(info.flags & BASS_DEVICE_INPUT)){
+			if  (m_hBassModule[2]) {
+				c += 4;
+			} else {
+				c += 2;
+			}
 		}
 	}
 	return c > 0xFFF ? 0xFFF : c;
@@ -246,13 +300,10 @@ static DWORD CALLBACK GetDefaultDeviceID(void){
 	int c = 0;
 	BASS_WASAPI_DEVICEINFO info;
 	for (int i = 0; BASS_WASAPI_GetDeviceInfo(i, &info); i++){
-		if (!(info.flags & BASS_DEVICE_INPUT))
-		{
-			if ((info.flags & BASS_DEVICE_DEFAULT) && i <= 0xFFF)
-			{
+		if (!(info.flags & BASS_DEVICE_INPUT)){
+			if ((info.flags & BASS_DEVICE_DEFAULT) && i <= 0xFFF){
 				return OUTPUT_PLUGIN_ID_BASE + (i & 0xFFF);
 			}
-			c += 2;
 		}
 	}
 	return OUTPUT_PLUGIN_ID_BASE + 0;
@@ -261,16 +312,18 @@ static DWORD CALLBACK GetDeviceID(int nIndex){
 	int c = 0;
 	BASS_WASAPI_DEVICEINFO info;
 	for (int i = 0; BASS_WASAPI_GetDeviceInfo(i, &info); i++){
-		if (!(info.flags & BASS_DEVICE_INPUT))
-		{
-			if ((nIndex & 0xFFE) == c)
-			{
-				if (nIndex & 1)
-					return OUTPUT_PLUGIN_ID_BASE + (i & 0xFFF) + 0x8000;
-				else
-					return OUTPUT_PLUGIN_ID_BASE + (i & 0xFFF);
+		if (!(info.flags & BASS_DEVICE_INPUT)){
+			if  (m_hBassModule[2]) {
+				if ((nIndex & 0xFFC) == c) {
+					return OUTPUT_PLUGIN_ID_BASE + (i & 0xFFF) + ((nIndex & 1) << (15)) + ((nIndex & 2) << (14 - 1));
+				}
+				c += 4;
+			} else {
+				if ((nIndex & 0xFFE) == c) {
+					return OUTPUT_PLUGIN_ID_BASE + (i & 0xFFF) + ((nIndex & 1) << (15));
+				}
+				c += 2;
 			}
-			c += 2;
 		}
 	}
 	return OUTPUT_PLUGIN_ID_BASE + 0;
@@ -279,18 +332,26 @@ static BOOL CALLBACK GetDeviceNameA(DWORD dwID, LPSTR szBuf, int nBufSize){
 	if ((dwID & 0xF0000) == OUTPUT_PLUGIN_ID_BASE) {
 		BASS_WASAPI_DEVICEINFO info;
 		if (BASS_WASAPI_GetDeviceInfo(dwID & 0xFFF, &info)) {
-			if (dwID & 0x8000)
-				lstrcpynA(szBuf, "WASAPI(E) : ", nBufSize);
-			else
-				lstrcpynA(szBuf, "WASAPI(S) : ", nBufSize);
-			if (nBufSize > 12) lstrcpynA(szBuf + 12, info.name, nBufSize - 12);
+			if (dwID & 0x4000){
+				if (dwID & 0x8000)
+					lstrcpynA(szBuf, "WASAPI+MIX(E) : ", nBufSize);
+				else
+					lstrcpynA(szBuf, "WASAPI+MIX(S) : ", nBufSize);
+				if (nBufSize > 16) lstrcpynA(szBuf + 16, info.name, nBufSize - 16);
+			} else {
+				if (dwID & 0x8000)
+					lstrcpynA(szBuf, "WASAPI(E) : ", nBufSize);
+				else
+					lstrcpynA(szBuf, "WASAPI(S) : ", nBufSize);
+				if (nBufSize > 12) lstrcpynA(szBuf + 12, info.name, nBufSize - 12);
+			}
 			return TRUE;
 		}
 	}
 	return FALSE;
 }
 static int CALLBACK Init(DWORD dwID){
-	m_nDevice = dwID & 0x8FFF;
+	m_nDevice = dwID & 0xFFFF;
 	return 0;
 }
 
@@ -310,7 +371,11 @@ static int m_nChanOut = -1;
 static int m_nChanNum = 0;
 static int m_nChanFreq = 44100;
 static int m_nPause = 0;
-static float m_sVolume = 1; 
+static float m_sVolume = 1;
+
+static DWORD m_dwMixer = 0;
+static DWORD m_dwDecoder = 0;
+
 
 static int CALLBACK GetStatus(void){
 	if (m_nPause) return OUTPUT_PLUGIN_STATUS_PAUSE;
@@ -325,7 +390,34 @@ static void CheckStartDecodeStream(DWORD hChan) {
 	static DWORD hOldChan = 0;
 	static DWORD dwResult;
 	if (hOldChan != hChan) {
+		if (m_nDevice & 0x4000) {
+			BASS_WASAPI_INFO bwi;
+			BASS_CHANNELINFO bci;
+			if (BASS_WASAPI_GetInfo(&bwi) && BASS_ChannelGetInfo(hChan, &bci)) {
+				if (m_dwDecoder) {
+					BASS_Mixer_ChannelRemove(m_dwDecoder);
+					m_dwDecoder = 0;
+				}
+				if ((bwi.freq != bci.freq) || (bwi.chans != bci.chans)) {
+					if (m_dwMixer) {
+						BASS_StreamFree(m_dwMixer);
+						m_dwMixer = 0;
+					}
+				}
+				if (!m_dwMixer) {
+					m_dwMixer = BASS_Mixer_StreamCreate(bwi.freq, bwi.chans, BASS_SAMPLE_FLOAT | BASS_STREAM_DECODE);
+				}
+				if (m_dwMixer) {
+					BASS_Mixer_StreamAddChannel(m_dwMixer, hChan, 0);
+					m_dwDecoder = hChan;
+					SetVolume(m_sVolume);
+				}
+			}
+		} else {
+			m_dwDecoder = hChan;
+		}
 		hOldChan = hChan;
+
 //		SendMessage(opinfo.hWnd, WM_F4B24_IPC, WM_F4B24_HOOK_START_DECODE_STREAM, (LPARAM)hChan);
 		SendMessageTimeout(opinfo.hWnd, WM_F4B24_IPC, WM_F4B24_HOOK_START_DECODE_STREAM, (LPARAM)hChan, SMTO_ABORTIFHUNG, 100, &dwResult);
 	}
@@ -334,12 +426,11 @@ static void CheckStartDecodeStream(DWORD hChan) {
 static DWORD CALLBACK WasapiProc(void *buffer, DWORD length, void *user)
 {
 	DWORD r = 0;
-	BASS_CHANNELINFO bci;
 	float sAmp;
 	DWORD hChan = opinfo.GetDecodeChannel(&sAmp);
 	if (BASS_ChannelIsActive(hChan)){
 		CheckStartDecodeStream(hChan);
-		r = BASS_ChannelGetData(hChan, buffer, length | BASS_DATA_FLOAT);
+		r = BASS_ChannelGetData(m_dwMixer ? m_dwMixer : hChan, buffer, length | BASS_DATA_FLOAT);
 		if (r == (DWORD)-1) r = 0;
 		if(opinfo.IsEndCue() || !BASS_ChannelIsActive(hChan)){
 			opinfo.PlayNext(opinfo.hWnd);
@@ -352,12 +443,16 @@ static DWORD CALLBACK WasapiProc(void *buffer, DWORD length, void *user)
 
 static BOOL WASAPI_Init(int freq, int ch){
 	if ((m_nDevice & 0x8000) && BASS_WASAPI_Init(m_nDevice & 0xFFF, freq, ch, BASS_WASAPI_EXCLUSIVE, 0, 0, WasapiProc, 0)) {
-		return TRUE;
+	} else if ((m_nDevice & 0x8000) && BASS_WASAPI_Init(m_nDevice & 0xFFF, freq, ch, BASS_WASAPI_AUTOFORMAT | BASS_WASAPI_EXCLUSIVE, 0, 0, WasapiProc, 0)) {
+	} else if (BASS_WASAPI_Init(m_nDevice & 0xFFF, freq, ch, BASS_WASAPI_SESSIONVOL, 0, 0, WasapiProc, 0)) {
+	} else if (BASS_WASAPI_Init(m_nDevice & 0xFFF, freq, ch, BASS_WASAPI_AUTOFORMAT | BASS_WASAPI_SESSIONVOL, 0, 0, WasapiProc, 0)) {
+	} else {
+		return FALSE;
 	}
-	if (BASS_WASAPI_Init(m_nDevice & 0xFFF, freq, ch, BASS_WASAPI_SESSIONVOL, 0, 0, WasapiProc, 0)) {
-		return TRUE;
-	}
-	return FALSE;
+	m_nChanOut = 0;
+	m_nChanFreq = freq;
+	m_nChanNum = ch;
+	return TRUE;
 }
 
 static void CALLBACK Start(void *pchinfo, float sVolume, BOOL fFloat){
@@ -365,9 +460,6 @@ static void CALLBACK Start(void *pchinfo, float sVolume, BOOL fFloat){
 	End();
 
 	if (WASAPI_Init(info->freq, info->chans)) {
-		m_nChanOut = 0;
-		m_nChanNum = info->chans;
-		m_nChanFreq = info->freq;
 		if (m_nChanOut){
 			SendMessage(opinfo.hWnd, WM_F4B24_IPC, WM_F4B24_HOOK_CREATE_STREAM, (LPARAM)0);
 			SendMessage(opinfo.hWnd, WM_F4B24_IPC, WM_F4B24_HOOK_CREATE_ASIO_STREAM, (LPARAM)m_nChanOut);
@@ -377,29 +469,46 @@ static void CALLBACK Start(void *pchinfo, float sVolume, BOOL fFloat){
 	}
 }
 
+static void DeviceStop(void){
+	if (m_nChanOut >= 0) {
+		BASS_WASAPI_Stop(FALSE);
+		if (m_nDevice & 0x4000) {
+			if (m_dwDecoder) {
+				BASS_Mixer_ChannelRemove(m_dwDecoder);
+				m_dwDecoder = 0;
+			}
+			if (m_dwMixer) {
+				BASS_StreamFree(m_dwMixer);
+				m_dwMixer = 0;
+			}
+		} else {
+			m_dwDecoder = 0;
+		}
+		BASS_WASAPI_Free();
+		m_nChanOut = -1;
+	}
+}
+
 static void CALLBACK End(void){
 	if (m_nChanOut >= 0) {
 		SendMessage(opinfo.hWnd, WM_F4B24_IPC, WM_F4B24_HOOK_FREE_ASIO_STREAM, (LPARAM)m_nChanOut);
 		SendMessage(opinfo.hWnd, WM_F4B24_IPC, WM_F4B24_HOOK_FREE_STREAM, (LPARAM)0);
-		BASS_WASAPI_Stop(FALSE);
-		BASS_WASAPI_Free();
-		m_nChanOut = -1;
+		DeviceStop();
 	}
 }
 
 
 static void CALLBACK Play(void){
 	if (m_nChanOut >= 0) {
-		SetVolume(m_sVolume);
 		BASS_WASAPI_Start();
-		SetVolume(m_sVolume);
+/*
 	} else if (m_nPause) {
 		if (WASAPI_Init(m_nChanFreq, m_nChanNum)) {
-			m_nChanOut = 0;
 			SetVolume(m_sVolume);
 			BASS_WASAPI_Start();
 			SetVolume(m_sVolume);
 		}
+*/
 	}
 	m_nPause = 0;
 }
@@ -408,12 +517,9 @@ static void CALLBACK Pause(void){
 	if (m_nChanOut >= 0) {
 		if (GetStatus() == OUTPUT_PLUGIN_STATUS_PLAY)
 		{
-			m_nPause = 1; 
-			BASS_WASAPI_Stop(FALSE);
-			BASS_WASAPI_Free();
-			m_nChanOut = -1;
+			m_nPause = 1;
+			BASS_WASAPI_Stop(TRUE);
 		}
-		//BASS_ASIO_ChannelPause(FALSE, m_nChanOut);
 	}
 }
 
@@ -426,7 +532,17 @@ static void CALLBACK Stop(void){
 
 static void SetVolumeRaw(float sVolume){
 	if (m_nChanOut >= 0) {
-		BASS_WASAPI_SetVolume(TRUE, sVolume);
+		if (m_nDevice & 0x4000) {
+			if (m_dwDecoder) {
+				BASS_ChannelSetAttribute(m_dwDecoder, BASS_ATTRIB_VOL, sVolume);
+			}
+		} else if (m_nDevice & 0x8000) {
+			if (m_dwDecoder) {
+				BASS_ChannelSetAttribute(m_dwDecoder, BASS_ATTRIB_VOL, sVolume);
+			}
+		} else {
+			BASS_WASAPI_SetVolume(TRUE, sVolume);
+		}
 	}
 }
 

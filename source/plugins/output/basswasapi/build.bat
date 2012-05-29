@@ -51,7 +51,7 @@ goto exitcmd
 
 set PREFIX=..\..\..\..\bin\Plugins\fop\
 set CFLAGS=/Gy /Ox /Os /MD
-set VER_STR=1205250_
+set VER_STR=1205290_
 
 call %0 basswasapi fop
 
