@@ -45,11 +45,11 @@
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
 #define F4B24_IF_VERSION 39
-#define F4B24_VERSION 46
+#define F4B24_VERSION 47
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test46u")
+#define F4B24_VERSION_STRING TEXT("test47u")
 #else
-#define F4B24_VERSION_STRING TEXT("test46")
+#define F4B24_VERSION_STRING TEXT("test47")
 #endif
 #ifndef _DEBUG
 #define FITTLE_TITLE TEXT("Fittle - f4b24 ") F4B24_VERSION_STRING
@@ -213,6 +213,9 @@ void TabSetListFocus(int nIndex){
 }
 int TabGetListCount(){
 	return TabCtrl_GetItemCount(m_hTab);
+}
+int TabGetRowCount(){
+	return TabCtrl_GetRowCount(m_hTab);
 }
 
 static int TabHitTest(LONG lp, int flag){
@@ -3905,15 +3908,15 @@ static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
 	{
 		case WM_LBUTTONDOWN:
 			s_nDragTab = TabHitTest(lp, TCHT_NOWHERE);
-			if(s_nDragTab>0){
+			if(s_nDragTab>0 && (TabGetRowCount() < 2 || TabGetListSel() == s_nDragTab)){
 				SetCapture(hTC);
 			}
 			break;
 
 		case WM_LBUTTONUP:
+			s_nDragTab = -1;
 			if(GetCapture()==hTC){
 				ReleaseCapture();
-				s_nDragTab = -1;
 			}
 			break;
 

@@ -34,5 +34,5 @@ goto skipsetup
 
 :skipsetup
 
-..\buildutil\perb /v "1103310A"  fittle.exe
+..\buildutil\perb /v "1207050A"  fittle.exe
 editbin /release fittle.exe

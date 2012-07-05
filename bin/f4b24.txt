@@ -1,7 +1,7 @@
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test46
+              for BASS 2.4 test47
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
@@ -102,6 +102,8 @@ Pluginsフォルダ
 追加した専用出力プラグイン
 	bass.fop        bass.dllによる音声出力 要test28以降 標準で同梱
 	bassasio.fop    bassasio.dllによる音声出力 要test28以降 要bassasio.dll
+	bassasiof.fop   bassasio.dllによる音声出力 要test28以降 要bassasio.dll 一時停止時にデバイス開放
+	basswasapi.fop  basswasapi.dllによる音声出力 要test28以降 要basswasapi.dll mix選択時にbassmix.dllがあれば使う
 
 廃止した専用プラグイン
 	addurl.dll      -> addurl.fgp
@@ -117,6 +119,10 @@ Pluginsフォルダ
 	wadsp.dll       -> wadsp.fgp
 
 実験履歴
+
+	test47/test47u
+		多段タブ表示設定時にタブを選択すると表示順だけでなく実際の順序まで入れ替わってしまう場合があった問題に対処
+		副作用で多段タブ表示時は選択済みのタブしか移動できない
 
 	(test46/)test46u
 		test44uの修正がtest45uに適切に反映されなかった問題に対処
