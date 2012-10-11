@@ -45,11 +45,11 @@
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
 #define F4B24_IF_VERSION 39
-#define F4B24_VERSION 47
+#define F4B24_VERSION 48
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test47u")
+#define F4B24_VERSION_STRING TEXT("test48u")
 #else
-#define F4B24_VERSION_STRING TEXT("test47")
+#define F4B24_VERSION_STRING TEXT("test48")
 #endif
 #ifndef _DEBUG
 #define FITTLE_TITLE TEXT("Fittle - f4b24 ") F4B24_VERSION_STRING
@@ -572,6 +572,19 @@ static void SetFolder(LPCTSTR lpszFolderPath){
 	}
 }
 
+static int WAGetIniIntFmt(LPCSTR pSec, LPCSTR pKeyFormat, int nKeyParam, int nDefault)
+{
+	CHAR szKey[10];
+	wsprintfA(szKey, pKeyFormat, nKeyParam);
+	return WAGetIniInt(pSec, szKey, nDefault);
+}
+static void WASetIniIntFmt(LPCSTR pSec, LPCSTR pKeyFormat, int nKeyParam, int iValue)
+{
+	CHAR szKey[10];
+	wsprintfA(szKey, pKeyFormat, nKeyParam);
+	WASetIniInt(pSec, szKey, iValue);
+}
+
 static void OnCreate(HWND hWnd){
 	int nDevice;
 	MENUITEMINFO mii;
@@ -758,13 +771,9 @@ static void OnCreate(HWND hWnd){
 	rbbi.cyMinChild = 22;
 	rbbi.fStyle = RBBS_CHILDEDGE | RBBS_GRIPPERALWAYS;
 	for(i=0;i<BAND_COUNT;i++){
-		CHAR szSec[10];
-		wsprintfA(szSec, "cx%d", i);
-		rbbi.cx = WAGetIniInt("Rebar2", szSec, 0);
-		wsprintfA(szSec, "wID%d", i);
-		rbbi.wID = WAGetIniInt("Rebar2", szSec, i);
-		wsprintfA(szSec, "fStyle%d", i);
-		rbbi.fStyle = WAGetIniInt("Rebar2", szSec, (RBBS_CHILDEDGE | RBBS_GRIPPERALWAYS)); //RBBS_BREAK
+		rbbi.cx = WAGetIniIntFmt("Rebar2", "cx%d", i, 0);
+		rbbi.wID = WAGetIniIntFmt("Rebar2", "wID%d", i, i);
+		rbbi.fStyle = WAGetIniIntFmt("Rebar2", "fStyle%d", i, (RBBS_CHILDEDGE | RBBS_GRIPPERALWAYS)); //RBBS_BREAK
 		
 		switch(rbbi.wID){
 			case 0:	// ツールバー
@@ -2373,7 +2382,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 // 再生時間をステータスバーに表示
 static void StatusBarDisplayTime(){
-	TCHAR buf[16];
+	TCHAR buf[64]; // 9 + 1 + 9 + 3 + 9 + 1 + 9 + 1
 	QWORD qPos = TrackGetPos();
 	QWORD qLen = g_cInfo[g_bNow].qDuration;
 	int nPos = (int)TrackPosToSec(qPos);
@@ -2487,7 +2496,6 @@ static void PopupPlayModeMenu(HWND hWnd, NMTOOLBAR *lpnmtb){
 // グローバルな設定を読み込む
 static void LoadConfig(){
 	int i;
-	CHAR szSec[10];
 
 	// コントロールカラー
 	g_cfg.nBkColor = WAGetIniInt("Color", "BkColor", (int)GetSysColor(COLOR_WINDOW));
@@ -2554,14 +2562,12 @@ static void LoadConfig(){
 
 	// ホットキーの設定
 	for(i=0;i<HOTKEY_COUNT;i++){
-		wsprintfA(szSec, "HotKey%d", i);
-		g_cfg.nHotKey[i] = WAGetIniInt("HotKey", szSec, 0);
+		g_cfg.nHotKey[i] = WAGetIniIntFmt("HotKey", "HotKey%d", i, 0);
 	}
 
 	// クリック時の動作
 	for(i=0;i<6;i++){
-		wsprintfA(szSec, "Click%d", i);
-		g_cfg.nTrayClick[i] = WAGetIniInt("TaskTray", szSec, "\x6\x0\x8\x0\x5\x0"[i]); //ホットキー
+		g_cfg.nTrayClick[i] = WAGetIniIntFmt("TaskTray", "Click%d", i, "\x6\x0\x8\x0\x5\x0"[i]); //ホットキー
 	}
 
 	// フォント設定読み込み
@@ -2615,7 +2621,6 @@ static void SaveState(HWND hWnd){
 	WASTR lastpath;
 	WINDOWPLACEMENT wpl;
 	REBARBANDINFO rbbi;
-	CHAR szSec[10];
 
 	wpl.length = sizeof(WINDOWPLACEMENT);
 
@@ -2649,8 +2654,7 @@ static void SaveState(HWND hWnd){
 	for(i=0;i<GetColumnNum();i++){
 		int t = GetColumnType(i);
 		if (t >= 0 && t < 4){
-			wsprintfA(szSec, "Width%d", t);
-			WASetIniInt("Column", szSec, ListView_GetColumnWidth(GetSelListTab()->hList, i));
+			WASetIniIntFmt("Column", "Width%d", t, ListView_GetColumnWidth(GetSelListTab()->hList, i));
 		}
 	}
 	WASetIniInt("Column", "Sort", GetSelListTab()->nSortState);
@@ -2660,12 +2664,9 @@ static void SaveState(HWND hWnd){
 	rbbi.fMask = RBBIM_STYLE | RBBIM_SIZE | RBBIM_ID;
 	for(i=0;i<BAND_COUNT;i++){
 		SendMessage(GetDlgItem(hWnd, ID_REBAR), RB_GETBANDINFO, i, (WPARAM)&rbbi);
-		wsprintfA(szSec, "fStyle%d", i);
-		WASetIniInt("Rebar2", szSec, rbbi.fStyle);
-		wsprintfA(szSec, "cx%d", i);
-		WASetIniInt("Rebar2", szSec, rbbi.cx);
-		wsprintfA(szSec, "wID%d", i);
-		WASetIniInt("Rebar2", szSec, rbbi.wID);
+		WASetIniIntFmt("Rebar2", "fStyle%d", i, rbbi.fStyle);
+		WASetIniIntFmt("Rebar2", "cx%d", i, rbbi.cx);
+		WASetIniIntFmt("Rebar2", "wID%d", i, rbbi.wID);
 	}
 
 	WAFlushIni();
@@ -3739,7 +3740,7 @@ static LRESULT CALLBACK NewSliderProc(HWND hSB, UINT msg, WPARAM wp, LPARAM lp){
 			float fLen;
 			RECT rcSB, rcTool, rcThumb;
 			POINT pt;
-			TCHAR szDrawBuff[10];
+			TCHAR szDrawBuff[32];
 
 			//シーク中かつ領域内だったら
 			if(GetCapture()==m_hSeek || GetCapture()==m_hVolume){
