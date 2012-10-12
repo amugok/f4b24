@@ -1,7 +1,7 @@
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test48
+              for BASS 2.4 test49
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
@@ -93,6 +93,7 @@ Pluginsフォルダ
 	lplugin.fgp     リストカラム拡張 要test36以降
 	minipaneu.fgp   ミニパネル Unicode対応 要test29以降 Win9x/Me非対応
 	replaygain.fgp  ReplayGain Ansi/Unicode両対応 要test29以降
+	treetool.fgp    フォルダツリーの右クリックメニューから外部ツールを起動 Ansi/Unicode両対応 要test49以降
 	wadsp.fgp       WinampDSPプラグイン対応 Ansi/Unicode両対応 要test32以降 要bass_wadsp.dll
 
 追加したリストカラム拡張プラグイン (要lplugin.fgp)
@@ -119,6 +120,9 @@ Pluginsフォルダ
 	wadsp.dll       -> wadsp.fgp
 
 実験履歴
+
+	test49/test49u
+		treetool.fgp用機能追加
 
 	test48/test48u
 		長時間働かせようとするとストライキを起こしていた問題に対処

@@ -123,6 +123,7 @@
 #define IDM_TAB_SORT                    40176
 #define IDM_TAB_NOEXIST                 40177
 #define IDM_LIST_TOOL                   40178
+#define IDM_TREE_TOOL                   40179
 
 // Next default values for new objects
 // 

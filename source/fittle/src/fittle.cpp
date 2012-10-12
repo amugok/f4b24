@@ -45,11 +45,11 @@
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
 #define F4B24_IF_VERSION 39
-#define F4B24_VERSION 48
+#define F4B24_VERSION 49
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test48u")
+#define F4B24_VERSION_STRING TEXT("test49u")
 #else
-#define F4B24_VERSION_STRING TEXT("test48")
+#define F4B24_VERSION_STRING TEXT("test49")
 #endif
 #ifndef _DEBUG
 #define FITTLE_TITLE TEXT("Fittle - f4b24 ") F4B24_VERSION_STRING
@@ -1001,6 +1001,26 @@ static void OnCreate(HWND hWnd){
 	TIMECHECK("ウインドウ作成終了")
 }
 
+// 外部ツールの実行
+static void ToolExecute(HWND hWnd, LPTSTR pszFilePathes, BOOL bMulti, BOOL bTool)
+{
+	LPWASTR pExePath = bTool ? &g_cfg.szToolPath : &g_cfg.szFilerPath;
+	TCHAR szToolPath[MAX_FITTLE_PATH];
+	if(!WAstrlen(pExePath)){
+		if (bTool){
+			SendF4b24Message(WM_F4B24_IPC_SETTING, WM_F4B24_IPC_SETTING_LP_PATH);
+			return;
+		}
+		lstrcpy(szToolPath, TEXT("explorer.exe"));
+	}else{
+		WAstrcpyt(szToolPath, pExePath, MAX_FITTLE_PATH);
+		if (szToolPath[0] != TEXT('\"')){
+			PathQuoteSpaces(szToolPath);
+		}
+	}
+	MyShellExecute(hWnd, szToolPath, pszFilePathes, bMulti);
+}
+
 // ウィンドウプロシージャ
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 	static int s_nHitTab = -1;				// タブのヒットアイテム
@@ -1008,7 +1028,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 	static BOOL s_bReviewAllow = TRUE;		// ツリーのセル変化で検索を許可するか
 
 	int i;
-	TCHAR szLastPath[MAX_FITTLE_PATH];
 	TCHAR szLabel[MAX_FITTLE_PATH];
 	RECT rcTab;
 
@@ -1590,16 +1609,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						struct LISTTAB *pCurList = GetSelListTab();
 						int nLBIndex = LV_GetNextSelect(pCurList->hList, -1);
 						if(nLBIndex!=-1){
-							if(WAstrlen(&g_cfg.szToolPath)!=0){
-								LPTSTR pszFiles = MallocAndConcatPath(pCurList);
-								if (pszFiles) {
-									WAstrcpyt(szLastPath, &g_cfg.szToolPath, MAX_FITTLE_PATH);
-									PathQuoteSpaces(szLastPath);
-									MyShellExecute(hWnd, szLastPath, pszFiles, TRUE);
-									HFree(pszFiles);
-								}
-							}else{
-								SendF4b24Message(WM_F4B24_IPC_SETTING, WM_F4B24_IPC_SETTING_LP_PATH);
+							LPTSTR pszFiles = MallocAndConcatPath(pCurList);
+							if (pszFiles) {
+								ToolExecute(hWnd, pszFiles, TRUE, TRUE);
+								HFree(pszFiles);
 							}
 						}
 					}
@@ -1685,6 +1698,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 				case IDM_EXPLORE:
 				case IDM_TREE_EXPLORE:
+				case IDM_TREE_TOOL:
 					// パスの取得
 					if(LOWORD(wp)==IDM_EXPLORE){
 						lstrcpyn(szNowDir, m_szTreePath, MAX_FITTLE_PATH);
@@ -1694,9 +1708,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					GetFolderPart(szNowDir);
 
 					// エクスプローラに投げる処理
-					WAstrcpyt(szLastPath, &g_cfg.szFilerPath, MAX_FITTLE_PATH);
-					PathQuoteSpaces(szLastPath);
-					MyShellExecute(hWnd, (szLastPath[0]?szLastPath:TEXT("explorer.exe")), szNowDir, FALSE);
+					ToolExecute(hWnd, szNowDir, FALSE, LOWORD(wp)==IDM_TREE_TOOL);
 					m_hHitTree = NULL;
 					break;
 
