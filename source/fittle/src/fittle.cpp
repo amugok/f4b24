@@ -116,7 +116,7 @@ static BOOL SetUIFont(void);
 static BOOL SetUIColor(void);
 static void SetStatusbarIcon(LPTSTR, BOOL);
 static LPTSTR MallocAndConcatPath(LISTTAB *);
-static void MyShellExecute(HWND, LPTSTR, LPTSTR, BOOL);
+static void MyShellExecute(HWND, LPTSTR, LPTSTR);
 static void InitFileTypes();
 
 // 演奏制御関係
@@ -286,6 +286,10 @@ static LRESULT SendFittleMessage(UINT uMsg, WPARAM wp, LPARAM lp){
 
 LRESULT SendF4b24Message(WPARAM wp, LPARAM lp){
 	return SendFittleMessage(WM_F4B24_IPC, wp, lp);
+}
+
+static void PostF4b24Message(WPARAM wp, LPARAM lp){
+	PostMessage(m_hMainWnd, WM_F4B24_IPC, wp, lp);
 }
 
 static LRESULT SendFittleCommand(int nCmd){
@@ -981,7 +985,7 @@ static void OnCreate(HWND hWnd){
 				SelectListItem(pCurList, szLastPath);
 				PostFittleCommand(IDM_PLAY);
 				// ポジションも復元
-				PostMessage(hWnd, WM_F4B24_IPC, WM_F4B24_INTERNAL_RESTORE_POSITION, 0);
+				PostF4b24Message(WM_F4B24_INTERNAL_RESTORE_POSITION, 0);
 			}
 		}else if (g_cfg.nSelLastPlayed) {
 			WAstrcpyt(szLastPath, &g_cfg.szLastFile, MAX_FITTLE_PATH);
@@ -1002,8 +1006,7 @@ static void OnCreate(HWND hWnd){
 }
 
 // 外部ツールの実行
-static void ToolExecute(HWND hWnd, LPTSTR pszFilePathes, BOOL bMulti, BOOL bTool)
-{
+static void ToolExecute(HWND hWnd, LPTSTR pszFilePathes, BOOL bTool){
 	LPWASTR pExePath = bTool ? &g_cfg.szToolPath : &g_cfg.szFilerPath;
 	TCHAR szToolPath[MAX_FITTLE_PATH];
 	if(!WAstrlen(pExePath)){
@@ -1018,7 +1021,7 @@ static void ToolExecute(HWND hWnd, LPTSTR pszFilePathes, BOOL bMulti, BOOL bTool
 			PathQuoteSpaces(szToolPath);
 		}
 	}
-	MyShellExecute(hWnd, szToolPath, pszFilePathes, bMulti);
+	MyShellExecute(hWnd, szToolPath, pszFilePathes);
 }
 
 // ウィンドウプロシージャ
@@ -1256,7 +1259,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 			break;
 
 		case WM_COMMAND:
-			TCHAR szNowDir[MAX_FITTLE_PATH];
+			TCHAR szNowDir[MAX_FITTLE_PATH + 2];
 			switch(LOWORD(wp))
 			{
 				case IDM_REVIEW: //最新の情報に更新
@@ -1611,7 +1614,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						if(nLBIndex!=-1){
 							LPTSTR pszFiles = MallocAndConcatPath(pCurList);
 							if (pszFiles) {
-								ToolExecute(hWnd, pszFiles, TRUE, TRUE);
+								ToolExecute(hWnd, pszFiles, TRUE);
 								HFree(pszFiles);
 							}
 						}
@@ -1700,15 +1703,30 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				case IDM_TREE_EXPLORE:
 				case IDM_TREE_TOOL:
 					// パスの取得
+#if 1
+					// step バグ対策 無条件quote
+					if(LOWORD(wp)==IDM_EXPLORE){
+						lstrcpyn(szNowDir + 1, m_szTreePath, MAX_FITTLE_PATH);
+					}else{
+						GetPathFromNode(m_hTree, m_hHitTree, szNowDir + 1);
+					}
+					GetFolderPart(szNowDir + 1);
+					szNowDir[0] = '\"';
+					i = lstrlen(szNowDir);
+					szNowDir[i] = '\"';
+					szNowDir[i + 1] = 0;
+#else
 					if(LOWORD(wp)==IDM_EXPLORE){
 						lstrcpyn(szNowDir, m_szTreePath, MAX_FITTLE_PATH);
 					}else{
 						GetPathFromNode(m_hTree, m_hHitTree, szNowDir);
 					}
 					GetFolderPart(szNowDir);
+					PathQuoteSpaces(szNowDir);
+#endif
 
 					// エクスプローラに投げる処理
-					ToolExecute(hWnd, szNowDir, FALSE, LOWORD(wp)==IDM_TREE_TOOL);
+					ToolExecute(hWnd, szNowDir, LOWORD(wp)==IDM_TREE_TOOL);
 					m_hHitTree = NULL;
 					break;
 
@@ -2952,7 +2970,7 @@ static BOOL PlayByUser(HWND hWnd, struct FILEINFO *pPlayFile){
 // user:1 cue再生時にトラックの再生終了時間で発生するイベント 次の曲へ
 static void CALLBACK EventSync(DWORD /*handle*/, DWORD /*channel*/, DWORD /*data*/, void *user){
 	if(user==0){
-		PostMessage(m_hMainWnd, WM_F4B24_IPC, WM_F4B24_INTERNAL_PREPARE_NEXT_MUSIC, 0);
+		PostF4b24Message(WM_F4B24_INTERNAL_PREPARE_NEXT_MUSIC, 0);
 	}else{
 		m_bCueEnd = TRUE;
 	}
@@ -3526,24 +3544,18 @@ BOOL CheckFileType(LPTSTR szFilePath){
 }
 
 // コマンドラインオプションを考慮したExecute
-static void MyShellExecute(HWND hWnd, LPTSTR pszExePath, LPTSTR pszFilePathes, BOOL bMulti){
+static void MyShellExecute(HWND hWnd, LPTSTR pszExePath, LPTSTR pszFilePathes){
 	LPTSTR pszArgs = PathGetArgs(pszExePath);
 
 	int nSize = lstrlen(pszArgs) + lstrlen(pszFilePathes) + 5;
 
 	LPTSTR pszBuff = (LPTSTR)HZAlloc(sizeof(TCHAR) * nSize);
 
-	if(!bMulti){
-		PathQuoteSpaces(pszFilePathes);
-	}
 	if(*pszArgs){	// コマンドラインオプションを考慮
 		*(pszArgs-1) = TEXT('\0');
 		wsprintf(pszBuff, TEXT("%s %s"), pszArgs, pszFilePathes);
 	}else{
 		wsprintf(pszBuff, TEXT("%s"), pszFilePathes);
-	}
-	if(!bMulti){
-		PathUnquoteSpaces(pszFilePathes);
 	}
 	ShellExecute(hWnd, TEXT("open"), pszExePath, pszBuff, NULL, SW_SHOWNORMAL);
 	if(*pszArgs){	// 戻そう
