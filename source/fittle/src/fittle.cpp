@@ -3550,6 +3550,7 @@ static void MyShellExecute(HWND hWnd, LPTSTR pszExePath, LPTSTR pszFilePathes){
 	int nSize = lstrlen(pszArgs) + lstrlen(pszFilePathes) + 5;
 
 	LPTSTR pszBuff = (LPTSTR)HZAlloc(sizeof(TCHAR) * nSize);
+	if (!pszBuff) return;
 
 	if(*pszArgs){	// コマンドラインオプションを考慮
 		*(pszArgs-1) = TEXT('\0');
@@ -3558,9 +3559,6 @@ static void MyShellExecute(HWND hWnd, LPTSTR pszExePath, LPTSTR pszFilePathes){
 		wsprintf(pszBuff, TEXT("%s"), pszFilePathes);
 	}
 	ShellExecute(hWnd, TEXT("open"), pszExePath, pszBuff, NULL, SW_SHOWNORMAL);
-	if(*pszArgs){	// 戻そう
-		*(pszArgs-1) = TEXT(' ');
-	}
 
 	HFree(pszBuff);
 	return;
@@ -3569,8 +3567,9 @@ static void MyShellExecute(HWND hWnd, LPTSTR pszExePath, LPTSTR pszFilePathes){
 // リストで選択されたアイテムのパスを連結して返す。どこかでFreeしてください。
 static LPTSTR MallocAndConcatPath(LISTTAB *pListTab){
 	DWORD s = sizeof(TCHAR) * 2;
-	LPTSTR pszRet = (LPTSTR)HZAlloc(s);
 	LPTSTR pszNew;
+	LPTSTR pszRet = (LPTSTR)HZAlloc(s);
+	if (!pszRet) return pszRet;
 
 	int i = -1;
 	while( (i = LV_GetNextSelect(pListTab->hList, i)) != -1 ){
