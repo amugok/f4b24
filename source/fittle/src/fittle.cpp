@@ -288,10 +288,6 @@ LRESULT SendF4b24Message(WPARAM wp, LPARAM lp){
 	return SendFittleMessage(WM_F4B24_IPC, wp, lp);
 }
 
-static void PostF4b24Message(WPARAM wp, LPARAM lp){
-	PostMessage(m_hMainWnd, WM_F4B24_IPC, wp, lp);
-}
-
 static LRESULT SendFittleCommand(int nCmd){
 	return SendFittleMessage(WM_COMMAND, MAKEWPARAM(nCmd, 0), 0);
 }
@@ -985,7 +981,7 @@ static void OnCreate(HWND hWnd){
 				SelectListItem(pCurList, szLastPath);
 				PostFittleCommand(IDM_PLAY);
 				// ポジションも復元
-				PostF4b24Message(WM_F4B24_INTERNAL_RESTORE_POSITION, 0);
+				PostMessage(m_hMainWnd, WM_F4B24_IPC, WM_F4B24_INTERNAL_RESTORE_POSITION, 0);
 			}
 		}else if (g_cfg.nSelLastPlayed) {
 			WAstrcpyt(szLastPath, &g_cfg.szLastFile, MAX_FITTLE_PATH);
@@ -2970,7 +2966,7 @@ static BOOL PlayByUser(HWND hWnd, struct FILEINFO *pPlayFile){
 // user:1 cue再生時にトラックの再生終了時間で発生するイベント 次の曲へ
 static void CALLBACK EventSync(DWORD /*handle*/, DWORD /*channel*/, DWORD /*data*/, void *user){
 	if(user==0){
-		PostF4b24Message(WM_F4B24_INTERNAL_PREPARE_NEXT_MUSIC, 0);
+		PostMessage(m_hMainWnd, WM_F4B24_IPC, WM_F4B24_INTERNAL_PREPARE_NEXT_MUSIC, 0);
 	}else{
 		m_bCueEnd = TRUE;
 	}
