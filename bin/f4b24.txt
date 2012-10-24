@@ -1,7 +1,7 @@
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
               Fittle Ver.2.2.2 Preview 3
-              for BASS 2.4 test49
+              for BASS 2.4 test50
 
 □□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 
@@ -84,6 +84,7 @@ Pluginsフォルダ
 	lplugin.fcp     lplugin.fgp 設定
 	minipane.fcp    minipane.dll/minipaneu.fgp 設定
 	output.fcp      bass.fop bassasio.fop replaygain.fgp cue.fap cueu.fap 設定
+	treetool.fcp    treetool.fgp Ansi/Unicode両対応 要test50以降
 	wadsp.fcp       wadsp.fgp 設定
 
 追加した専用一般プラグイン
@@ -120,6 +121,9 @@ Pluginsフォルダ
 	wadsp.dll       -> wadsp.fgp
 
 実験履歴
+
+	test50/test50u
+		treetool.fcp用機能追加
 
 	test49/test49u
 		treetool.fgp用機能追加

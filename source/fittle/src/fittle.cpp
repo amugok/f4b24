@@ -45,11 +45,11 @@
 // ソフト名（バージョンアップ時に忘れずに更新）
 #define FITTLE_VERSION TEXT("Fittle Ver.2.2.2 Preview 3")
 #define F4B24_IF_VERSION 39
-#define F4B24_VERSION 49
+#define F4B24_VERSION 50
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test49u")
+#define F4B24_VERSION_STRING TEXT("test50u")
 #else
-#define F4B24_VERSION_STRING TEXT("test49")
+#define F4B24_VERSION_STRING TEXT("test50")
 #endif
 #ifndef _DEBUG
 #define FITTLE_TITLE TEXT("Fittle - f4b24 ") F4B24_VERSION_STRING
@@ -255,6 +255,12 @@ static int GetVolumeBar() {
 	return SendMessage(m_hVolume, TBM_GETPOS, 0, 0);
 }
 
+static void SetVolumeBar(int nVol){
+	SendMessage(m_hVolume, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)nVol);
+}
+
+/* ツリー関係 */
+
 static void TreeSelect(HTREEITEM hNode) {
 	TreeView_Select(m_hTree, hNode, TVGN_CARET);
 }
@@ -276,10 +282,12 @@ static void TreeSetColor(){
 	TreeView_SetTextColor(m_hTree, g_cfg.nTextColor);
 }
 
-static void SetVolumeBar(int nVol){
-	SendMessage(m_hVolume, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)nVol);
+/* メインメニュー関係 */
+static void CheckMainMenuItem(int nIndex, int nFlag){
+	CheckMenuItem(m_hMainMenu, nIndex, nFlag);
 }
 
+/* メッセージ関係 */
 static LRESULT SendFittleMessage(UINT uMsg, WPARAM wp, LPARAM lp){
 	return SendMessage(m_hMainWnd, uMsg, wp, lp);
 }
@@ -295,6 +303,7 @@ static LRESULT SendFittleCommand(int nCmd){
 static void PostFittleCommand(int nCmd){
 	PostMessage(m_hMainWnd, WM_COMMAND, MAKEWPARAM(nCmd, 0), 0);
 }
+
 
 #ifndef _DEBUG
 /*  既に実行中のFittleにパラメータを送信する */
@@ -795,7 +804,7 @@ static void OnCreate(HWND hWnd){
 
 		// 非表示時の処理
 		if(!(rbbi.fStyle & RBBS_HIDDEN)){
-			CheckMenuItem(GetMenu(hWnd), IDM_SHOWMAIN+i, MF_BYCOMMAND | MF_CHECKED);
+			CheckMainMenuItem(IDM_SHOWMAIN+i, MF_BYCOMMAND | MF_CHECKED);
 		}else{
 			if(rbbi.wID==0)	ShowWindow(m_hToolBar, SW_HIDE);	// ツールバーが表示されてしまうバグ対策
 		}
@@ -805,11 +814,11 @@ static void OnCreate(HWND hWnd){
 
 	// メニューチェック
 	if(rbbi.fStyle & RBBS_NOGRIPPER){
-		CheckMenuItem(GetMenu(hWnd), IDM_FIXBAR, MF_BYCOMMAND | MF_CHECKED);
+		CheckMainMenuItem(IDM_FIXBAR, MF_BYCOMMAND | MF_CHECKED);
 	}
 
 	if(g_cfg.nTreeState==TREE_SHOW){
-		CheckMenuItem(GetMenu(hWnd), IDM_TOGGLETREE, MF_BYCOMMAND | MF_CHECKED);
+		CheckMainMenuItem(IDM_TOGGLETREE, MF_BYCOMMAND | MF_CHECKED);
 	}
 
 	TIMECHECK("メニュー状態復元")
@@ -1002,11 +1011,21 @@ static void OnCreate(HWND hWnd){
 }
 
 // 外部ツールの実行
-static void ToolExecute(HWND hWnd, LPTSTR pszFilePathes, BOOL bTool){
-	LPWASTR pExePath = bTool ? &g_cfg.szToolPath : &g_cfg.szFilerPath;
+static void ToolExecute(HWND hWnd, LPTSTR pszFilePathes, int nCmd){
+
+	bool bFiler = (nCmd != IDM_TREE_TOOL && nCmd != IDM_LIST_TOOL);
+	LPWASTR pExePath =
+		bFiler
+		? &g_cfg.szFilerPath
+		: (
+			(nCmd == IDM_TREE_TOOL && WAstrlen(&g_cfg.szTreeToolPath))
+			? &g_cfg.szTreeToolPath
+			: &g_cfg.szToolPath
+		);
+
 	TCHAR szToolPath[MAX_FITTLE_PATH];
 	if(!WAstrlen(pExePath)){
-		if (bTool){
+		if (!bFiler){
 			SendF4b24Message(WM_F4B24_IPC_SETTING, WM_F4B24_IPC_SETTING_LP_PATH);
 			return;
 		}
@@ -1463,7 +1482,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 
 				case IDM_SHOWSTATUS:
 					g_cfg.nShowStatus = g_cfg.nShowStatus?0:1;	// 反転
-					CheckMenuItem(m_hMainMenu, LOWORD(wp), g_cfg.nShowStatus?MF_CHECKED:MF_UNCHECKED);
+					CheckMainMenuItem(LOWORD(wp), g_cfg.nShowStatus?MF_CHECKED:MF_UNCHECKED);
 					ShowWindow(m_hStatus, g_cfg.nShowStatus?SW_SHOW:SW_HIDE);
 					UpdateWindowSize(hWnd);
 					break;
@@ -1479,10 +1498,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						SendMessage(m_hRebar, RB_GETBANDINFO, (WPARAM)SendMessage(m_hRebar, RB_IDTOINDEX, (WPARAM)(LOWORD(wp)-IDM_SHOWMAIN), 0), (LPARAM)&rbbi);
 						if(rbbi.fStyle & RBBS_HIDDEN){
 							rbbi.fStyle &= ~RBBS_HIDDEN;
-							CheckMenuItem(m_hMainMenu, LOWORD(wp), MF_CHECKED);
+							CheckMainMenuItem(LOWORD(wp), MF_CHECKED);
 						}else{
 							rbbi.fStyle |= RBBS_HIDDEN;
-							CheckMenuItem(m_hMainMenu, LOWORD(wp), MF_UNCHECKED);
+							CheckMainMenuItem(LOWORD(wp), MF_UNCHECKED);
 						}
 						SendMessage(m_hRebar, RB_SETBANDINFO, (WPARAM)SendMessage(m_hRebar, RB_IDTOINDEX, (WPARAM)(LOWORD(wp)-IDM_SHOWMAIN), 0), (LPARAM)&rbbi);
 					}
@@ -1508,7 +1527,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 							}
 							SendMessage(m_hRebar, RB_SETBANDINFO, i, (LPARAM)&rbbi);
 						}
-						CheckMenuItem(m_hMainMenu, IDM_FIXBAR, MF_BYCOMMAND | (rbbi.fStyle & RBBS_NOGRIPPER)?MF_CHECKED:MF_UNCHECKED);
+						CheckMainMenuItem(IDM_FIXBAR, MF_BYCOMMAND | (rbbi.fStyle & RBBS_NOGRIPPER)?MF_CHECKED:MF_UNCHECKED);
 					}
 					break;
 
@@ -1519,12 +1538,12 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 							s_bReviewAllow = FALSE;
 							MakeTreeFromPath(m_hTree, m_hCombo, m_szTreePath);
 							s_bReviewAllow = TRUE;
-							CheckMenuItem(m_hMainMenu, IDM_TOGGLETREE, MF_BYCOMMAND | MF_CHECKED);
+							CheckMainMenuItem(IDM_TOGGLETREE, MF_BYCOMMAND | MF_CHECKED);
 							g_cfg.nTreeState = TREE_SHOW;
 							break;
 
 						case TREE_SHOW:
-							CheckMenuItem(m_hMainMenu, IDM_TOGGLETREE, MF_BYCOMMAND | MF_UNCHECKED);
+							CheckMainMenuItem(IDM_TOGGLETREE, MF_BYCOMMAND | MF_UNCHECKED);
 							g_cfg.nTreeState = TREE_HIDE;
 							SetFocus(GetSelListTab()->hList);
 							break;
@@ -1610,7 +1629,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 						if(nLBIndex!=-1){
 							LPTSTR pszFiles = MallocAndConcatPath(pCurList);
 							if (pszFiles) {
-								ToolExecute(hWnd, pszFiles, TRUE);
+								ToolExecute(hWnd, pszFiles, IDM_LIST_TOOL);
 								HFree(pszFiles);
 							}
 						}
@@ -1708,9 +1727,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					}
 					GetFolderPart(szNowDir + 1);
 					szNowDir[0] = '\"';
-					i = lstrlen(szNowDir);
-					szNowDir[i] = '\"';
-					szNowDir[i + 1] = 0;
+					lstrcat(szNowDir, TEXT("\""));
 #else
 					if(LOWORD(wp)==IDM_EXPLORE){
 						lstrcpyn(szNowDir, m_szTreePath, MAX_FITTLE_PATH);
@@ -1722,7 +1739,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 #endif
 
 					// エクスプローラに投げる処理
-					ToolExecute(hWnd, szNowDir, LOWORD(wp)==IDM_TREE_TOOL);
+					ToolExecute(hWnd, szNowDir, LOWORD(wp));
 					m_hHitTree = NULL;
 					break;
 
@@ -2603,7 +2620,7 @@ static void LoadConfig(){
 
 	// 外部ツール
 	WAGetIniStr("Tool", "Path0", &g_cfg.szToolPath);
-
+	WAGetIniStr("Tool", "PathT", &g_cfg.szTreeToolPath);
 
 	// 音声出力デバイス
 	g_cfg.nOutputDevice = WAGetIniInt("Main", "OutputDevice", 0);

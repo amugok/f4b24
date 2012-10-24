@@ -153,7 +153,7 @@ struct CONFIG{
 	int nFontHeight;			// フォントの高さ
 	int nFontStyle;				// フォントのスタイル
 
-	WASTR szToolPath;
+	WASTR szToolPath;			// 外部ツールパス(リスト)
 
 	int nListSort;				// リストビューのソート方法
 
@@ -168,6 +168,8 @@ struct CONFIG{
 	int nMiniPanelEnd;
 
 	WASTR szLastFile;
+
+	WASTR szTreeToolPath;		// 外部ツールパス(ツリー)
 };
 
 extern struct CONFIG g_cfg;
