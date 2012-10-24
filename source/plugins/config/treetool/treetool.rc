@@ -1,0 +1,110 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "treetool.rh"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#if defined(_MSC_VER) && (_MSC_VER < 1400)
+# include <winres.h>
+#else
+# include <WinResrc.h>
+#endif
+#ifndef IDC_STATIC
+# define IDC_STATIC -1
+#endif
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// 日本語 resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_JPN)
+#ifdef _WIN32
+LANGUAGE LANG_JAPANESE, SUBLANG_DEFAULT
+#pragma code_page(932)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE MOVEABLE PURE 
+BEGIN
+    "treetool.rh\0"
+END
+
+2 TEXTINCLUDE MOVEABLE PURE 
+BEGIN
+    "#if defined(_MSC_VER) && (_MSC_VER < 1400)\r\n"
+    "# include <winres.h>\r\n"
+    "#else\r\n"
+    "# include <WinResrc.h>\r\n"
+    "#endif\r\n"
+    "#ifndef IDC_STATIC\r\n"
+    "# define IDC_STATIC -1\r\n"
+    "#endif\0"
+END
+
+3 TEXTINCLUDE MOVEABLE PURE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO MOVEABLE PURE 
+BEGIN
+    "TREETOOL_SHEET", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 200
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 218
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+TREETOOL_SHEET DIALOG DISCARDABLE  0, 0, 207, 225
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "treetool"
+FONT 9, "MS UI Gothic"
+BEGIN
+    GROUPBOX        "フォルダツリー用外部ツールのパス",IDC_STATIC,5,5,198,51
+    EDITTEXT        IDC_EDIT1,13,17,182,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "参照(&Q)...",IDC_BUTTON1,149,35,46,15
+END
+
+#endif    // 日本語 resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
