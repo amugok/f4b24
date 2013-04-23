@@ -58,6 +58,7 @@ typedef struct {
 } BASS_ASIO_DEVICEINFO;
 typedef DWORD (CALLBACK ASIOPROC)(BOOL input, DWORD channel, void *buffer, DWORD length, void *user);
 
+DWORD BASSASIODEF(BASS_ASIO_GetVersion)();
 BOOL BASSASIODEF(BASS_ASIO_ChannelEnable)(BOOL input, DWORD channel, ASIOPROC *proc, void *user);
 DWORD BASSASIODEF(BASS_ASIO_ChannelIsActive)(BOOL input, DWORD channel);
 BOOL BASSASIODEF(BASS_ASIO_ChannelJoin)(BOOL input, DWORD channel, int channel2);
@@ -72,6 +73,7 @@ BOOL BASSASIODEF(BASS_ASIO_GetDeviceInfo)(DWORD device, BASS_ASIO_DEVICEINFO *in
 BOOL BASSASIODEF(BASS_ASIO_Init)(DWORD device, DWORD flags);
 BOOL BASSASIODEF(BASS_ASIO_SetRate)(double rate);
 BOOL BASSASIODEF(BASS_ASIO_Start)(DWORD buflen);
+BOOL BASSASIODEF(BASS_ASIO_Start_13)(DWORD buflen, DWORD threads);
 BOOL BASSASIODEF(BASS_ASIO_Stop)();
 
 
@@ -99,9 +101,11 @@ static const IMPORT_FUNC_TABLE functbl1[] = {
 	{ "ControlPanel", (FARPROC *)&BASS_ASIO_ControlPanel },
 	{ "Free", (FARPROC *)&BASS_ASIO_Free },
 	{ "GetDeviceInfo", (FARPROC *)&BASS_ASIO_GetDeviceInfo },
+	{ "GetVersion", (FARPROC *)&BASS_ASIO_GetVersion },
 	{ "Init", (FARPROC *)&BASS_ASIO_Init },
 	{ "SetRate", (FARPROC *)&BASS_ASIO_SetRate },
 	{ "Start", (FARPROC *)&BASS_ASIO_Start },
+	{ "Start", (FARPROC *)&BASS_ASIO_Start_13 },
 	{ "Stop", (FARPROC *)&BASS_ASIO_Stop },
 	{ 0, (FARPROC *)0 }
 };
@@ -340,6 +344,14 @@ static void CALLBACK End(void){
 	}
 }
 
+static void ASIO_Start()
+{
+	if (BASS_ASIO_GetVersion() >= 0x103) {
+		BASS_ASIO_Start_13(0, 0);
+	} else {
+		BASS_ASIO_Start(0);
+	}
+}
 
 static void CALLBACK Play(void){
 	if (m_nChanOut >= 0) {
@@ -348,7 +360,7 @@ static void CALLBACK Play(void){
 		}
 		else
 		{
-			BASS_ASIO_Start(0);
+			ASIO_Start();
 		}
 	}
 }
