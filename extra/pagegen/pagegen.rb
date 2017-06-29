@@ -111,6 +111,15 @@ print(<<"EOS")
 </div>
 </div>
 
+<a href="http://hp.vector.co.jp/authors/VA039869/">Fittle配布ページ</a>
+<br>
+<a href="http://www9.atwiki.jp/fittle/">Fittle まとめWiki</a>
+<br>
+<a href="https://github.com/amugok/f4b24">GitHub f4b24 project</a>
+<br>
+<a href="https://code.google.com/p/f4b24/">Google Code f4b24 project</A>
+<br>
+
 </div>
 
 </body>
