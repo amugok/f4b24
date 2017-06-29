@@ -61,7 +61,7 @@ static FITTLE_PLUGIN_INFO fpi = {
 static void UnsubclassWindow(void){
 	if (g_state == subclassed){
 		if (IsWindow(g_hTaskWnd)){
-			(g_fDefProcUnicode ? SetWindowLongW : SetWindowLongA)(g_hTaskWnd, GWL_WNDPROC, IsBadCodePtr((FARPROC)g_DefProc) ? (LONG)(g_fDefProcUnicode ? GetClassLongW : GetClassLongA)(g_hTaskWnd, GCL_WNDPROC) : (LONG)g_DefProc);
+			(g_fDefProcUnicode ? SetWindowLongPtrW : SetWindowLongPtrA)(g_hTaskWnd, GWLP_WNDPROC, IsBadCodePtr((FARPROC)g_DefProc) ? (LONG_PTR)(g_fDefProcUnicode ? GetClassLongPtrW : GetClassLongPtrA)(g_hTaskWnd, GCLP_WNDPROC) : (LONG_PTR)g_DefProc);
 		}
 		g_state = uninstalled;
 	}
@@ -93,7 +93,7 @@ static LRESULT CALLBACK SubClassProc(HWND hWnd , UINT msg , WPARAM wp , LPARAM l
 			UnsubclassWindow();
 			return 0;
 	}
-	return (g_fDefProcUnicode ? CallWindowProcW : CallWindowProcA)(IsBadCodePtr((FARPROC)g_DefProc) ? (WNDPROC)(g_fDefProcUnicode ? GetClassLongW : GetClassLongA)(hWnd, GCL_WNDPROC): g_DefProc, hWnd, msg, wp , lp);
+	return (g_fDefProcUnicode ? CallWindowProcW : CallWindowProcA)(IsBadCodePtr((FARPROC)g_DefProc) ? (WNDPROC)(g_fDefProcUnicode ? GetClassLongPtrW : GetClassLongPtrA)(hWnd, GCLP_WNDPROC): g_DefProc, hWnd, msg, wp , lp);
 }
 
 /* フックプロシージャ */
@@ -105,7 +105,7 @@ static LRESULT CALLBACK CallWndProc(int nCode, WPARAM wParam, LPARAM lParam)
 		if(g_state == notinitialized && lpcs->hwnd == g_hTaskWnd){
 			g_state = subclassed;
 			g_fDefProcUnicode = IsWindowUnicode(g_hTaskWnd);
-			g_DefProc = (WNDPROC)(g_fDefProcUnicode ? SetWindowLongW : SetWindowLongA)(g_hTaskWnd, GWL_WNDPROC, (LONG)SubClassProc);
+			g_DefProc = (WNDPROC)(g_fDefProcUnicode ? SetWindowLongPtrW : SetWindowLongPtrA)(g_hTaskWnd, GWLP_WNDPROC, (LONG_PTR)SubClassProc);
 		}
 	}
 	return CallNextHookEx(g_hHook, nCode, wParam, lParam);
@@ -135,7 +135,7 @@ static BOOL OnInit(){
 
 /* 終了時に一度だけ呼ばれます */
 static void OnQuit(){
-	SendMessage(g_hTaskWnd, WM_APP + 5, 0, 0);
+	SendMessageA(g_hTaskWnd, WM_APP + 5, 0, 0);
 	if(g_hHook){
 		UnhookWindowsHookEx(g_hHook);
 		g_hHook = 0;

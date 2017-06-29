@@ -1,7 +1,7 @@
 @echo off
-if not "%MSVCDir%"=="" goto skipsetup
+if not "%DevEnvDir%"=="" goto skipsetup
 
-if exist "%ProgramFiles%\Microsoft Visual Studio\VC98\Bin\VCVARS32.BAT" CALL "%ProgramFiles%\Microsoft Visual Studio\VC98\Bin\VCVARS32.BAT"
+if exist "%VS140COMNTOOLS%..\..\VC\Bin\vcvars32.bat" CALL "%VS140COMNTOOLS%..\..\VC\Bin\vcvars32.bat"
 
 :skipsetup
 
@@ -23,9 +23,10 @@ if exist %1.res del %1.res
 if not exist %1.%2 goto exitcmd
 if "%1.%2" == "perb.exe" goto selfperb
 
-if "%VER_STR%"=="" perb %1.%2
-if not "%VER_STR%"=="" perb /v %VER_STR% %1.%2
+if "%VER_STR%"=="" ..\..\..\..\buildutil\perb %1.%2
+if not "%VER_STR%"=="" ..\..\..\..\buildutil\perb /v %VER_STR% %1.%2
 editbin /release %1.%2
+if not "%PREFIX2%"=="" copy %1.%2 %PREFIX2%%1.%2
 if not "%PREFIX%"=="" move %1.%2 %PREFIX%%1.%2
 
 goto exitcmd
@@ -49,9 +50,10 @@ goto exitcmd
 :buildall
 
 
-set PREFIX=..\..\..\..\bin\Plugins\fgp\
+set PREFIX=..\..\..\..\bin_x86\Plugins\fgp\
+set PREFIX2=..\..\..\..\bin_mbcs\Plugins\fgp\
 set CFLAGS=/GF /Gy /Ox /Os /MD
-set VER_STR=0812190_
+set VER_STR=1706290_
 
 call %0 replaygain fgp
 

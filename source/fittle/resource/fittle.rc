@@ -15,6 +15,12 @@
 #ifndef IDC_STATIC
 # define IDC_STATIC -1
 #endif
+#ifndef RT_MANIFEST
+# define RT_MANIFEST 24
+#endif
+#ifndef CREATEPROCESS_MANIFEST_RESOURCE_ID
+# define CREATEPROCESS_MANIFEST_RESOURCE_ID 1
+#endif
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
 
@@ -48,7 +54,13 @@ BEGIN
     "#ifndef IDC_STATIC\r\n"
     "# define IDC_STATIC -1\r\n"
     "#endif\0"
-END
+    "#ifndef RT_MANIFEST\r\n"
+    "# define RT_MANIFEST 24\r\n"
+    "#endif\0"
+    "#ifndef CREATEPROCESS_MANIFEST_RESOURCE_ID\r\n"
+    "# define CREATEPROCESS_MANIFEST_RESOURCE_ID 1\r\n"
+    "#endif\0"
+    END
 
 3 TEXTINCLUDE MOVEABLE PURE 
 BEGIN
@@ -403,7 +415,11 @@ END
 #endif    // “ú–{Œê resources
 /////////////////////////////////////////////////////////////////////////////
 
-
+#ifdef _WIN64
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "Fittle.exe.x64.manifest"
+#else
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "Fittle.exe.manifest"
+#endif
 
 #ifndef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////

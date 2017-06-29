@@ -10,6 +10,11 @@
 #pragma comment(lib,"user32.lib")
 #pragma comment(lib,"comdlg32.lib")
 #pragma comment(lib,"shlwapi.lib")
+#ifdef _WIN64
+#pragma comment(lib,"..\\..\\..\\..\\extra\\smartvc14\\smartvc14_x64.lib")
+#else
+#pragma comment(lib,"..\\..\\..\\..\\extra\\smartvc14\\smartvc14_x86.lib")
+#endif
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/ENTRY:DllMain")
@@ -265,7 +270,7 @@ static DWORD WINAPI ThreadFunc(LPVOID param)
 /* 起動時に一度だけ呼ばれます */
 BOOL OnInit(){
 	//サブクラス化してメニューに追加
-	g_hOldProc = (WNDPROC)SetWindowLong( fpi.hParent, GWL_WNDPROC, (LONG)WndProcSub );
+	g_hOldProc = (WNDPROC)SetWindowLongPtr( fpi.hParent, GWLP_WNDPROC, (LONG_PTR)WndProcSub );
 	AppendMenu( GetMenu( fpi.hParent ), MF_STRING, IDM_LYRICS, "歌詞の表示" );
 
 	int len = GetModuleFileName( fpi.hDllInst, g_szIniPath, MAX_PATH );

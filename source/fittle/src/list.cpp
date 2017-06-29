@@ -26,7 +26,12 @@ static int CALLBACK LXStrCmp(LPCVOID pStrLeft, LPCVOID pStrRight);
 
 #include "f4b24lx.h"
 
+#if 0
 static F4B24LX_INTERFACE m_lxif = {
+    0,
+    0
+};
+static const F4B24LX_INTERFACE c_lxif = {
 	1,
 	F4B24LX_INTERFACE_VERSION,
 #ifdef UNICODE
@@ -43,6 +48,25 @@ static F4B24LX_INTERFACE m_lxif = {
 	LXStrCmp,
 	0
 };
+#else
+static F4B24LX_INTERFACE m_lxif = {
+    1,
+    F4B24LX_INTERFACE_VERSION,
+#ifdef UNICODE
+    1,
+#else
+    0,
+#endif
+    LXLoadMusic,
+    LXFreeMusic,
+    LXGetTag,
+    LXAddColumn,
+    LXGetFileName,
+    LXCheckPath,
+    LXStrCmp,
+    0
+};
+#endif
 
 static const BYTE m_aDefaultColumns[] = { 0, 1, 2, 3 };
 static int m_nNumColumns = 0;
@@ -728,5 +752,11 @@ void SaveColumnsOrder(HWND hList){
 }
 
 LPVOID GetLXIf(){
+#if 0
+    if (m_lxif.nVersion == 0)
+    {
+        memcpy(&m_lxif, &c_lxif, sizeof(c_lxif));
+    }
+#endif
 	return &m_lxif;
 }

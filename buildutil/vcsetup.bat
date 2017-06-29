@@ -3,6 +3,8 @@
 if not "%VCINSTALLDIR%"=="" goto skipsetup
 if not "%MSVCDir%"=="" goto skipsetup
 
+if exist "%VS140COMNTOOLS%..\..\VC\Bin\vcvars32.bat" goto vc2015setup
+if exist "%VS140COMNTOOLS%vsvars32.bat" goto vs2015setup
 if exist "%VS100COMNTOOLS%..\..\VC\Bin\vcvars32.bat" goto vc2010setup
 if exist "%VS100COMNTOOLS%vsvars32.bat" goto vs2010setup
 if exist "%VS90COMNTOOLS%..\..\VC\Bin\vcvars32.bat" goto vc2008setup
@@ -57,6 +59,16 @@ goto skipsetup
 
 :vs2010setup
 call "%VS100COMNTOOLS%vsvars32.bat"
+set XVCFLAGS=/GL /GS-
+goto skipsetup
+
+:vc2015setup
+call "%VS140COMNTOOLS%..\..\VC\Bin\vcvars32.bat"
+set XVCFLAGS=/GL /GS-
+goto skipsetup
+
+:vs2015setup
+call "%VS140COMNTOOLS%vsvars32.bat"
 set XVCFLAGS=/GL /GS-
 goto skipsetup
 

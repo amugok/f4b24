@@ -65,7 +65,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 static BOOL OnInit(){
 	HWND hSeekbar = GetDlgItem(GetDlgItem(fpi.hParent, ID_REBAR), TD_SEEKBAR);
 	m_bOldProc = IsWindowUnicode(hSeekbar);
-	m_hOldProc = (WNDPROC)(m_bOldProc ? SetWindowLongW : SetWindowLongA)(hSeekbar, GWL_WNDPROC, (LONG)WndProc);
+	m_hOldProc = (WNDPROC)(m_bOldProc ? SetWindowLongPtrW : SetWindowLongPtrA)(hSeekbar, GWLP_WNDPROC, (LONG_PTR)WndProc);
 	return TRUE;
 }
 

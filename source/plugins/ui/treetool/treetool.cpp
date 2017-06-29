@@ -12,7 +12,13 @@
 #pragma comment(lib,"kernel32.lib")
 #pragma comment(lib,"user32.lib")
 #pragma comment(lib,"shlwapi.lib")
+#ifdef _WIN64
+#pragma comment(lib,"..\\..\\..\\..\\extra\\smartvc14\\smartvc14_x64.lib")
+#pragma comment(linker, "/EXPORT:GetGPluginInfo")
+#else
+#pragma comment(lib,"..\\..\\..\\..\\extra\\smartvc14\\smartvc14_x86.lib")
 #pragma comment(linker, "/EXPORT:GetGPluginInfo=_GetGPluginInfo@0")
+#endif
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/ENTRY:DllMain")

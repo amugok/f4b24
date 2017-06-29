@@ -2,24 +2,30 @@
 #include "../../fittle/src/aplugin.h"
 #include "../../fittle/src/f4b24.h"
 #include <shlwapi.h>
-#include <time.h>
-#include <math.h>
-#include <stdio.h>
+//#include <time.h>
+//#include <math.h>
+//#include <stdio.h>
 
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")
 #pragma comment(lib,"user32.lib")
 #pragma comment(lib,"shlwapi.lib")
 #ifdef UNICODE
-#pragma comment(linker, "/EXPORT:GetAPluginInfoW=_GetAPluginInfoW@0")
-#define GetAPluginInfo GetAPluginInfoW
+#ifdef _WIN64
+#pragma comment(lib,"..\\..\\..\\extra\\smartvc14\\smartvc14_x64.lib")
+#pragma comment(linker, "/EXPORT:GetAPluginInfoW=GetAPluginInfo")
 #else
+#pragma comment(lib,"..\\..\\..\\extra\\smartvc14\\smartvc14_x86.lib")
+#pragma comment(linker, "/EXPORT:GetAPluginInfoW=_GetAPluginInfo@0")
+#endif
+#else
+#pragma comment(lib,"..\\..\\..\\extra\\smartvc14\\smartvc14_x86.lib")
 #pragma comment(linker, "/EXPORT:GetAPluginInfo=_GetAPluginInfo@0")
 #endif
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/MERGE:.rdata=.text")
-//#pragma comment(linker,"/ENTRY:DllMain")
+#pragma comment(linker,"/ENTRY:DllMain")
 #pragma comment(linker,"/OPT:NOWIN98")
 #endif
 
@@ -34,6 +40,9 @@ static const BYTE UTF16LEBOM[] = {0xFF,0xFE};
 static const BYTE UTF16BEBOM[] = {0xFE,0xFF};
 
 static HMODULE hDLL = 0;
+static HMODULE hMSVCRTDLL = 0;
+typedef double (__cdecl * LPPOW)(double x, double y);
+static LPPOW lpPow;
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
@@ -74,8 +83,16 @@ static ARCHIVE_PLUGIN_INFO apinfo = {
 	GetGain
 };
 
-static BOOL InitArchive(){	
-	return TRUE;
+static BOOL InitArchive(){
+	HMODULE hMod = LoadLibraryA("msvcrt.dll");
+	if (hMod) {
+		lpPow = (LPPOW)GetProcAddress(hMod, "pow");
+		if (lpPow) {
+			return TRUE;
+		}
+		FreeLibrary(hMod);
+	}
+	return FALSE;
 }
 
 #ifdef __cplusplus
@@ -481,8 +498,10 @@ static BOOL CALLBACK GetGain(LPTSTR pszArchivePath, LPTSTR pszTrackPart, float *
 	float volume = 1;
 
 	int nGainMode = SendMessage(apinfo.hwndMain, WM_F4B24_IPC, WM_F4B24_IPC_GET_REPLAYGAIN_MODE, 0);
-	int nPreAmp = SendMessage(apinfo.hwndMain, WM_F4B24_IPC, WM_F4B24_IPC_GET_PREAMP, 0);
-	if (!nPreAmp) nPreAmp = 100;
+
+	int nPreAmp = SendMessage(apinfo.hwndMain, WM_F4B24_IPC, WM_F4B24_IPC_GET_PREAMP, 0);
+
+	if (!nPreAmp) nPreAmp = 100;
 
 	// ƒI[ƒvƒ“
 	hFile = CreateFile(pszArchivePath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -519,24 +538,24 @@ static BOOL CALLBACK GetGain(LPTSTR pszArchivePath, LPTSTR pszTrackPart, float *
 
 	switch (nGainMode){
 	case 1:
-		volume = nPreAmp * pow(10, album_gain / 20 - 2);
+		volume = nPreAmp * lpPow(10, album_gain / 20 - 2);
 		break;
 	case 2:
 		volume = 1 / album_peak;
 		break;
 	case 3:
-		volume = nPreAmp * pow(10, track_gain / 20 - 2);
+		volume = nPreAmp * lpPow(10, track_gain / 20 - 2);
 		break;
 	case 4:
 		volume = 1 / track_peak;
 		break;
 	case 5:
-		volume = nPreAmp * pow(10, album_gain / 20 - 2);
+		volume = nPreAmp * lpPow(10, album_gain / 20 - 2);
 		if (volume > 1 / album_peak)
 			volume = 1 / album_peak;
 		break;
 	case 6:
-		volume = nPreAmp * pow(10, track_gain / 20 - 2);
+		volume = nPreAmp * lpPow(10, track_gain / 20 - 2);
 		if (volume > 1 / track_peak)
 			volume = 1 / track_peak;
 		break;

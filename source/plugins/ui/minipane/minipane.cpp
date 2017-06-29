@@ -21,7 +21,15 @@
 #pragma comment(lib,"shell32.lib")
 #pragma comment(lib,"ole32.lib")
 #ifdef UNICODE
+#ifdef _WIN64
+#pragma comment(lib,"..\\..\\..\\..\\extra\\smartvc14\\smartvc14_x64.lib")
+#pragma comment(linker, "/EXPORT:GetGPluginInfo")
+#else
+#pragma comment(lib,"..\\..\\..\\..\\extra\\smartvc14\\smartvc14_x86.lib")
 #pragma comment(linker, "/EXPORT:GetGPluginInfo=_GetGPluginInfo@0")
+#endif
+#else
+#pragma comment(lib,"..\\..\\..\\..\\extra\\smartvc14\\smartvc14_x86.lib")
 #endif
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
@@ -44,7 +52,7 @@ static void *memset(void *dest, int c, size_t count){
 #define SET_SUBCLASS(hWnd, Proc) \
 	SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)Proc))
 
-static BOOL CALLBACK MiniPanelProc(HWND, UINT, WPARAM, LPARAM);
+static INT_PTR CALLBACK MiniPanelProc(HWND, UINT, WPARAM, LPARAM);
 static void LoadConfig();
 
 #include "../../../fittle/src/wastr.cpp"
@@ -562,7 +570,7 @@ static void UpdateFont(HWND hDlg){
 	ReleaseDC(hDlg, hDC);
 }
 
-static BOOL CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
+static INT_PTR CALLBACK MiniPanelProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 	HDC hDC;
 	HGDIOBJ hOldFont;
 	RECT rc;

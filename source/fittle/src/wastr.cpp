@@ -132,12 +132,18 @@ void WAGetFileName(LPWASTR pBuf, LPCWASTR pPath){
 }
 
 void WAGetModuleParentDir(HMODULE h, LPWASTR pBuf){
+    WASTR mod;
+	if (h == NULL) {
+		h = GetModuleHandleA(NULL);
+	}
 	if (m_WAIsUnicode) {
-		GetModuleFileNameW(h, pBuf->W, WA_MAX_SIZE);
-		*PathFindFileNameW(pBuf->W) = L'\0';
-	}else{
-		GetModuleFileNameA(h, pBuf->A, WA_MAX_SIZE);
-		*PathFindFileNameA(pBuf->A) = '\0';
+		GetModuleFileNameW(h,mod.W, WA_MAX_SIZE);
+		*PathFindFileNameW(mod.W) = L'\0';
+        PathCanonicalizeW(pBuf->W, mod.W);
+    }else{
+		GetModuleFileNameA(h, mod.A, WA_MAX_SIZE);
+		*PathFindFileNameA(mod.A) = '\0';
+        PathCanonicalizeA(pBuf->A, mod.A);
 	}
 }
 

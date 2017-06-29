@@ -43,7 +43,7 @@ BOOL LoadPlaylists(HWND);
 int RenameListTab(HWND, int, LPTSTR);
 int RemoveListTab(HWND, int);
 int InsertList(struct LISTTAB *, int, struct FILEINFO *);
-BOOL CALLBACK TabNameDlgProc(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK TabNameDlgProc(HWND, UINT, WPARAM, LPARAM);
 void SortListTab(struct LISTTAB *, int);
 void AppendToList(LISTTAB *pList, FILEINFO *pSub);
 

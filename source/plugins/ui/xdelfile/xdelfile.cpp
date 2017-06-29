@@ -68,7 +68,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 /* ‹N“®Žž‚Éˆê“x‚¾‚¯ŒÄ‚Î‚ê‚Ü‚· */
 static BOOL OnInit(){
 	bOldProc = IsWindowUnicode(fpi.hParent);
-	hOldProc = (WNDPROC)(bOldProc ? SetWindowLongW : SetWindowLongA)(fpi.hParent, GWL_WNDPROC, (LONG)WndProc);
+	hOldProc = (WNDPROC)(bOldProc ? SetWindowLongPtrW : SetWindowLongPtrA)(fpi.hParent, GWLP_WNDPROC, (LONG_PTR)WndProc);
 	return TRUE;
 }
 

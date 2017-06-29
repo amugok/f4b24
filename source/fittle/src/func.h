@@ -45,7 +45,7 @@ void LV_SingleSelectView(HWND hLV, int nIndex);
 void LV_SingleSelectViewP(HWND hLV, int nIndex);
 int LV_GetNextSelect(HWND hLV, int nIndex);
 int LV_GetCount(HWND hLV);
-int LV_HitTest(HWND hLV, LONG lPos);
+int LV_HitTest(HWND hLV, LPARAM lPos);
 
 void lstrcpyntA(LPSTR lpDst, LPCTSTR lpSrc, int nDstMax);
 void lstrcpyntW(LPWSTR lpDst, LPCTSTR lpSrc, int nDstMax);

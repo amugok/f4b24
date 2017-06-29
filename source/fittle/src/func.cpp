@@ -276,7 +276,7 @@ HMODULE ExpandArgs(int *pARGC, LPTSTR **pARGV){
 	*pARGC = 1;
 	*pARGV = CommandLineToArgvW(GetCommandLine(), pARGC);
 	return NULL;
-#elif defined(_MSC_VER)
+#elif defined(_MSC_VER) && _MSC_VER < 1900
 	*pARGC = __argc;
 	*pARGV = __argv;
 	return NULL;
@@ -360,7 +360,7 @@ int LV_GetCount(HWND hLV){
 	return ListView_GetItemCount(hLV);
 }
 
-int LV_HitTest(HWND hLV, LONG lPos){
+int LV_HitTest(HWND hLV, LPARAM lPos){
 	LVHITTESTINFO pinfo;
 	pinfo.pt.x = (short)LOWORD(lPos);
 	pinfo.pt.y = (short)HIWORD(lPos);

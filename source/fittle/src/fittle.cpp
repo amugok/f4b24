@@ -47,9 +47,13 @@
 #define F4B24_IF_VERSION 39
 #define F4B24_VERSION 50
 #ifdef UNICODE
-#define F4B24_VERSION_STRING TEXT("test50u")
+#ifdef _WIN64
+#define F4B24_VERSION_STRING TEXT("test51x")
 #else
-#define F4B24_VERSION_STRING TEXT("test50")
+#define F4B24_VERSION_STRING TEXT("test51u")
+#endif
+#else
+#define F4B24_VERSION_STRING TEXT("test51")
 #endif
 #ifndef _DEBUG
 #define FITTLE_TITLE TEXT("Fittle - f4b24 ") F4B24_VERSION_STRING
@@ -136,8 +140,20 @@ static void RemoveFiles();
 static CRITICAL_SECTION m_cs;
 
 // メンバ変数（状態編）
+#if 0
+static int s_nDragTab/* = -1*/;
+static int s_nHitTab/* = -1*/;			// タブのヒットアイテム
+static BOOL s_bReviewAllow/* = TRUE*/;	// ツリーのセル変化で検索を許可するか
+static int m_nPlayTab/* = -1*/;			// 再生中のタブインデックス
+static int m_nGaplessState/* = GS_OK*/;	// ギャップレス再生用のステータス
+#else
+static int s_nDragTab = -1;
+static int s_nHitTab = -1;			// タブのヒットアイテム
+static BOOL s_bReviewAllow = TRUE;	// ツリーのセル変化で検索を許可するか
 static int m_nPlayTab = -1;			// 再生中のタブインデックス
 static int m_nGaplessState = GS_OK;	// ギャップレス再生用のステータス
+#endif
+
 static int m_nPlayMode = PM_LIST;	// プレイモード
 static HINSTANCE m_hInst = NULL;	// インスタンス
 static NOTIFYICONDATA m_ni;	// タスクトレイのアイコンのデータ
@@ -147,6 +163,7 @@ static TCHAR m_szTime[100];			// 再生時間
 static TCHAR m_szTag[MAX_FITTLE_PATH];	// タグ
 static TCHAR m_szTreePath[MAX_FITTLE_PATH];	// ツリーのパス
 static BOOL m_bFloat = FALSE;
+static int s_nClickState = 0;		// タスクトレイアイコンのクリック状態
 
 static TAGINFO m_taginfo = {0};
 typedef struct{
@@ -218,7 +235,7 @@ int TabGetRowCount(){
 	return TabCtrl_GetRowCount(m_hTab);
 }
 
-static int TabHitTest(LONG lp, int flag){
+static int TabHitTest(LPARAM lp, int flag){
 	TCHITTESTINFO tchti;
 	tchti.flags = flag & 0xf;
 	tchti.pt.x = (short)LOWORD(lp);
@@ -427,7 +444,7 @@ static HWND Initialze(HINSTANCE hCurInst, int nCmdShow){
 	wc.hInstance = m_hInst = hCurInst; //インスタンス
 	wc.hIcon = (HICON)LoadImage(hCurInst, TEXT("MYICON"), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_SHARED);
 	wc.hIconSm = (HICON)LoadImage(hCurInst, TEXT("MYICON"), IMAGE_ICON, 16, 16, LR_SHARED);
-	wc.hCursor = (HCURSOR)LoadImage(NULL, MAKEINTRESOURCE(IDC_ARROW), IMAGE_CURSOR,	0, 0, LR_DEFAULTSIZE | LR_SHARED);
+	wc.hCursor = (HCURSOR)LoadImage(NULL, IDC_ARROW, IMAGE_CURSOR,	0, 0, LR_DEFAULTSIZE | LR_SHARED);
 	wc.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);
 	wc.lpszMenuName = TEXT("MAINMENU");	//メニュー名
 	wc.lpszClassName = (LPCTSTR)szClassName;
@@ -494,6 +511,14 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE /*hPrevInst*/, LPSTR /*lpsCmdLi
 
 #if defined(_MSC_VER) && defined(_DEBUG)
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
+
+#if 0
+    s_nDragTab = -1;
+    s_nHitTab = -1;			// タブのヒットアイテム
+    s_bReviewAllow = TRUE;	// ツリーのセル変化で検索を許可するか
+    m_nPlayTab = -1;			// 再生中のタブインデックス
+    m_nGaplessState = GS_OK;	// ギャップレス再生用のステータス
 #endif
 
 	WAIsUnicode();
@@ -1041,9 +1066,6 @@ static void ToolExecute(HWND hWnd, LPTSTR pszFilePathes, int nCmd){
 
 // ウィンドウプロシージャ
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
-	static int s_nHitTab = -1;				// タブのヒットアイテム
-	static int s_nClickState = 0;			// タスクトレイアイコンのクリック状態
-	static BOOL s_bReviewAllow = TRUE;		// ツリーのセル変化で検索を許可するか
 
 	int i;
 	TCHAR szLabel[MAX_FITTLE_PATH];
@@ -2226,10 +2248,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 					return (LRESULT)OPGetStatus();
 
 				case GET_POSITION:
-					return (LRESULT)TrackPosToSec(TrackGetPos());
+					return (LRESULT)(int)TrackPosToSec(TrackGetPos());
 
 				case GET_DURATION:
-					return (LRESULT)TrackPosToSec(g_cInfo[g_bNow].qDuration);
+					return (LRESULT)(int)TrackPosToSec(g_cInfo[g_bNow].qDuration);
 
 				case GET_LISTVIEW:
 					int nCount;
@@ -3939,7 +3961,6 @@ static int GetListIndex(HWND hwndList){
 
 // タブの新しいプロシージャ
 static LRESULT CALLBACK NewTabProc(HWND hTC, UINT msg, WPARAM wp, LPARAM lp){
-	static int s_nDragTab = -1;
 
 	switch(msg)
 	{

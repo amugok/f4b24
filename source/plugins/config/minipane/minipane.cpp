@@ -20,8 +20,15 @@
 #pragma comment(lib,"shlwapi.lib")
 #pragma comment(lib,"shell32.lib")
 #pragma comment(lib,"ole32.lib")
+#ifdef _WIN64
+#pragma comment(lib,"..\\..\\..\\..\\extra\\smartvc14\\smartvc14_x64.lib")
+#pragma comment(linker, "/EXPORT:GetCPluginInfo")
+#pragma comment(linker, "/EXPORT:OldMode")
+#else
+#pragma comment(lib,"..\\..\\..\\..\\extra\\smartvc14\\smartvc14_x86.lib")
 #pragma comment(linker, "/EXPORT:GetCPluginInfo=_GetCPluginInfo@0")
 #pragma comment(linker, "/EXPORT:OldMode=_OldMode@4")
+#endif
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/MERGE:.rdata=.text")
@@ -193,7 +200,7 @@ static void ApplyFittle(){
 	}
 }
 
-static BOOL CALLBACK MiniPanePageProc(HWND hWnd , UINT msg , WPARAM wp , LPARAM lp) {
+static INT_PTR CALLBACK MiniPanePageProc(HWND hWnd , UINT msg , WPARAM wp , LPARAM lp) {
 	switch (msg){
 	case WM_INITDIALOG:
 		LoadConfig();

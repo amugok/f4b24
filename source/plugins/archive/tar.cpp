@@ -4,19 +4,23 @@
 #include "../../fittle/src/aplugin.h"
 #include <shlwapi.h>
 #include <time.h>
-#include "../../../extra/unlha32/UNLHA32.H"
+#include "cal.h"
 
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")
 #pragma comment(lib,"user32.lib")
 #pragma comment(lib,"shlwapi.lib")
 #ifdef UNICODE
-#pragma comment(linker, "/EXPORT:GetAPluginInfoW=_GetAPluginInfoW@0")
-#define GetAPluginInfo GetAPluginInfoW
-#define UNICODE_POSTFIX "W"
+#ifdef _WIN64
+#pragma comment(lib,"..\\..\\..\\extra\\smartvc14\\smartvc14_x64.lib")
+#pragma comment(linker, "/EXPORT:GetAPluginInfoW=GetAPluginInfo")
 #else
+#pragma comment(lib,"..\\..\\..\\extra\\smartvc14\\smartvc14_x86.lib")
+#pragma comment(linker, "/EXPORT:GetAPluginInfoW=_GetAPluginInfo@0")
+#endif
+#else
+#pragma comment(lib,"..\\..\\..\\extra\\smartvc14\\smartvc14_x86.lib")
 #pragma comment(linker, "/EXPORT:GetAPluginInfo=_GetAPluginInfo@0")
-#define UNICODE_POSTFIX
 #endif
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
@@ -41,7 +45,12 @@ static HMODULE hUnlha32 = 0;
 static HMODULE hDLL = 0;
 
 #define FUNC_PREFIXA "Tar"
+#ifdef _WIN64
+static /*const*/ TCHAR szDllName[] = TEXT("tar64.dll");
+#else
 static /*const*/ TCHAR szDllName[] = TEXT("tar32.dll");
+#endif
+
 static /*const*/ struct IMPORT_FUNC_TABLE {
 	LPSTR/*LPCSTR*/ lpszFuncName;
 	FARPROC * ppFunc;
@@ -70,6 +79,8 @@ static BOOL CALLBACK IsArchiveExt(LPTSTR pszExt){
 	if(lstrcmpi(pszExt, TEXT("tgz"))==0) return TRUE;
 	if(lstrcmpi(pszExt, TEXT("bz2"))==0) return TRUE;
 	if(lstrcmpi(pszExt, TEXT("tbz"))==0) return TRUE;
+	if(lstrcmpi(pszExt, TEXT("xz"))==0) return TRUE;
+	if(lstrcmpi(pszExt, TEXT("txz"))==0) return TRUE;
 	return FALSE;
 }
 
@@ -83,7 +94,12 @@ static LPTSTR CALLBACK CheckArchivePath(LPTSTR pszFilePath){
 	if (p) return p;
 	p = StrStrI(pszFilePath, TEXT(".bz2/"));
 	if (p) return p;
-	return StrStrI(pszFilePath, TEXT(".tbz/"));
+	p = StrStrI(pszFilePath, TEXT(".tbz/"));
+	if (p) return p;
+	p = StrStrI(pszFilePath, TEXT(".xz/"));
+	if (p) return p;
+	p = StrStrI(pszFilePath, TEXT(".txz/"));
+	return p;
 }
 
 static BOOL CALLBACK EnumArchive(LPTSTR pszFilePath, LPFNARCHIVEENUMPROC lpfnProc, void *pData){

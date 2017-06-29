@@ -5,13 +5,13 @@
  * All Rights Reserved
  */
 
-#include "MainWnd.h"
-#include <shlwapi.h>
+//#include "MainWnd.h"
+//#include <shlwapi.h>
 //#include "resource.h"
-#include "Plugin.h"
-#include <tchar.h>
-#include "GEN.H"
-#include "wa_ipc.h"
+//#include "Plugin.h"
+//#include <tchar.h>
+//#include "GEN.H"
+//#include "wa_ipc.h"
 
 extern HINSTANCE g_hInst;
 extern HWND g_hMainWnd;

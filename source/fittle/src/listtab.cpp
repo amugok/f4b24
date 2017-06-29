@@ -16,6 +16,12 @@
 #include "archive.h"
 #include "f4b24.h"
 
+#ifdef UNICODE
+static const char PLAYLIST_FILENAME[] = "Playlist.fpu";
+#else
+static const char PLAYLIST_FILENAME[] = "Playlist.fpf";
+#endif
+
 // 新しいタブもろもろを作成
 struct LISTTAB *MakeNewTab(HWND hTab, LPTSTR szTabName, int nItem){
 	struct LISTTAB *pNew = NULL;
@@ -434,11 +440,7 @@ BOOL LoadPlaylists(HWND hTab){
 	// ファイルをオープン＆リード
 
 	WAGetIniDir(NULL, &szColPath);
-#ifdef UNICODE
-	WAstrcatA(&szColPath, "Playlist.fpu");
-#else
-	WAstrcatA(&szColPath, "Playlist.fpf");
-#endif
+    WAstrcatA(&szColPath, PLAYLIST_FILENAME);
 
 	hFile = WAOpenFile(&szColPath);
 	if(hFile==INVALID_HANDLE_VALUE) return FALSE;
@@ -522,11 +524,7 @@ BOOL SavePlaylists(HWND hTab){
 	DWORD dwAccBytes;
 
 	WAGetIniDir(NULL, &szColPath);
-#ifdef UNICODE
-	WAstrcatA(&szColPath, "Playlist.fpu");
-#else
-	WAstrcatA(&szColPath, "Playlist.fpf");
-#endif
+    WAstrcatA(&szColPath, PLAYLIST_FILENAME);
 
 	nTabCount = TabGetListCount() - 1;
 	if(nTabCount<=0){
@@ -597,7 +595,7 @@ BOOL SavePlaylists(HWND hTab){
 	return TRUE;
 }
 
-BOOL CALLBACK TabNameDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
+INT_PTR CALLBACK TabNameDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 	static LPTSTR pszText;
 
 	switch(msg){	

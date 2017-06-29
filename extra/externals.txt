@@ -1,9 +1,3 @@
-cabsdk/
-	FDI.H
-
-		Microsoft Cabinet SDK
-		http://support.microsoft.com/kb/310618
-
 
 gcasdk/
 	GcaSDK.h

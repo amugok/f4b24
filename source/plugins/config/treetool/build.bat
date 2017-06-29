@@ -1,35 +1,7 @@
 @echo off
+if not "%DevEnvDir%"=="" goto skipsetup
 
-if not "%VCINSTALLDIR%"=="" goto skipsetup
-if not "%MSVCDir%"=="" goto skipsetup
-
-if exist "%ProgramFiles%\Microsoft Visual Studio\VC98\Bin\VCVARS32.BAT" goto vc6setup
-if exist "%VS100COMNTOOLS%..\..\VC\Bin\vcvars32.bat" goto vc2010setup
-if exist "%VS90COMNTOOLS%..\..\VC\Bin\vcvars32.bat" goto vc2008setup
-if exist "%VS80COMNTOOLS%..\..\VC\Bin\vcvars32.bat" goto vc2005setup
-if exist "%VS71COMNTOOLS%..\..\VC\Bin\vcvars32.bat" goto vc2003setup
-
-goto skipsetup
-
-:vc6setup
-call "%ProgramFiles%\Microsoft Visual Studio\VC98\Bin\VCVARS32.BAT"
-goto skipsetup
-
-:vc2003setup
-call "%VS71COMNTOOLS%..\..\VC\Bin\vcvars32.bat"
-goto skipsetup
-
-:vc2005setup
-call "%VS80COMNTOOLS%..\..\VC\Bin\vcvars32.bat"
-goto skipsetup
-
-:vc2008setup
-call "%VS90COMNTOOLS%..\..\VC\Bin\vcvars32.bat"
-goto skipsetup
-
-:vc2010setup
-call "%VS100COMNTOOLS%..\..\VC\Bin\vcvars32.bat"
-goto skipsetup
+if exist "%VS140COMNTOOLS%..\..\VC\Bin\vcvars32.bat" CALL "%VS140COMNTOOLS%..\..\VC\Bin\vcvars32.bat"
 
 :skipsetup
 
@@ -49,11 +21,23 @@ if exist %1.obj del %1.obj
 if exist %1.res del %1.res
 
 if not exist %1.%2 goto exitcmd
+if "%1.%2" == "perb.exe" goto selfperb
 
-if "%VER_STR%"=="" %PREFIXPERB%perb %1.%2
-if not "%VER_STR%"=="" %PREFIXPERB%perb /v %VER_STR% %1.%2
+if "%VER_STR%"=="" ..\..\..\..\buildutil\perb %1.%2
+if not "%VER_STR%"=="" ..\..\..\..\buildutil\perb /v %VER_STR% %1.%2
 editbin /release %1.%2
+if not "%PREFIX2%"=="" copy %1.%2 %PREFIX2%%1.%2
 if not "%PREFIX%"=="" move %1.%2 %PREFIX%%1.%2
+
+goto exitcmd
+
+:selfperb
+
+copy %1.%2 .\perb_.exe
+if "%VER_STR%"=="" .\perb_.exe %1.%2
+if not "%VER_STR%"=="" .\perb_.exe /v %VER_STR% %1.%2
+editbin /release %1.%2
+del .\perb_.exe
 
 goto exitcmd
 
@@ -66,11 +50,10 @@ goto exitcmd
 :buildall
 
 
-set PREFIXPERB=..\..\..\..\buildutil\
-set CFLAGS=/GF /Gy /Ox /Os /GS- /GR- /Gm- /EHs-c- /MD
-
-set PREFIX=..\..\..\..\bin\Plugins\fcp\
-set VER_STR=1210240_
+set PREFIX=..\..\..\..\bin_x86\Plugins\fcp\
+set PREFIX2=..\..\..\..\bin_mbcs\Plugins\fcp\
+set CFLAGS=/GF /Gy /Ox /Os /MD
+set VER_STR=1706290_
 
 call %0 treetool fcp
 

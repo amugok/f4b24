@@ -3,16 +3,22 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include "../../../extra/cabsdk/FDI.h"
+#include <FDI.h>
 
 #if defined(_MSC_VER)
 #pragma comment(lib,"kernel32.lib")
 #pragma comment(lib,"user32.lib")
 #pragma comment(lib,"shlwapi.lib")
 #ifdef UNICODE
-#pragma comment(linker, "/EXPORT:GetAPluginInfoW=_GetAPluginInfoW@0")
-#define GetAPluginInfo GetAPluginInfoW
+#ifdef _WIN64
+#pragma comment(lib,"..\\..\\..\\extra\\smartvc14\\smartvc14_x64.lib")
+#pragma comment(linker, "/EXPORT:GetAPluginInfoW=GetAPluginInfo")
 #else
+#pragma comment(lib,"..\\..\\..\\extra\\smartvc14\\smartvc14_x86.lib")
+#pragma comment(linker, "/EXPORT:GetAPluginInfoW=_GetAPluginInfo@0")
+#endif
+#else
+#pragma comment(lib,"..\\..\\..\\extra\\smartvc14\\smartvc14_x86.lib")
 #pragma comment(linker, "/EXPORT:GetAPluginInfo=_GetAPluginInfo@0")
 #endif
 #endif
@@ -161,7 +167,7 @@ public:
 			DWORD dwDistanceToMove = 0;
 			LONG dwDistanceToMoveHigh = 0;
 			dwDistanceToMove = SetFilePointer(m_h, dist, &dwDistanceToMoveHigh, seektype);
-			return dwDistanceToMove | (dwDistanceToMoveHigh << 32);
+			return dwDistanceToMove/* | (dwDistanceToMoveHigh << 32)*/;
 		}
 		if (IsMemory())
 		{

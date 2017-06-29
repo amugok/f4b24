@@ -284,7 +284,7 @@ BEGIN
     GROUPBOX        "f4b24",IDC_STATIC5,17,140,172,48
     ICON            "",IDC_STATIC6,25,156,20,20
     LTEXT           "",IDC_STATIC,52,155,119,10
-    LTEXT           "http://code.google.com/p/f4b24/",IDC_STATIC7,52,169,123,
+    LTEXT           "https://amugok.github.io/f4b24/",IDC_STATIC7,52,169,123,
                     10,SS_NOTIFY
 END
 

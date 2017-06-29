@@ -5,9 +5,6 @@
  * All Rights Reserved
  */
 
-#include "plugin.h"
-#include "MainWnd.h"
-
 BOOL OnInit();
 void OnQuit();
 void OnTrackChange();
@@ -33,11 +30,6 @@ HANDLE hThread  = NULL;
 DWORD WINAPI ThreadFunc(LPVOID /*param*/)
 {
 	return MyWinMain();
-}
-
-/* エントリポント */
-BOOL WINAPI _DllMainCRTStartup(HANDLE /*hModule*/, DWORD /*dwFunction*/, LPVOID /*lpNot*/){
-    return TRUE;
 }
 
 /* 起動時に一度だけ呼ばれます */

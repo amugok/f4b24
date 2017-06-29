@@ -7,9 +7,15 @@
 #pragma comment(lib,"user32.lib")
 #pragma comment(lib,"shlwapi.lib")
 #ifdef UNICODE
-#pragma comment(linker, "/EXPORT:GetAPluginInfoW=_GetAPluginInfoW@0")
-#define GetAPluginInfo GetAPluginInfoW
+#ifdef _WIN64
+#pragma comment(lib,"..\\..\\..\\extra\\smartvc14\\smartvc14_x64.lib")
+#pragma comment(linker, "/EXPORT:GetAPluginInfoW=GetAPluginInfo")
 #else
+#pragma comment(lib,"..\\..\\..\\extra\\smartvc14\\smartvc14_x86.lib")
+#pragma comment(linker, "/EXPORT:GetAPluginInfoW=_GetAPluginInfo@0")
+#endif
+#else
+#pragma comment(lib,"..\\..\\..\\extra\\smartvc14\\smartvc14_x86.lib")
 #pragma comment(linker, "/EXPORT:GetAPluginInfo=_GetAPluginInfo@0")
 #endif
 #endif
@@ -75,7 +81,11 @@ static /*const*/ struct IMPORT_FUNC_TABLE {
 	{ "RARSetCallback", (FARPROC *)&pRARSetCallback },
 	{ 0, (FARPROC *)0 }
 };
-static /*const*/ TCHAR szDllName[] = TEXT("unrar.dll");
+#ifdef _WIN64
+static /*const*/ TCHAR szDllName[] = TEXT("UnRAR64.dll");
+#else
+static /*const*/ TCHAR szDllName[] = TEXT("UnRAR.dll");
+#endif
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {

@@ -10,6 +10,6 @@
 
 #include "fittle.h"
 
-BOOL CALLBACK FindDlgProc(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK FindDlgProc(HWND, UINT, WPARAM, LPARAM);
 
 #endif

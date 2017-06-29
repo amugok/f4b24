@@ -115,6 +115,10 @@ static int perb(const char *path, int s, int dctmin, const char *v){
 	unsigned long erva = 0;
 	unsigned long irva = 0;
 	unsigned long rrva = 0;
+	unsigned long machine;
+	unsigned long osmajor = 4;
+	unsigned long osminor = 0;
+	unsigned long moptsz = 96;
 
 	rbf = readfile(path, &rsz);
 	if (!rbf){
@@ -142,41 +146,45 @@ static int perb(const char *path, int s, int dctmin, const char *v){
 	rcoffofs = rpeofs + 4;
 
 	memcpy(wbf + wcoffofs, rbf + rcoffofs, 20);
+	machine = getwordle(wbf + wcoffofs);
 	setdwordle(wbf + wcoffofs + 4, 0); /* timestamp */
 
 	woptofs = wcoffofs + 20;
 	roptofs = rcoffofs + 20;
 	roptsz = getwordle(rbf + rcoffofs + 16);
-	rdctnum = getdwordle(rbf + roptofs + 92);
 
-	if (0){
-		woptsz = roptsz;
-		wdctnum = rdctnum;
-	}else{
-		for (wdctnum = rdctnum; wdctnum > 0; wdctnum--){
-			unsigned long rva = getdwordle(rbf + roptofs + 96 + (wdctnum - 1) * 8);
-			unsigned long size = getdwordle(rbf + roptofs + 96 + (wdctnum - 1) * 8 + 4);
-			if (rva != 0 || size != 0) break;
-		}
-		if (wdctnum == 0) wdctnum = 1;
-		woptsz = 96 + wdctnum * 8;
+	if (machine == 0x8664){
+		moptsz = 112;
 	}
+
+	rdctnum = getdwordle(rbf + roptofs + moptsz - 4);
+
+	for (wdctnum = rdctnum; wdctnum > 0; wdctnum--){
+		unsigned long rva = getdwordle(rbf + roptofs + moptsz + (wdctnum - 1) * 8);
+		unsigned long size = getdwordle(rbf + roptofs + moptsz + (wdctnum - 1) * 8 + 4);
+		if (rva != 0 || size != 0) break;
+	}
+	if (wdctnum == 0) wdctnum = 1;
+	woptsz = moptsz + wdctnum * 8;
 
 	memcpy(wbf + woptofs, rbf + roptofs, woptsz);
+	if (machine == 0x8664){
+		//osmajor = 6;
+	}
 	if (woptsz >= 44){
-		setwordle(wbf + woptofs + 40, 4); /* MajorOperatingSystemVersion */
-		setwordle(wbf + woptofs + 42, 0); /* MinorOperatingSystemVersion */
+		setwordle(wbf + woptofs + 40, osmajor); /* MajorOperatingSystemVersion */
+		setwordle(wbf + woptofs + 42, osminor); /* MinorOperatingSystemVersion */
 	}
 	if (woptsz >= 52){
-		setwordle(wbf + woptofs + 48, 4); /* MajorSubsystemVersion */
-		setwordle(wbf + woptofs + 50, 0); /* MinorSubsystemVersion */
+		setwordle(wbf + woptofs + 48, osmajor); /* MajorSubsystemVersion */
+		setwordle(wbf + woptofs + 50, osminor); /* MinorSubsystemVersion */
 	}
 	if (wdctnum < dctmin) wdctnum = dctmin;	/* 16‚æ‚è¬‚³‚¢‚ÆƒAƒCƒRƒ“‚ð“Ç‚ß‚È‚¢ê‡‚ª‚ ‚é */
-	woptsz = 96 + wdctnum * 8;
+	woptsz = moptsz + wdctnum * 8;
 
 	setdwordle(wbf + woptofs + 64, 0);	/* checksum */
 	setwordle(wbf + wcoffofs + 16, woptsz);
-	setdwordle(wbf + woptofs + 92, wdctnum);
+	setdwordle(wbf + woptofs + moptsz - 4, wdctnum);
 
 	rsecofs = roptofs + roptsz;
 	wsecofs = woptofs + woptsz;
@@ -189,13 +197,13 @@ static int perb(const char *path, int s, int dctmin, const char *v){
 	wdofs = whdsz;
 
 	if (wdctnum >= 1){
-		erva = getdwordle(rbf + roptofs + 96 + 0 * 8);
+		erva = getdwordle(rbf + roptofs + moptsz + 0 * 8);
 	}
 	if (wdctnum >= 2){
-		irva = getdwordle(rbf + roptofs + 96 + 1 * 8);
+		irva = getdwordle(rbf + roptofs + moptsz + 1 * 8);
 	}
 	if (wdctnum >= 3){
-		rrva = getdwordle(rbf + roptofs + 96 + 2 * 8);
+		rrva = getdwordle(rbf + roptofs + moptsz + 2 * 8);
 	}
 
 	for (rsec = 0; rsec < rsecnum; rsec++){
@@ -234,6 +242,7 @@ static int perb(const char *path, int s, int dctmin, const char *v){
 			wbf = nwbf;
 		}
 		memcpy(wbf + wdofs, rbf + rdofs, rdsz);
+
 		if (erva && rdva <= erva && erva < rdva + rdsz){
 			setdwordle(wbf + wdofs + erva - rdva + 4, 0);	/* time stamp */
 		}
@@ -246,6 +255,7 @@ static int perb(const char *path, int s, int dctmin, const char *v){
 		if (rrva && rdva <= rrva && rrva < rdva + rdsz){
 			clearres(wbf + wdofs + rrva - rdva, 0);
 		}
+
 		wdofs += wdsz;
 	}
 

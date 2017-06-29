@@ -8,8 +8,7 @@
 #pragma comment(lib,"user32.lib")
 #pragma comment(lib,"shlwapi.lib")
 #ifdef UNICODE
-#pragma comment(linker, "/EXPORT:GetAPluginInfoW=_GetAPluginInfoW@0")
-#define GetAPluginInfo GetAPluginInfoW
+#pragma comment(linker, "/EXPORT:GetAPluginInfoW=_GetAPluginInfo@0")
 #define UNICODE_POSTFIX "W"
 #else
 #pragma comment(linker, "/EXPORT:GetAPluginInfo=_GetAPluginInfo@0")

@@ -14,7 +14,13 @@
 #pragma comment(lib,"kernel32.lib")
 #pragma comment(lib,"user32.lib")
 #pragma comment(lib,"shlwapi.lib")
+#ifdef _WIN64
+#pragma comment(lib,"..\\..\\..\\..\\extra\\smartvc14\\smartvc14_x64.lib")
+#pragma comment(linker, "/EXPORT:GetGPluginInfo")
+#else
+#pragma comment(lib,"..\\..\\..\\..\\extra\\smartvc14\\smartvc14_x86.lib")
 #pragma comment(linker, "/EXPORT:GetGPluginInfo=_GetGPluginInfo@0")
+#endif
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/ENTRY:DllMain")
@@ -31,7 +37,7 @@
 #define IsURLPathA(X) StrStrA(X, "://")
 #define IsURLPathW(X) StrStrW(X, L"://")
 
-static BOOL CALLBACK AddURLDlgProc(HWND, UINT, WPARAM, LPARAM);
+static INT_PTR CALLBACK AddURLDlgProc(HWND, UINT, WPARAM, LPARAM);
 static void AddURL(HWND hWnd);
 
 static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg);
@@ -110,7 +116,7 @@ static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode) {
 	return TRUE;
 }
 
-static BOOL CALLBACK AddURLDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
+static INT_PTR CALLBACK AddURLDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 	static LPVOID pszBuf;
 	union {
 		CHAR A[MAX_FITTLE_PATH];

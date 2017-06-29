@@ -18,7 +18,13 @@
 #pragma comment(lib,"ole32.lib")
 #pragma comment(lib,"shlwapi.lib")
 #pragma comment(lib,"shell32.lib")
+#ifdef _WIN64
+#pragma comment(lib,"..\\..\\..\\..\\extra\\smartvc14\\smartvc14_x64.lib")
+#pragma comment(linker, "/EXPORT:GetOPluginInfo")
+#else
+#pragma comment(lib,"..\\..\\..\\..\\extra\\smartvc14\\smartvc14_x86.lib")
 #pragma comment(linker, "/EXPORT:GetOPluginInfo=_GetOPluginInfo@0")
+#endif
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/MERGE:.rdata=.text")
@@ -388,7 +394,7 @@ static int CALLBACK GetStatus(void){
 
 static void CheckStartDecodeStream(DWORD hChan) {
 	static DWORD hOldChan = 0;
-	static DWORD dwResult;
+	static DWORD_PTR dwResult;
 	if (hOldChan != hChan) {
 		if (m_nDevice & 0x4000) {
 			BASS_WASAPI_INFO bwi;

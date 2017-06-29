@@ -19,7 +19,13 @@
 #pragma comment(lib,"shlwapi.lib")
 #pragma comment(lib,"shell32.lib")
 #pragma comment(lib,"ole32.lib")
+#ifdef _WIN64
+#pragma comment(lib,"..\\..\\..\\..\\extra\\smartvc14\\smartvc14_x64.lib")
+#pragma comment(linker, "/EXPORT:GetGPluginInfo")
+#else
+#pragma comment(lib,"..\\..\\..\\..\\extra\\smartvc14\\smartvc14_x86.lib")
 #pragma comment(linker, "/EXPORT:GetGPluginInfo=_GetGPluginInfo@0")
+#endif
 #endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #pragma comment(linker,"/ENTRY:DllMain")
@@ -326,7 +332,7 @@ static int LV_GetWidth(HWND hList, LPCWASTR lpszString){
 		SendMessageA(hList, LVM_GETSTRINGWIDTHA, 0, (LPARAM)lpszString->A);
 }
 
-static LV_InsertItem(HWND hList, int nPos, LPCWASTR lpszString){
+static void LV_InsertItem(HWND hList, int nPos, LPCWASTR lpszString){
 	union {
 		LVITEMA A;
 		LVITEMW W;
@@ -346,7 +352,7 @@ static LV_InsertItem(HWND hList, int nPos, LPCWASTR lpszString){
 	}
 }
 
-static LV_GetItemText(HWND hList, int nPos, LPWASTR lpszBuf){
+static void LV_GetItemText(HWND hList, int nPos, LPWASTR lpszBuf){
 	union {
 		LVITEMA A;
 		LVITEMW W;
@@ -364,7 +370,7 @@ static LV_GetItemText(HWND hList, int nPos, LPWASTR lpszBuf){
 	}
 }
 
-static LV_SetItemText(HWND hList, int nPos, LPCWASTR lpszBuf){
+static void LV_SetItemText(HWND hList, int nPos, LPCWASTR lpszBuf){
 	union {
 		LVITEMA A;
 		LVITEMW W;

@@ -134,7 +134,7 @@ ScrobSubmitter::Init(
     HINSTANCE h = ShellExecute(
         NULL, "open", acExe, "-tray", sDefaultDir.c_str(), SW_SHOWNORMAL);
         
-    if (reinterpret_cast<int>(h) <= 32) // Error
+    if (reinterpret_cast<INT_PTR>(h) <= 32) // Error
     {
         // Invalid handle means it didn't launch
         ostringstream os;

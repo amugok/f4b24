@@ -1,0 +1,14 @@
+.vs/
+bin/
+obj/
+*.VC.db
+*.vcxproj.user
+/bin_mbcs/
+!/bin_mbcs/build.bat
+/bin_x86/
+!/bin_x86/buildu.bat
+/bin_x64/
+!/bin_x64/buildx.bat
+/extra/gcasdk/GcaSDK.h
+/extra/unlha32/UNLHA32.H
+/extra/unrar/unrar.h

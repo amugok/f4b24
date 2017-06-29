@@ -1,7 +1,9 @@
 @echo off
+
+if not "%VCINSTALLDIR%"=="" goto skipsetup
 if not "%MSVCDir%"=="" goto skipsetup
 
-if exist "%ProgramFiles%\Microsoft Visual Studio\VC98\Bin\VCVARS32.BAT" CALL "%ProgramFiles%\Microsoft Visual Studio\VC98\Bin\VCVARS32.BAT"
+if exist "%VS140COMNTOOLS%..\..\VC\Bin\vcvars32.bat" CALL "%VS140COMNTOOLS%..\..\VC\Bin\vcvars32.bat"
 
 :skipsetup
 
@@ -49,7 +51,7 @@ goto exitcmd
 :buildall
 
 set CFLAGS=/GF /O1 /MD
-set VER_STR=091210_
+set VER_STR=170629_
 
 call %0 perb exe
 

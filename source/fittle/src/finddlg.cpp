@@ -21,7 +21,7 @@ static LRESULT CALLBACK NewFindEditProc(HWND, UINT, WPARAM, LPARAM);
 void ToPlayList(struct FILEINFO **, struct FILEINFO *, LPTSTR);
 
 
-BOOL CALLBACK FindDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
+INT_PTR CALLBACK FindDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp){
 	static HWND hList = NULL;
 	static HWND hEdit = NULL;
 	static struct FILEINFO *pRoot = NULL;

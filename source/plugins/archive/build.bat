@@ -1,7 +1,7 @@
 @echo off
-if not "%MSVCDir%"=="" goto skipsetup
+if not "%DevEnvDir%"=="" goto skipsetup
 
-if exist "%ProgramFiles%\Microsoft Visual Studio\VC98\Bin\VCVARS32.BAT" CALL "%ProgramFiles%\Microsoft Visual Studio\VC98\Bin\VCVARS32.BAT"
+if exist "%VS140COMNTOOLS%..\..\VC\Bin\vcvars32.bat" CALL "%VS140COMNTOOLS%..\..\VC\Bin\vcvars32.bat"
 
 :skipsetup
 
@@ -23,9 +23,10 @@ if exist %1.res del %1.res
 if not exist %1.%2 goto exitcmd
 if "%1.%2" == "perb.exe" goto selfperb
 
-if "%VER_STR%"=="" perb %1.%2
-if not "%VER_STR%"=="" perb /v %VER_STR% %1.%2
+if "%VER_STR%"=="" ..\..\..\buildutil\perb %1.%2
+if not "%VER_STR%"=="" ..\..\..\buildutil\perb /v %VER_STR% %1.%2
 editbin /release %1.%2
+if not "%PREFIX2%"=="" copy %1.%2 %PREFIX2%%1.%2
 if not "%PREFIX%"=="" move %1.%2 %PREFIX%%1.%2
 
 goto exitcmd
@@ -48,41 +49,51 @@ goto exitcmd
 
 :buildall
 
-set VER_STR_BASE=0807100
-set CFLAGSBASE=/Ogisyb1 /Gy
-set PREFIX=..\..\..\bin\Plugins\fap\
 
-set CFLAGS=%CFLAGSBASE% /MD
+set PREFIX=..\..\..\bin_mbcs\Plugins\fap\
+set PREFIX2=
+set CFLAGS=/GF /Gy /Ox /Os /MD
+set VER_STR=1706290A
 
-set VER_STR=%VER_STR_BASE%A
-call %0 arj fap
 call %0 cab fap
-call %0 lha fap
-call %0 rar fap
-call %0 tar fap
-call %0 zip fap
-set VER_STR=%VER_STR_BASE%U
-call %0 arju fap
-call %0 cabu fap
-call %0 lhau fap
-call %0 raru fap
 
-set VER_STR=0807190U
-call %0 taru fap
-call %0 zipu fap
+set VER_STR=1706290A
 
-set VER_STR=0811120A
 call %0 cue fap
-set VER_STR=0811120U
+
+set VER_STR=1706290A
+
+call %0 rar fap
+
+set VER_STR=1706290A
+
+call %0 tar fap
+
+set VER_STR=1706290A
+
+call %0 7z fap
+
+set PREFIX=..\..\..\bin_x86\Plugins\fap\
+set PREFIX2=
+set CFLAGS=/GF /Gy /Ox /Os /EHs-c- /fp:except- /GS- /MD
+set VER_STR=1706290U
+
+call %0 cabu fap
+
+set VER_STR=1706290U
+
 call %0 cueu fap
 
-set CFLAGS=%CFLAGSBASE%
+set VER_STR=1706290U
 
-set VER_STR=%VER_STR_BASE%A
-call %0 gca fap /GX /link /NODEFAULTLIB:libcmt.lib msvcrt.lib
-set VER_STR=%VER_STR_BASE%U
-call %0 gcau fap /GX /link /NODEFAULTLIB:libcmt.lib msvcrt.lib
+call %0 raru fap
 
+set VER_STR=1706290U
 
+call %0 taru fap
+
+set VER_STR=1706290U
+
+call %0 7zu fap
 
 :exitcmd

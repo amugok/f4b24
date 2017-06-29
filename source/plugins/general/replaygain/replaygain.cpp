@@ -21,10 +21,16 @@
 #pragma comment(lib,"shell32.lib")
 #pragma comment(lib,"ole32.lib")
 #pragma comment(lib,"gdi32.lib")
+#ifdef _WIN64
+#pragma comment(lib,"..\\..\\..\\..\\extra\\smartvc14\\smartvc14_x64.lib")
+#pragma comment(linker, "/EXPORT:GetGPluginInfo")
+#else
+#pragma comment(lib,"..\\..\\..\\..\\extra\\smartvc14\\smartvc14_x86.lib")
 #pragma comment(linker, "/EXPORT:GetGPluginInfo=_GetGPluginInfo@0")
 #endif
+#endif
 #if defined(_MSC_VER) && !defined(_DEBUG)
-//#pragma comment(linker,"/ENTRY:DllMain")
+#pragma comment(linker,"/ENTRY:DllMain")
 #pragma comment(linker,"/MERGE:.rdata=.text")
 #pragma comment(linker,"/OPT:NOWIN98")
 #endif
@@ -57,6 +63,9 @@ static const struct IMPORT_FUNC_TABLE {
 	{ 0, (FARPROC *)0 }
 };
 
+static HMODULE hMSVCRTDLL = 0;
+typedef double (__cdecl * LPPOW)(double x, double y);
+static LPPOW lpPow;
 
 static LPVOID HZAlloc(DWORD dwSize){
 	return HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwSize);
@@ -69,7 +78,8 @@ static void HFree(LPVOID lp){
 #include "../../../fittle/src/readtag.h"
 
 static HMODULE m_hBASS = 0;
-
+
+
 #include "../../../fittle/src/wastr.h"
 #include "../../../fittle/src/wastr.cpp"
 
@@ -96,6 +106,18 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved){
 	}else if (fdwReason == DLL_PROCESS_DETACH){
 	}
 	return TRUE;
+}
+
+static BOOL InitPow(){
+	HMODULE hMod = LoadLibraryA("msvcrt.dll");
+	if (hMod) {
+		lpPow = (LPPOW)GetProcAddress(hMod, "pow");
+		if (lpPow) {
+			return TRUE;
+		}
+		FreeLibrary(hMod);
+	}
+	return FALSE;
 }
 
 BOOL LoadBASS(void){
@@ -382,12 +404,14 @@ static BOOL ReadGain(LPGAININFO pgi, DWORD hBass){
 
 static BOOL GetGain(HWND hWnd, float *pGain, DWORD hBass){
 	GAININFO gi;
-	float volume = 1;
+
+	float volume = 1;
 
 	int nGainMode = SendMessage(hWnd, WM_F4B24_IPC, WM_F4B24_IPC_GET_REPLAYGAIN_MODE, 0);
 	int nPreAmp = SendMessage(hWnd, WM_F4B24_IPC, WM_F4B24_IPC_GET_PREAMP, 0);
 	if (!nPreAmp) nPreAmp = 100;
-
+
+
 	if (!ReadGain(&gi, hBass)) return FALSE;
 
 	if (!gi.has_album_gain) gi.album_gain = gi.track_gain;
@@ -397,24 +421,24 @@ static BOOL GetGain(HWND hWnd, float *pGain, DWORD hBass){
 
 	switch (nGainMode){
 	case 1:
-		volume = nPreAmp * pow(10, gi.album_gain / 20 - 2);
+		volume = nPreAmp * lpPow(10, gi.album_gain / 20 - 2);
 		break;
 	case 2:
 		volume = 1 / gi.album_peak;
 		break;
 	case 3:
-		volume = nPreAmp * pow(10, gi.track_gain / 20 - 2);
+		volume = nPreAmp * lpPow(10, gi.track_gain / 20 - 2);
 		break;
 	case 4:
 		volume = 1 / gi.track_peak;
 		break;
 	case 5:
-		volume = nPreAmp * pow(10, gi.album_gain / 20 - 2);
+		volume = nPreAmp * lpPow(10, gi.album_gain / 20 - 2);
 		if (volume > 1 / gi.album_peak)
 			volume = 1 / gi.album_peak;
 		break;
 	case 6:
-		volume = nPreAmp * pow(10, gi.track_gain / 20 - 2);
+		volume = nPreAmp * lpPow(10, gi.track_gain / 20 - 2);
 		if (volume > 1 / gi.track_peak)
 			volume = 1 / gi.track_peak;
 		break;
@@ -441,7 +465,7 @@ static BOOL CALLBACK HookWndProc(LPGENERAL_PLUGIN_HOOK_WNDPROC pMsg) {
 static BOOL CALLBACK OnEvent(HWND hWnd, GENERAL_PLUGIN_EVENT eCode) {
 	if (eCode == GENERAL_PLUGIN_EVENT_INIT0) {
 		WAIsUnicode();
-		if (!LoadBASS()) return FALSE;
+		if (!InitPow() || !LoadBASS()) return FALSE;
 	} else if (eCode == GENERAL_PLUGIN_EVENT_QUIT) {
 	}
 	return TRUE;

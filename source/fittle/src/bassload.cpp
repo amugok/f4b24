@@ -26,8 +26,8 @@ BOOL BASSDEF(BASS_StreamFree)(DWORD handle);
 QWORD BASSDEF(BASS_StreamGetFilePosition)(DWORD handle, DWORD mode);
 
 #define FUNC_PREFIXA "BASS_"
-static CHAR szDllNameA[] = "bass.dll";
-static struct IMPORT_FUNC_TABLE {
+static const CHAR szDllNameA[] = "bass.dll";
+static const struct IMPORT_FUNC_TABLE {
 	LPSTR lpszFuncName;
 	FARPROC * ppFunc;
 } functbl[] = {
