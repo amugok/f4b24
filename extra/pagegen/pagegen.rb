@@ -84,7 +84,7 @@ table.each {|rx|
 	classname = rx[5]
 	filename = rx[6]
 	tagname = rx[7] || "googlecode"
-	releaseurl = rx[7] == "" ? "https://github.com/amugok/amugok.github.io/releases/download" : "https://github.com/amugok/f4b24/releases/download"
+	releaseurl = rx[7] ? "https://github.com/amugok/f4b24/releases/download" : "https://github.com/amugok/amugok.github.io/releases/download"
 
 	print <<-"EOS"
 <div class="row allitem #{latest} #{unicode} #{category}">
