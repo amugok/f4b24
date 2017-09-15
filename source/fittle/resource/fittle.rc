@@ -415,11 +415,7 @@ END
 #endif    // “ú–{Œê resources
 /////////////////////////////////////////////////////////////////////////////
 
-#ifdef _WIN64
-CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "Fittle.exe.x64.manifest"
-#else
 CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "Fittle.exe.manifest"
-#endif
 
 #ifndef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
