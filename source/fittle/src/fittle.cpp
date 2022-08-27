@@ -1171,10 +1171,12 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp){
 				}
 
 				//ステータスバーの分割変更
+				float dpiScale = static_cast<FLOAT>(GetDeviceCaps(GetDC(0), LOGPIXELSX)) / 96.0f;
+
 				sb_size[3] = LOWORD(lp);
-				sb_size[2] = sb_size[3] - 18;
-				sb_size[1] = sb_size[2] - 120;
-				sb_size[0] = sb_size[1] - 100;
+				sb_size[2] = sb_size[3] - 18 * dpiScale;
+				sb_size[1] = sb_size[2] - 120 * dpiScale;
+				sb_size[0] = sb_size[1] - 90 * dpiScale;
 				SendMessage(m_hStatus, SB_SETPARTS, (WPARAM)3, (LPARAM)(LPINT)sb_size);
 				
 				SendMessage(m_hStatus, WM_SIZE, wp, lp);
